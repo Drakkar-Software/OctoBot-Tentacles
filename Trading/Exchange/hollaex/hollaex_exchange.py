@@ -15,6 +15,7 @@
 #  License along with this library.
 import ccxt
 import typing
+import decimal
 
 import octobot_commons.enums as commons_enums
 import octobot_commons.constants as commons_constants
@@ -23,8 +24,37 @@ import octobot_trading.exchanges as exchanges
 import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
 
 
+
+class hollaexConnector(exchanges.CCXTConnector):
+
+    def _create_client(self, force_unauth=False):
+        super()._create_client(force_unauth=force_unauth)
+        self._register_patched_sign()
+
+    def _register_patched_sign(self):
+        # hollaex sign() creates invalid signatures when floats are represented in scientific notation
+        # use strings instead
+        # Note: stop param should not be converted to string as it will then be ignored: leave it as float
+        origin_sign = self.client.sign
+
+        def _patched_sign(path, api='public', method='GET', params={}, headers=None, body=None):
+            if self.client.omit(params, self.client.extract_params(path)):
+                # only fix params when there is a query to generate a signature for
+                # => meaning when self.client.omit leaves something to put in request body
+                fixed_params = {
+                    k: format(decimal.Decimal(str(v)), "f") if (isinstance(v, float) and k != "stop") else v
+                    for k, v in params.items()
+                }
+            else:
+                fixed_params = params
+            return origin_sign(path, api=api, method=method, params=fixed_params, headers=headers, body=body)
+
+        self.client.sign = _patched_sign
+
+
 class hollaex(exchanges.RestExchange):
     DESCRIPTION = ""
+    DEFAULT_CONNECTOR_CLASS = hollaexConnector
 
     FIX_MARKET_STATUS = True
 
@@ -36,6 +66,7 @@ class hollaex(exchanges.RestExchange):
 
     # STOP_PRICE is used in ccxt/hollaex instead of default STOP_LOSS_PRICE
     STOP_LOSS_CREATE_PRICE_PARAM = ccxt_enums.ExchangeOrderCCXTUnifiedParams.STOP_PRICE.value
+    STOP_LOSS_EDIT_PRICE_PARAM = STOP_LOSS_CREATE_PRICE_PARAM
 
     # should be overridden locally to match exchange support
     SUPPORTED_ELEMENTS = {
@@ -56,7 +87,7 @@ class hollaex(exchanges.RestExchange):
         trading_enums.ExchangeTypes.SPOT.value: {
             # order that should be self-managed by OctoBot
             trading_enums.ExchangeSupportedElements.UNSUPPORTED_ORDERS.value: [
-                trading_enums.TraderOrderType.STOP_LOSS,    # broken for now (Request validation failed: Parameter (order) failed schema validation)
+                # trading_enums.TraderOrderType.STOP_LOSS,
                 trading_enums.TraderOrderType.STOP_LOSS_LIMIT,
                 trading_enums.TraderOrderType.TAKE_PROFIT,
                 trading_enums.TraderOrderType.TAKE_PROFIT_LIMIT,
@@ -137,6 +168,13 @@ class hollaex(exchanges.RestExchange):
     def is_configurable(cls):
         return True
 
+    def is_authenticated_request(self, url: str, method: str, headers: dict, body) -> bool:
+        signature_identifier = "api-signature"
+        return bool(
+            headers
+            and signature_identifier in headers
+        )
+
     def get_max_orders_count(self, symbol: str, order_type: trading_enums.TraderOrderType) -> int:
         #  (05/06/2025)
         # hollaex {"message":"Error 1010 - You are only allowed to have maximum 25 active orders per market."}
@@ -178,6 +216,14 @@ class HollaexCCXTAdapter(exchanges.CCXTAdapter):
         fixed = super().fix_order(raw, symbol=symbol, **kwargs)
         if not fixed[trading_enums.ExchangeConstantsOrderColumns.PRICE.value] and "average" in raw_order_info:
             fixed[trading_enums.ExchangeConstantsOrderColumns.PRICE.value] = raw_order_info.get("average", 0)
+
+        if fixed[ccxt_enums.ExchangeOrderCCXTColumns.TRIGGER_PRICE.value]:
+            order_type = trading_enums.TradeOrderType.STOP_LOSS.value
+            # todo uncomment when stop loss limit are supported
+            # if fixed[ccxt_enums.ExchangeOrderCCXTColumns.PRICE.value] is None:
+            #     order_type = trading_enums.TradeOrderType.STOP_LOSS.value
+            fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = order_type
+
         return fixed
 
     def fix_ticker(self, raw, **kwargs):
