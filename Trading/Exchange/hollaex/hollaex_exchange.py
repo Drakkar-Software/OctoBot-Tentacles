@@ -64,6 +64,8 @@ class hollaex(exchanges.RestExchange):
     REQUIRE_ORDER_FEES_FROM_TRADES = True  # set True when get_order is not giving fees on closed orders and fees
     SUPPORT_FETCHING_CANCELLED_ORDERS = False
 
+    IS_SKIPPING_EMPTY_CANDLES_IN_OHLCV_FETCH = True
+
     # STOP_PRICE is used in ccxt/hollaex instead of default STOP_LOSS_PRICE
     STOP_LOSS_CREATE_PRICE_PARAM = ccxt_enums.ExchangeOrderCCXTUnifiedParams.STOP_PRICE.value
     STOP_LOSS_EDIT_PRICE_PARAM = STOP_LOSS_CREATE_PRICE_PARAM
