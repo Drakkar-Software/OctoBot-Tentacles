@@ -16,13 +16,31 @@
 import ccxt
 import typing
 import decimal
+import enum
+import cachetools
 
 import octobot_commons.enums as commons_enums
 import octobot_commons.constants as commons_constants
+import octobot_commons.symbols as symbols_utils
+import octobot_commons.logging as logging
 import octobot_trading.enums as trading_enums
+import octobot_trading.constants as trading_constants
 import octobot_trading.exchanges as exchanges
+import octobot_trading.errors as errors
 import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
 
+
+_EXCHANGE_FEE_TIERS_BY_EXCHANGE_NAME: dict[str, dict] = {}
+# refresh exchange fee tiers every day but don't delete outdated info, only replace it with updated ones
+_REFRESHED_EXCHANGE_FEE_TIERS_BY_EXCHANGE_NAME : cachetools.TTLCache[str, bool] = cachetools.TTLCache(
+    maxsize=50, ttl=commons_constants.DAYS_TO_SECONDS
+)
+DEFAULT_FEE_SIDE = trading_enums.ExchangeFeeSides.GET.value     # the fee is always in the currency you get
+
+
+class FeeTiers(enum.Enum):
+    BASIC = "1"
+    VIP = "2"
 
 
 class hollaexConnector(exchanges.CCXTConnector):
@@ -50,6 +68,190 @@ class hollaexConnector(exchanges.CCXTConnector):
             return origin_sign(path, api=api, method=method, params=fixed_params, headers=headers, body=body)
 
         self.client.sign = _patched_sign
+
+    async def load_symbol_markets(
+        self,
+        reload=False,
+        market_filter: typing.Union[None, typing.Callable[[dict], bool]] = None
+    ):
+        await super().load_symbol_markets(reload=reload, market_filter=market_filter)
+        # also refresh fee tiers when necessary
+        if self.exchange_manager.exchange_name not in _REFRESHED_EXCHANGE_FEE_TIERS_BY_EXCHANGE_NAME:
+            await self._refresh_exchange_fee_tiers()
+
+    async def _refresh_exchange_fee_tiers(self):
+        response = await self.client.publicGetTiers()
+        # similar to ccxt's fetch_trading_fees except that we parse all tiers
+        if not response:
+            self.logger.error("No fee tiers available")
+        fees_by_tier = {}
+        for tier, values in response.items():
+            fees = self.client.safe_value(values, 'fees', {})
+            makerFees = self.client.safe_value(fees, 'maker', {})
+            takerFees = self.client.safe_value(fees, 'taker', {})
+            result: dict = {}
+            for symbol in self.client.symbols:
+                market = self.client.market(symbol)
+                makerString = self.client.safe_string(makerFees, market['id'])
+                takerString = self.client.safe_string(takerFees, market['id'])
+                result[symbol] = {
+                    trading_enums.ExchangeConstantsMarketPropertyColumns.MAKER.value:
+                        self.client.parse_number(ccxt.Precise.string_div(makerString, '100')),
+                    trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER.value:
+                        self.client.parse_number(ccxt.Precise.string_div(takerString, '100')),
+                    trading_enums.ExchangeConstantsMarketPropertyColumns.FEE_SIDE.value: market.get(
+                        trading_enums.ExchangeConstantsMarketPropertyColumns.FEE_SIDE.value, DEFAULT_FEE_SIDE
+                    )
+                    # don't keep unecessary info
+                    # 'info': fees,
+                    # 'symbol': symbol,
+                    # 'percentage': True,
+                    # 'tierBased': True,
+                }
+            fees_by_tier[tier] = result
+        exchange_name = self.exchange_manager.exchange_name
+        _EXCHANGE_FEE_TIERS_BY_EXCHANGE_NAME[exchange_name] = fees_by_tier
+        _REFRESHED_EXCHANGE_FEE_TIERS_BY_EXCHANGE_NAME[exchange_name] = True
+
+    @classmethod
+    def simulator_connector_calculate_fees_factory(cls, exchange_name: str, tiers: FeeTiers):
+        # same signature as ExchangeSimulatorConnector.calculate_fees
+        def simulator_connector_calculate_fees(
+            symbol: str, order_type: trading_enums.TraderOrderType,
+            quantity: decimal.Decimal, price: decimal.Decimal, taker_or_maker: str
+        ):
+            # no try/catch: should raise in case fees are not available
+            return cls._calculate_fetched_fees(
+                exchange_name, tiers, symbol, order_type, quantity, price, taker_or_maker
+            )
+        return simulator_connector_calculate_fees
+
+    @classmethod
+    def simulator_connector_get_fees_factory(cls, exchange_name: str, tiers: FeeTiers):
+        # same signature as ExchangeSimulatorConnector.get_fees
+        def simulator_connector_get_fees(symbol):
+            return cls._get_fees(exchange_name, tiers, symbol)
+        return simulator_connector_get_fees
+
+    @classmethod
+    def register_simulator_connector_fee_methods(
+        cls, exchange_name: str, simulator_connector: exchanges.ExchangeSimulatorConnector
+    ):
+        # only called in backtesting
+        # overrides exchange simulator connector calculate_fees and get_fees to use fetched fees instead
+        fee_tiers = cls._get_fee_tiers(False)
+        simulator_connector.calculate_fees = cls.simulator_connector_calculate_fees_factory(exchange_name, fee_tiers)
+        simulator_connector.get_fees = cls.simulator_connector_get_fees_factory(exchange_name, fee_tiers)
+
+    def calculate_fees(
+        self, symbol: str, order_type: trading_enums.TraderOrderType,
+        quantity: decimal.Decimal, price: decimal.Decimal, taker_or_maker: str
+    ):
+        # only called in live trading
+        is_real_trading = self.exchange_manager.is_backtesting  # consider live trading as real to use basic tier
+        try:
+            return self._calculate_fetched_fees(
+                self.exchange_manager.exchange_name, self._get_fee_tiers(is_real_trading),
+                symbol, order_type, quantity, price, taker_or_maker
+            )
+        except errors.MissingFeeDetailsError as err:
+            self.logger.error(f"Error calculating fees: {err}. Using default ccxt values")
+            # live trading: can fallback to ccxt default values as the ccxt client exists and is initialized
+            return super().calculate_fees(symbol, order_type, quantity, price, taker_or_maker)
+
+    def get_fees(self, symbol):
+        # only called in live trading
+        try:
+            is_real_trading = self.exchange_manager.is_backtesting  # consider live trading as real to use basic tier
+            return self._get_fees(self.exchange_manager.exchange_name, self._get_fee_tiers(is_real_trading), symbol)
+        except errors.MissingFeeDetailsError:
+            self.logger.error(f"Missing fee details, using default value")
+            market = self.get_market_status(symbol, with_fixer=False)
+            # use default ccxt values
+            return {
+                trading_enums.ExchangeConstantsMarketPropertyColumns.MAKER.value: market[
+                    trading_enums.ExchangeConstantsMarketPropertyColumns.MAKER.value
+                ],
+                trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER.value: market[
+                    trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER.value
+                ],
+                trading_enums.ExchangeConstantsMarketPropertyColumns.FEE_SIDE.value: market.get(
+                    trading_enums.ExchangeConstantsMarketPropertyColumns.FEE_SIDE.value, DEFAULT_FEE_SIDE
+                ),
+                trading_enums.ExchangeConstantsMarketPropertyColumns.FEE.value: market.get(
+                    trading_enums.ExchangeConstantsMarketPropertyColumns.FEE.value,
+                    trading_constants.CONFIG_DEFAULT_FEES
+                )
+            }
+
+    @classmethod
+    def _calculate_fetched_fees(
+        cls, exchange_name: str, fee_tiers: FeeTiers, symbol: str, order_type: trading_enums.TraderOrderType,
+        quantity: decimal.Decimal, price: decimal.Decimal, taker_or_maker: str
+    ):
+        # will raise MissingFeeDetailsError if fees details are not available
+        fee_details = cls._get_fetched_fees(exchange_name, fee_tiers, symbol)
+        fee_side = fee_details[trading_enums.ExchangeConstantsMarketPropertyColumns.FEE_SIDE.value]
+        side = exchanges.get_order_side(order_type)
+        # similar as ccxt.Exchange.calculate_fee
+        if fee_side == trading_enums.ExchangeFeeSides.GET.value:
+            # the fee is always in the currency you get
+            use_quote = side == trading_enums.TradeOrderSide.SELL.value
+        elif fee_side == trading_enums.ExchangeFeeSides.GIVE.value:
+            # the fee is always in the currency you give
+            use_quote = side == trading_enums.TradeOrderSide.BUY.value
+        else:
+            # the fee is always in feeSide currency
+            use_quote = fee_side == trading_enums.ExchangeFeeSides.QUOTE.value
+        parsed_symbol = symbols_utils.parse_symbol(symbol)
+        if use_quote:
+            cost = quantity * price
+            fee_currency = parsed_symbol.quote
+        else:
+            cost = quantity
+            fee_currency = parsed_symbol.base
+        fee_rate = decimal.Decimal(str(fee_details[taker_or_maker]))
+        fee_cost = cost * fee_rate
+        return {
+            trading_enums.FeePropertyColumns.TYPE.value: taker_or_maker,
+            trading_enums.FeePropertyColumns.CURRENCY.value: fee_currency,
+            trading_enums.FeePropertyColumns.RATE.value: float(fee_rate),
+            trading_enums.FeePropertyColumns.COST.value: float(fee_cost),
+        }
+
+    @classmethod
+    def _get_fee_tiers(cls, is_real_trading: bool):
+        return FeeTiers.BASIC if is_real_trading else FeeTiers.VIP
+
+    @classmethod
+    def _get_fees(cls, exchange_name: str, tiers: FeeTiers, symbol: str):
+        return {
+            ** cls._get_fetched_fees(exchange_name, tiers, symbol),
+            ** {
+                # todo update this if withdrawal fees become relevant
+                trading_enums.ExchangeConstantsMarketPropertyColumns.FEE.value: trading_constants.CONFIG_DEFAULT_FEES
+            }
+        }
+
+    @classmethod
+    def _get_fetched_fees(cls, exchange: str, tier_to_use: FeeTiers, symbol: str):
+        try:
+            exchange_fees = _EXCHANGE_FEE_TIERS_BY_EXCHANGE_NAME[exchange]
+        except KeyError as err:
+            raise errors.MissingFeeDetailsError(f"No available {exchange} fee details") from err
+        try:
+            return exchange_fees[tier_to_use.value][symbol]
+        except KeyError as err:
+            if tier_to_use.value not in exchange_fees and (
+                FeeTiers.BASIC.value in tier_to_use.value and symbol in exchange_fees[FeeTiers.BASIC.value]
+            ):
+                logging.get_logger(cls.__name__).info(
+                    f"Falling back on {FeeTiers.BASIC.name} fee tier for {exchange}: no {tier_to_use.name} value"
+                )
+                return exchange_fees[FeeTiers.BASIC.value][symbol]
+            raise errors.MissingFeeDetailsError(
+                f"No available {exchange} {tier_to_use.name} {symbol} fee details"
+            ) from err
 
 
 class hollaex(exchanges.RestExchange):
