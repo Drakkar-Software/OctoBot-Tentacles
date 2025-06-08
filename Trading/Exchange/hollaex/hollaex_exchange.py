@@ -106,6 +106,11 @@ class hollaex(exchanges.RestExchange):
         # '"message":"Access denied: Unauthorized Access. This key does not have the right permissions to access this endpoint"'
         ("permissions to access",),
     ]
+    EXCHANGE_IP_WHITELIST_ERRORS: typing.List[typing.Iterable[str]] = [
+        # {"message":"Access denied: Unauthorized Access.
+        # The IP address you are reaching this endpoint through is not allowed to access this endpoint"}
+        ("the ip address", "is not allowed"),
+    ]
 
     def __init__(
         self, config, exchange_manager, exchange_config_by_exchange: typing.Optional[dict[str, dict]],
