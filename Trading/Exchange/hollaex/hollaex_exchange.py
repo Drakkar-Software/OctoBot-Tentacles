@@ -113,6 +113,11 @@ class hollaexConnector(exchanges.CCXTConnector):
         exchange_name = self.exchange_manager.exchange_name
         _EXCHANGE_FEE_TIERS_BY_EXCHANGE_NAME[exchange_name] = fees_by_tier
         _REFRESHED_EXCHANGE_FEE_TIERS_BY_EXCHANGE_NAME[exchange_name] = True
+        sample = {
+            tier: next(iter(fees.values())) if fees else None
+            for tier, fees in fees_by_tier.items()
+        }
+        self.logger.info(f"Refreshed {exchange_name} fee tiers: {sample}")
 
     @classmethod
     def simulator_connector_calculate_fees_factory(cls, exchange_name: str, tiers: FeeTiers):
@@ -149,7 +154,7 @@ class hollaexConnector(exchanges.CCXTConnector):
         quantity: decimal.Decimal, price: decimal.Decimal, taker_or_maker: str
     ):
         # only called in live trading
-        is_real_trading = self.exchange_manager.is_backtesting  # consider live trading as real to use basic tier
+        is_real_trading = not self.exchange_manager.is_backtesting  # consider live trading as real to use basic tier
         try:
             return self._calculate_fetched_fees(
                 self.exchange_manager.exchange_name, self._get_fee_tiers(is_real_trading),
@@ -163,7 +168,7 @@ class hollaexConnector(exchanges.CCXTConnector):
     def get_fees(self, symbol):
         # only called in live trading
         try:
-            is_real_trading = self.exchange_manager.is_backtesting  # consider live trading as real to use basic tier
+            is_real_trading = not self.exchange_manager.is_backtesting  # consider live trading as real to use basic tier
             return self._get_fees(self.exchange_manager.exchange_name, self._get_fee_tiers(is_real_trading), symbol)
         except errors.MissingFeeDetailsError:
             self.logger.error(f"Missing fee details, using default value")
