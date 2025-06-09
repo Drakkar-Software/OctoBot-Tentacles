@@ -30,9 +30,17 @@ import octobot_commons.enums as commons_enums
 import octobot_commons.constants as commons_constants
 import octobot_commons.symbols as commons_symbols
 import octobot_commons.logging as logging
+import octobot_commons.os_util as os_util
 
 
 ALIASED_SYMBOLS = set()
+
+# hard code Coinbase base tier fees as long as there is no way to fetch it
+# https://www.coinbase.com/advanced-fees
+DEFAULT_TAKER_FEE_VALUE = 0.012  # 1.2%: base Coinbase taker fees tier
+DEFAULT_MAKER_FEE_VALUE = 0.006  # 0.6%: base Coinbase maker fees tier
+# disabled by default
+FORCE_COINBASE_BASE_FEES = os_util.parse_boolean_environment_var("FORCE_COINBASE_BASE_FEES", "false")
 
 
 def _refresh_alias_symbols(client):
@@ -101,6 +109,39 @@ class CoinbaseConnector(ccxt_connector.CCXTConnector):
         # only call _refresh_alias_symbols from here as markets just got reloaded,
         # no market can be missing unlike when using cached markets
         _refresh_alias_symbols(client)
+        if FORCE_COINBASE_BASE_FEES:
+            # always use base fee tiers inside OctoBot to avoid issues with coinbase high fees
+            self._apply_base_fee_tiers()
+
+    def _apply_base_fee_tiers(self):
+        taker_fee, maker_fee = self._get_base_tier_fees()
+        self.logger.info(
+            f"Applying {self.exchange_manager.exchange_name} base fees tiers to markets: {taker_fee=}, {maker_fee=}"
+        )
+        for market in self.client.markets.values():
+            market[trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER.value] = taker_fee
+            market[trading_enums.ExchangeConstantsMarketPropertyColumns.MAKER.value] = maker_fee
+
+
+    def _get_base_tier_fees(self) -> (float, float):
+        return (
+            DEFAULT_TAKER_FEE_VALUE, DEFAULT_MAKER_FEE_VALUE
+        )
+        # TODO uncomment this in case there is a way to fetch tier 0 fees in Coinbase
+        # try:
+        #     # use ccxt default fee tiers
+        #     fee_tiers = self.client.describe()["fees"]["trading"]["tiers"]
+        #     return (
+        #         fee_tiers[trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER.value][0][1],
+        #         fee_tiers[trading_enums.ExchangeConstantsMarketPropertyColumns.MAKER.value][0][1],
+        #     )
+        # except KeyError as err:
+        #     self.logger.error(
+        #         f"Error when getting base fee tier: {err}. Using default {DEFAULT_FEE_VALUE} value"
+        #     )
+        #     return (
+        #         DEFAULT_TAKER_FEE_VALUE, DEFAULT_MAKER_FEE_VALUE
+        #     )
 
     async def _edit_order_by_cancel_and_create(
         self, exchange_order_id: str, symbol: str, order_type: trading_enums.TraderOrderType,
