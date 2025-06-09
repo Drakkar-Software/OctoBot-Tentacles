@@ -27,10 +27,11 @@ import octobot_tentacles_manager.api
 from ..hollaex.hollaex_exchange import hollaex
 
 
-_EXCHANGE_REMOTE_CONFIG_BY_EXCHANGE_KIT_URL: cachetools.TTLCache[str, dict] = cachetools.TTLCache(
+_EXCHANGE_REMOTE_CONFIG_BY_EXCHANGE_KIT_URL: dict[str, dict] = {}
+# refresh exchange config every day but don't delete outdated info, only replace it with updated ones
+_REFRESHED_EXCHANGE_REMOTE_CONFIG_BY_EXCHANGE_KIT_URL : cachetools.TTLCache[str, bool] = cachetools.TTLCache(
     maxsize=50, ttl=octobot_commons.constants.DAYS_TO_SECONDS
 )
-
 
 class HollaexAutofilled(hollaex):
     HAS_FETCHED_DETAILS = True
@@ -99,7 +100,7 @@ class HollaexAutofilled(hollaex):
             exchange_kit_url = cls._get_kit_url(tentacle_config, exchange_name)
         except KeyError:
             raise errors.NotSupported(f"{exchange_name} is not supported by {cls.get_name()}")
-        if exchange_kit_url in _EXCHANGE_REMOTE_CONFIG_BY_EXCHANGE_KIT_URL:
+        if exchange_kit_url in _REFRESHED_EXCHANGE_REMOTE_CONFIG_BY_EXCHANGE_KIT_URL:
             return _EXCHANGE_REMOTE_CONFIG_BY_EXCHANGE_KIT_URL[exchange_kit_url]
         commons_logging.get_logger(cls.get_name()).info(
             f"Fetching {exchange_name} HollaEx kit from {exchange_kit_url}"
@@ -108,6 +109,7 @@ class HollaexAutofilled(hollaex):
             _EXCHANGE_REMOTE_CONFIG_BY_EXCHANGE_KIT_URL[exchange_kit_url] = await cls._retry_fetch_when_rate_limit(
                 session, exchange_kit_url
             )
+            _REFRESHED_EXCHANGE_REMOTE_CONFIG_BY_EXCHANGE_KIT_URL[exchange_kit_url] = True
         return _EXCHANGE_REMOTE_CONFIG_BY_EXCHANGE_KIT_URL[exchange_kit_url]
 
     @classmethod

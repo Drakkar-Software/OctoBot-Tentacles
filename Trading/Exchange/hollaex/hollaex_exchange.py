@@ -80,6 +80,7 @@ class hollaexConnector(exchanges.CCXTConnector):
             await self._refresh_exchange_fee_tiers()
 
     async def _refresh_exchange_fee_tiers(self):
+        self.logger.info(f"Refreshing {self.exchange_manager.exchange_name} fee tiers")
         response = await self.client.publicGetTiers()
         # similar to ccxt's fetch_trading_fees except that we parse all tiers
         if not response:
