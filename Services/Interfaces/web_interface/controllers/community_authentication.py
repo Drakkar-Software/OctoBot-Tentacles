@@ -58,8 +58,8 @@ def register(blueprint):
                                         f"from your OctoBot account.", "success")
                 except community_errors.EmailValidationRequiredError:
                     flask.flash(VALIDATE_EMAIL_INFO, "info")
-                except authentication.FailedAuthentication:
-                    flask.flash(f"Invalid email or password", "error")
+                except authentication.FailedAuthentication as err:
+                    flask.flash(str(err), "error")
                 except Exception as e:
                     logging.get_logger("CommunityAuthentication").exception(e, False)
                     flask.flash(f"Error during authentication: {e}", "error")
@@ -102,7 +102,7 @@ def register(blueprint):
                 interfaces_util.run_in_bot_main_loop(authenticator.logout())
                 return flask.redirect(flask.url_for(f"community_login", **flask.request.args))
             except authentication.AuthenticationError as err:
-                flask.flash(f"Error when creating account: {err}", "error")
+                flask.flash(str(err), "error")
                 interfaces_util.run_in_bot_main_loop(authenticator.logout())
             except Exception as e:
                 logging.get_logger("CommunityAuthentication").exception(e, False)
