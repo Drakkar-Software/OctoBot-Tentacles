@@ -439,7 +439,23 @@ class HollaexCCXTAdapter(exchanges.CCXTAdapter):
             #     order_type = trading_enums.TradeOrderType.STOP_LOSS.value
             fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = order_type
 
+        self._fix_fees(raw_order_info, fixed)
         return fixed
+
+    def fix_trades(self, raw, **kwargs):
+        fixed = super().fix_trades(raw, **kwargs)
+        # CCXT standard trades fixing logic
+        for trade in fixed:
+            info = trade.get(ccxt_enums.ExchangeOrderCCXTColumns.INFO.value, {})
+            self._fix_fees(info, trade)
+        return fixed
+
+    def _fix_fees(self, info, fixed):
+        if (fee_coin := info.get("fee_coin")) and fixed.get(ccxt_enums.ExchangeOrderCCXTColumns.FEE.value):
+            # fee_coin is wrongly overwritten by ccxt as quote currency, used fetched value
+            fixed[trading_enums.ExchangeConstantsOrderColumns.FEE.value][
+                trading_enums.FeePropertyColumns.CURRENCY.value
+            ] = fee_coin.upper()
 
     def fix_ticker(self, raw, **kwargs):
         fixed = super().fix_ticker(raw, **kwargs)
