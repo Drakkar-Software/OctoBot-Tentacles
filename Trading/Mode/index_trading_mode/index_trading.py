@@ -51,6 +51,7 @@ class RebalanceDetails(enum.Enum):
 
 class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     FILL_ORDER_TIMEOUT = 60
+    SIMPLE_ADD_MIN_TOLERANCE_RATIO = decimal.Decimal("0.8")  # 20% tolerance
 
     async def create_new_orders(self, symbol, _, state, **kwargs):
         details = kwargs["data"]
@@ -67,17 +68,24 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             self.logger.info("Step 1/3: ensuring enough funds are available for rebalance")
             await self._ensure_enough_funds_to_buy_after_selling()
             # 2. sell indexed coins for reference market
-            self.logger.info(
-                f"Step 2/3: selling coins to free "
-                f"{self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market}"
-            )
-            orders += await self._sell_indexed_coins_for_reference_market(details)
+            is_simple_buy_without_selling = self._can_simply_buy_coins_without_selling(details)
+            if is_simple_buy_without_selling:
+                self.logger.info(
+                    f"Step 2/3: skipped: no coin to sell for "
+                    f"{self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market}"
+                )
+            else:
+                self.logger.info(
+                    f"Step 2/3: selling coins to free "
+                    f"{self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market}"
+                )
+                orders += await self._sell_indexed_coins_for_reference_market(details)
             # 3. split reference market into indexed coins
             self.logger.info(
                 f"Step 3/3: buying coins using "
                 f"{self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market}"
             )
-            orders += await self._split_reference_market_into_indexed_coins(details)
+            orders += await self._split_reference_market_into_indexed_coins(details, is_simple_buy_without_selling)
         except trading_errors.MissingMinimalExchangeTradeVolume as err:
             self.logger.warning(f"Aborting rebalance on {self.exchange_manager.exchange_name}: {err}")
             self._update_producer_last_activity(
@@ -142,6 +150,49 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             self.trading_mode.indexed_coins
         )
 
+    def _can_simply_buy_coins_without_selling(self, details: dict) -> bool:
+        simple_buy_coins = self._get_simple_buy_coins(details)
+        if not simple_buy_coins:
+            return False
+        # check if there is enough free funds to buy those coins
+        ref_market = self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market
+        reference_market_to_split = self.exchange_manager.exchange_personal_data.portfolio_manager. \
+            portfolio_value_holder.get_traded_assets_holdings_value(ref_market, None)
+        free_reference_market_holding = \
+            self.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.get_currency_portfolio(
+                ref_market
+            ).available
+        cumulated_ratio = sum(
+            self.trading_mode.get_target_ratio(coin)
+            for coin in simple_buy_coins
+        )
+        tolerated_min_amount = reference_market_to_split * cumulated_ratio * self.SIMPLE_ADD_MIN_TOLERANCE_RATIO
+        # can reach target ratios without selling if this condition is met
+        return tolerated_min_amount <= free_reference_market_holding
+
+
+    def _get_simple_buy_coins(self, details: dict) -> list:
+        # Returns the list of coins to simply buy.
+        # Used to avoid a full rebalance when coins are seen as added to a basket
+        # AND funds are available to buy it AND no asset should be sold
+        added = details[RebalanceDetails.ADD.value] or details[RebalanceDetails.BUY_MORE.value]
+        if added and not (
+            details[RebalanceDetails.SWAP.value]
+            or details[RebalanceDetails.SELL_SOME.value]
+            or details[RebalanceDetails.REMOVE.value]
+        ):
+            added_coins = list(details[RebalanceDetails.ADD.value]) + list(details[RebalanceDetails.BUY_MORE.value])
+            return [
+                coin
+                for coin in self.trading_mode.indexed_coins # iterate over self.trading_mode.indexed_coins to keep order
+                if coin in added_coins
+            ] + [
+                coin
+                for coin in added_coins
+                if coin not in self.trading_mode.indexed_coins
+            ]
+        return []
+
     async def _ensure_enough_funds_to_buy_after_selling(self):
         reference_market_to_split = self.exchange_manager.exchange_personal_data.portfolio_manager. \
             portfolio_value_holder.get_traded_assets_holdings_value(
@@ -150,14 +201,17 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         # will raise if funds are missing
         await self._get_symbols_and_amounts(self.trading_mode.indexed_coins, reference_market_to_split)
 
-    async def _split_reference_market_into_indexed_coins(self, details: dict):
+    async def _split_reference_market_into_indexed_coins(self, details: dict, is_simple_buy_without_selling: bool):
         orders = []
         ref_market = self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market
-        if details[RebalanceDetails.SWAP.value]:
+        if details[RebalanceDetails.SWAP.value] or is_simple_buy_without_selling:
             # has to infer total reference market holdings
             reference_market_to_split = self.exchange_manager.exchange_personal_data.portfolio_manager. \
                 portfolio_value_holder.get_traded_assets_holdings_value(ref_market, None)
-            coins_to_buy = list(details[RebalanceDetails.SWAP.value].values())
+            coins_to_buy = (
+                self._get_simple_buy_coins(details) if is_simple_buy_without_selling
+                else list(details[RebalanceDetails.SWAP.value].values())
+            )
         else:
             # can use actual reference market holdings: everything has been sold
             reference_market_to_split = \
