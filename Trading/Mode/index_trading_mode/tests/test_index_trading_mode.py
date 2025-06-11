@@ -656,6 +656,30 @@ async def test_get_rebalance_details(tools):
             _resolve_swaps_mock.assert_called_once_with(details)
             _resolve_swaps_mock.reset_mock()
 
+        # will only add ETH
+        def _get_holdings_ratio(coin, **kwargs):
+            if coin == "ETH":
+                return decimal.Decimal("0")
+            return decimal.Decimal("0.33")
+        with mock.patch.object(
+            portfolio_value_holder, "get_holdings_ratio", mock.Mock(side_effect=_get_holdings_ratio)
+        ) as get_holdings_ratio_mock:
+            should_rebalance, details = producer._get_rebalance_details()
+            assert should_rebalance is True
+            assert details == {
+                index_trading.RebalanceDetails.SELL_SOME.value: {},
+                index_trading.RebalanceDetails.BUY_MORE.value: {},
+                index_trading.RebalanceDetails.REMOVE.value: {},
+                index_trading.RebalanceDetails.ADD.value: {
+                    'ETH': decimal.Decimal('0.3333333333333333617834929233'),
+                },
+                index_trading.RebalanceDetails.SWAP.value: {},
+            }
+            assert get_holdings_ratio_mock.call_count == 3  # called for each coin
+            get_holdings_ratio_mock.reset_mock()
+            _resolve_swaps_mock.assert_called_once_with(details)
+            _resolve_swaps_mock.reset_mock()
+
 
 async def test_get_removed_coins_from_config(tools):
     update = {}
@@ -739,10 +763,25 @@ async def test_rebalance_portfolio(tools):
     ) as _sell_indexed_coins_for_reference_market_mock, mock.patch.object(
         consumer, "_split_reference_market_into_indexed_coins", mock.AsyncMock(return_value=["buy"])
     ) as _split_reference_market_into_indexed_coins_mock:
-        assert await consumer._rebalance_portfolio("details") == ["sell", "buy"]
-        _ensure_enough_funds_to_buy_after_selling_mock.assert_called_once()
-        _sell_indexed_coins_for_reference_market_mock.assert_called_once_with("details")
-        _split_reference_market_into_indexed_coins_mock.assert_called_once_with("details")
+        with mock.patch.object(
+            consumer, "_can_simply_buy_coins_without_selling", mock.Mock(return_value=False)
+        ) as _can_simply_buy_coins_without_selling_mock:
+            assert await consumer._rebalance_portfolio("details") == ["sell", "buy"]
+            _ensure_enough_funds_to_buy_after_selling_mock.assert_called_once()
+            _sell_indexed_coins_for_reference_market_mock.assert_called_once_with("details")
+            _split_reference_market_into_indexed_coins_mock.assert_called_once_with("details", False)
+            _can_simply_buy_coins_without_selling_mock.assert_called_once_with("details")
+            _ensure_enough_funds_to_buy_after_selling_mock.reset_mock()
+            _sell_indexed_coins_for_reference_market_mock.reset_mock()
+            _split_reference_market_into_indexed_coins_mock.reset_mock()
+        with mock.patch.object(
+            consumer, "_can_simply_buy_coins_without_selling", mock.Mock(return_value=True)
+        ) as _can_simply_buy_coins_without_selling_mock:
+            assert await consumer._rebalance_portfolio("details") == ["buy"]
+            _ensure_enough_funds_to_buy_after_selling_mock.assert_called_once()
+            _sell_indexed_coins_for_reference_market_mock.assert_not_called()
+            _split_reference_market_into_indexed_coins_mock.assert_called_once_with("details", True)
+            _can_simply_buy_coins_without_selling_mock.assert_called_once_with("details")
 
     with mock.patch.object(
             consumer, "_update_producer_last_activity", mock.Mock()
@@ -755,11 +794,14 @@ async def test_rebalance_portfolio(tools):
             )
         ) as _sell_indexed_coins_for_reference_market_mock, mock.patch.object(
             consumer, "_split_reference_market_into_indexed_coins", mock.AsyncMock(return_value=["buy"])
-        ) as _split_reference_market_into_indexed_coins_mock:
+        ) as _split_reference_market_into_indexed_coins_mock, mock.patch.object(
+            consumer, "_can_simply_buy_coins_without_selling", mock.Mock(return_value=False)
+        ) as _can_simply_buy_coins_without_selling_mock:
             assert await consumer._rebalance_portfolio("details") == []
             _ensure_enough_funds_to_buy_after_selling_mock.assert_called_once()
             _sell_indexed_coins_for_reference_market_mock.assert_called_once_with("details")
             _split_reference_market_into_indexed_coins_mock.assert_not_called()
+            _can_simply_buy_coins_without_selling_mock.assert_called_once_with("details")
             _update_producer_last_activity_mock.assert_called_once_with(
                 index_trading.IndexActivity.REBALANCING_SKIPPED,
                 index_trading.RebalanceSkipDetails.NOT_ENOUGH_AVAILABLE_FOUNDS.value
@@ -767,23 +809,22 @@ async def test_rebalance_portfolio(tools):
             _update_producer_last_activity_mock.reset_mock()
 
         with mock.patch.object(
-                consumer, "_ensure_enough_funds_to_buy_after_selling", mock.AsyncMock(
-                    side_effect=trading_errors.MissingMinimalExchangeTradeVolume
-                )
-        ) as _ensure_enough_funds_to_buy_after_selling_mock, \
-                mock.patch.object(
-                    consumer, "_sell_indexed_coins_for_reference_market", mock.AsyncMock(
-                        return_value=["sell"]
-                    )
-                ) as _sell_indexed_coins_for_reference_market_mock, mock.patch.object(
-            consumer, "_split_reference_market_into_indexed_coins", mock.AsyncMock(
-                return_value=["buy"]
+            consumer, "_ensure_enough_funds_to_buy_after_selling", mock.AsyncMock(
+                side_effect=trading_errors.MissingMinimalExchangeTradeVolume
             )
-        ) as _split_reference_market_into_indexed_coins_mock:
+        ) as _ensure_enough_funds_to_buy_after_selling_mock, \
+            mock.patch.object(
+                consumer, "_sell_indexed_coins_for_reference_market", mock.AsyncMock(return_value=["sell"])
+        ) as _sell_indexed_coins_for_reference_market_mock, mock.patch.object(
+            consumer, "_split_reference_market_into_indexed_coins", mock.AsyncMock(return_value=["buy"])
+        ) as _split_reference_market_into_indexed_coins_mock, mock.patch.object(
+            consumer, "_can_simply_buy_coins_without_selling", mock.Mock(return_value=False)
+        ) as _can_simply_buy_coins_without_selling_mock:
             assert await consumer._rebalance_portfolio("details") == []
             _ensure_enough_funds_to_buy_after_selling_mock.assert_called_once()
             _sell_indexed_coins_for_reference_market_mock.assert_not_called()
             _split_reference_market_into_indexed_coins_mock.assert_not_called()
+            _can_simply_buy_coins_without_selling_mock.assert_not_called()
             _update_producer_last_activity_mock.assert_called_once_with(
                 index_trading.IndexActivity.REBALANCING_SKIPPED,
                 index_trading.RebalanceSkipDetails.NOT_ENOUGH_AVAILABLE_FOUNDS.value
@@ -791,26 +832,45 @@ async def test_rebalance_portfolio(tools):
             _update_producer_last_activity_mock.reset_mock()
 
         with mock.patch.object(
-                consumer, "_ensure_enough_funds_to_buy_after_selling", mock.AsyncMock()
+            consumer, "_ensure_enough_funds_to_buy_after_selling", mock.AsyncMock()
         ) as _ensure_enough_funds_to_buy_after_selling_mock, \
-                mock.patch.object(
-                    consumer, "_sell_indexed_coins_for_reference_market", mock.AsyncMock(
-                        return_value=["sell"]
-                    )
-                ) as _sell_indexed_coins_for_reference_market_mock, mock.patch.object(
+        mock.patch.object(
+            consumer, "_sell_indexed_coins_for_reference_market", mock.AsyncMock(return_value=["sell"])
+        ) as _sell_indexed_coins_for_reference_market_mock, mock.patch.object(
             consumer, "_split_reference_market_into_indexed_coins", mock.AsyncMock(
                 side_effect=trading_errors.MissingMinimalExchangeTradeVolume
             )
         ) as _split_reference_market_into_indexed_coins_mock:
-            assert await consumer._rebalance_portfolio("details") == ["sell"]
-            _ensure_enough_funds_to_buy_after_selling_mock.assert_called_once()
-            _sell_indexed_coins_for_reference_market_mock.assert_called_once_with("details")
-            _split_reference_market_into_indexed_coins_mock.assert_called_once_with("details")
-            _update_producer_last_activity_mock.assert_called_once_with(
-                index_trading.IndexActivity.REBALANCING_SKIPPED,
-                index_trading.RebalanceSkipDetails.NOT_ENOUGH_AVAILABLE_FOUNDS.value
-            )
-            _update_producer_last_activity_mock.reset_mock()
+            with mock.patch.object(
+                consumer, "_can_simply_buy_coins_without_selling", mock.Mock(return_value=False)
+            ) as _can_simply_buy_coins_without_selling_mock:
+                assert await consumer._rebalance_portfolio("details") == ["sell"]
+                _ensure_enough_funds_to_buy_after_selling_mock.assert_called_once()
+                _sell_indexed_coins_for_reference_market_mock.assert_called_once_with("details")
+                _split_reference_market_into_indexed_coins_mock.assert_called_once_with("details", False)
+                _update_producer_last_activity_mock.assert_called_once_with(
+                    index_trading.IndexActivity.REBALANCING_SKIPPED,
+                    index_trading.RebalanceSkipDetails.NOT_ENOUGH_AVAILABLE_FOUNDS.value
+                )
+                _ensure_enough_funds_to_buy_after_selling_mock.reset_mock()
+                _sell_indexed_coins_for_reference_market_mock.reset_mock()
+                _split_reference_market_into_indexed_coins_mock.reset_mock()
+                _update_producer_last_activity_mock.reset_mock()
+            with mock.patch.object(
+                consumer, "_can_simply_buy_coins_without_selling", mock.Mock(return_value=True)
+            ) as _can_simply_buy_coins_without_selling_mock:
+                assert await consumer._rebalance_portfolio("details") == []
+                _ensure_enough_funds_to_buy_after_selling_mock.assert_called_once()
+                _sell_indexed_coins_for_reference_market_mock.assert_not_called()
+                _split_reference_market_into_indexed_coins_mock.assert_called_once_with("details", True)
+                _update_producer_last_activity_mock.assert_called_once_with(
+                    index_trading.IndexActivity.REBALANCING_SKIPPED,
+                    index_trading.RebalanceSkipDetails.NOT_ENOUGH_AVAILABLE_FOUNDS.value
+                )
+                _ensure_enough_funds_to_buy_after_selling_mock.reset_mock()
+                _sell_indexed_coins_for_reference_market_mock.reset_mock()
+                _split_reference_market_into_indexed_coins_mock.reset_mock()
+                _update_producer_last_activity_mock.reset_mock()
 
 
 async def test_ensure_enough_funds_to_buy_after_selling(tools):
@@ -825,6 +885,174 @@ async def test_ensure_enough_funds_to_buy_after_selling(tools):
         await consumer._ensure_enough_funds_to_buy_after_selling()
         get_traded_assets_holdings_value_mock.assert_called_once_with("USDT", None)
         _get_symbols_and_amounts_mock.assert_called_once_with(["BTC"], decimal.Decimal("2000"))
+
+
+async def test_can_simply_buy_coins_without_selling(tools):
+    update = {}
+    mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
+    details = "details"
+    with mock.patch.object(
+        trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder,
+        "get_traded_assets_holdings_value", mock.Mock(return_value=decimal.Decimal("2000"))
+    ) as get_traded_assets_holdings_value_mock:
+
+        # no coins to simply buy
+        with mock.patch.object(
+            consumer, "_get_simple_buy_coins", return_value=[]
+        ) as _get_simple_buy_coins_mock, mock.patch.object(
+            trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio,
+            "get_currency_portfolio", mock.Mock(return_value=mock.Mock(available=decimal.Decimal("160")))
+        ) as get_currency_portfolio_mock:
+            assert consumer._can_simply_buy_coins_without_selling(details) is False
+            _get_simple_buy_coins_mock.assert_called_once_with(details)
+            get_traded_assets_holdings_value_mock.assert_not_called()
+            get_currency_portfolio_mock.assert_not_called()
+
+        # there are coins to simply buy
+        with mock.patch.object(
+            mode, "get_target_ratio", return_value=decimal.Decimal("0.25")
+        ) as get_target_ratio_mock, mock.patch.object(
+            consumer, "_get_simple_buy_coins", return_value=["BTC"]
+        ) as _get_simple_buy_coins_mock:
+
+            # not enough free funds in portfolio to buy for 25% of 2000
+            with mock.patch.object(
+                trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio,
+                "get_currency_portfolio", mock.Mock(return_value=mock.Mock(available=decimal.Decimal("160")))
+            ) as get_currency_portfolio_mock:
+                assert consumer._can_simply_buy_coins_without_selling(details) is False
+                _get_simple_buy_coins_mock.assert_called_once_with(details)
+                get_traded_assets_holdings_value_mock.assert_called_once_with("USDT", None)
+                get_currency_portfolio_mock.assert_called_once_with("USDT")
+                get_target_ratio_mock.assert_called_once_with("BTC")
+                _get_simple_buy_coins_mock.reset_mock()
+                get_traded_assets_holdings_value_mock.reset_mock()
+                get_target_ratio_mock.reset_mock()
+
+            # enough free funds in portfolio to buy for 25% of 2000 (using tolerance)
+            with mock.patch.object(
+                trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio,
+                "get_currency_portfolio", mock.Mock(return_value=mock.Mock(available=decimal.Decimal("450")))
+            ) as get_currency_portfolio_mock:
+                assert consumer._can_simply_buy_coins_without_selling(details) is True
+                _get_simple_buy_coins_mock.assert_called_once_with(details)
+                get_traded_assets_holdings_value_mock.assert_called_once_with("USDT", None)
+                get_currency_portfolio_mock.assert_called_once_with("USDT")
+                get_target_ratio_mock.assert_called_once_with("BTC")
+                _get_simple_buy_coins_mock.reset_mock()
+                get_traded_assets_holdings_value_mock.reset_mock()
+                get_target_ratio_mock.reset_mock()
+
+            # more than enough free funds in portfolio to buy for 25% of 2000
+            with mock.patch.object(
+                trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio,
+                "get_currency_portfolio", mock.Mock(return_value=mock.Mock(available=decimal.Decimal("600.811")))
+            ) as get_currency_portfolio_mock:
+                assert consumer._can_simply_buy_coins_without_selling(details) is True
+                _get_simple_buy_coins_mock.assert_called_once_with(details)
+                get_traded_assets_holdings_value_mock.assert_called_once_with("USDT", None)
+                get_currency_portfolio_mock.assert_called_once_with("USDT")
+                get_target_ratio_mock.assert_called_once_with("BTC")
+                _get_simple_buy_coins_mock.reset_mock()
+                get_traded_assets_holdings_value_mock.reset_mock()
+                get_target_ratio_mock.reset_mock()
+
+            # now having multiple coins to buy
+            with  mock.patch.object(
+                consumer, "_get_simple_buy_coins", return_value=["BTC", "ETH"]
+            ) as _get_simple_buy_coins_mock:
+                # enough funds for 1 but not 2 coins at 25%
+                with mock.patch.object(
+                    trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio,
+                    "get_currency_portfolio",
+                    mock.Mock(return_value=mock.Mock(available=decimal.Decimal("600.811")))
+                ) as get_currency_portfolio_mock:
+                    assert consumer._can_simply_buy_coins_without_selling(details) is False
+                    _get_simple_buy_coins_mock.assert_called_once_with(details)
+                    get_traded_assets_holdings_value_mock.assert_called_once_with("USDT", None)
+                    get_currency_portfolio_mock.assert_called_once_with("USDT")
+                    assert get_target_ratio_mock.call_count == 2
+                    assert get_target_ratio_mock.mock_calls[0].args[0] == "BTC"
+                    assert get_target_ratio_mock.mock_calls[1].args[0] == "ETH"
+                    _get_simple_buy_coins_mock.reset_mock()
+                    get_traded_assets_holdings_value_mock.reset_mock()
+                    get_target_ratio_mock.reset_mock()
+
+                # enough funds for 2 coins at 25%
+                with mock.patch.object(
+                    trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio,
+                    "get_currency_portfolio",
+                    mock.Mock(return_value=mock.Mock(available=decimal.Decimal("1000.811")))
+                ) as get_currency_portfolio_mock:
+                    assert consumer._can_simply_buy_coins_without_selling(details) is True
+                    _get_simple_buy_coins_mock.assert_called_once_with(details)
+                    get_traded_assets_holdings_value_mock.assert_called_once_with("USDT", None)
+                    get_currency_portfolio_mock.assert_called_once_with("USDT")
+                    assert get_target_ratio_mock.call_count == 2
+                    assert get_target_ratio_mock.mock_calls[0].args[0] == "BTC"
+                    assert get_target_ratio_mock.mock_calls[1].args[0] == "ETH"
+                    _get_simple_buy_coins_mock.reset_mock()
+                    get_traded_assets_holdings_value_mock.reset_mock()
+                    get_target_ratio_mock.reset_mock()
+
+
+async def test_get_simple_buy_coins(tools):
+    update = {}
+    mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
+    mode.indexed_coins = ["BTC", "ETH", "SOL"]
+    assert consumer._get_simple_buy_coins({
+        index_trading.RebalanceDetails.SELL_SOME.value: {},
+        index_trading.RebalanceDetails.BUY_MORE.value: {},
+        index_trading.RebalanceDetails.REMOVE.value: {},
+        index_trading.RebalanceDetails.ADD.value: {},
+        index_trading.RebalanceDetails.SWAP.value: {},
+    }) == []
+    assert consumer._get_simple_buy_coins({
+        index_trading.RebalanceDetails.SELL_SOME.value: {},
+        index_trading.RebalanceDetails.BUY_MORE.value: {},
+        index_trading.RebalanceDetails.REMOVE.value: {},
+        index_trading.RebalanceDetails.ADD.value: {"BTC": decimal.Decimal("0.2"), "ETH": decimal.Decimal("0.2")},
+        index_trading.RebalanceDetails.SWAP.value: {},
+    }) == ["BTC", "ETH"]
+    # keep index coins order
+    assert consumer._get_simple_buy_coins({
+        index_trading.RebalanceDetails.SELL_SOME.value: {},
+        index_trading.RebalanceDetails.BUY_MORE.value: {"SOL": decimal.Decimal("0.2")},
+        index_trading.RebalanceDetails.REMOVE.value: {},
+        index_trading.RebalanceDetails.ADD.value: {"ETH": decimal.Decimal("0.2"), "BTC": decimal.Decimal("0.2")},
+        index_trading.RebalanceDetails.SWAP.value: {},
+    }) == ["BTC", "ETH", "SOL"]
+    # TRX not in indexed coins: added at the end
+    assert consumer._get_simple_buy_coins({
+        index_trading.RebalanceDetails.SELL_SOME.value: {},
+        index_trading.RebalanceDetails.BUY_MORE.value: {"SOL": decimal.Decimal("0.1"), "TRX": decimal.Decimal("0.2")},
+        index_trading.RebalanceDetails.REMOVE.value: {},
+        index_trading.RebalanceDetails.ADD.value: {"ETH": decimal.Decimal("0.2"), "BTC": decimal.Decimal("0.5")},
+        index_trading.RebalanceDetails.SWAP.value: {},
+    }) == ["BTC", "ETH", "SOL", "TRX"]
+
+    # don't return anything when other values are set
+    assert consumer._get_simple_buy_coins({
+        index_trading.RebalanceDetails.SELL_SOME.value: {"BTC": decimal.Decimal("0.2")},
+        index_trading.RebalanceDetails.BUY_MORE.value: {},
+        index_trading.RebalanceDetails.REMOVE.value: {},
+        index_trading.RebalanceDetails.ADD.value: {"ETH": decimal.Decimal("0.2")},
+        index_trading.RebalanceDetails.SWAP.value: {},
+    }) == []
+    assert consumer._get_simple_buy_coins({
+        index_trading.RebalanceDetails.SELL_SOME.value: {},
+        index_trading.RebalanceDetails.BUY_MORE.value: {},
+        index_trading.RebalanceDetails.REMOVE.value: {"BTC": decimal.Decimal("0.2")},
+        index_trading.RebalanceDetails.ADD.value: {"ETH": decimal.Decimal("0.2")},
+        index_trading.RebalanceDetails.SWAP.value: {},
+    }) == []
+    assert consumer._get_simple_buy_coins({
+        index_trading.RebalanceDetails.SELL_SOME.value: {},
+        index_trading.RebalanceDetails.BUY_MORE.value: {},
+        index_trading.RebalanceDetails.REMOVE.value: {},
+        index_trading.RebalanceDetails.ADD.value: {"ETH": decimal.Decimal("0.2")},
+        index_trading.RebalanceDetails.SWAP.value: {"BTC": decimal.Decimal("0.2")},
+    }) == []
 
 
 async def test_sell_indexed_coins_for_reference_market(tools):
@@ -1022,75 +1250,114 @@ async def test_split_reference_market_into_indexed_coins(tools):
     # no indexed coin
     mode.indexed_coins = []
     details = {index_trading.RebalanceDetails.SWAP.value: {}}
+    is_simple_buy_without_selling = False
     with mock.patch.object(
-            consumer,
-            "_get_symbols_and_amounts", mock.AsyncMock(
-                side_effect=lambda coins, _: {f"{coin}/USDT": decimal.Decimal(i + 1) for i, coin in enumerate(coins)}
-            )
+        consumer, "_get_symbols_and_amounts", mock.AsyncMock(
+            side_effect=lambda coins, _: {f"{coin}/USDT": decimal.Decimal(i + 1) for i, coin in enumerate(coins)}
+        )
     ) as _get_symbols_and_amounts_mock:
         with mock.patch.object(
-                trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio,
-                "get_currency_portfolio", mock.Mock(return_value=mock.Mock(available=decimal.Decimal("2")))
-        ) as get_currency_portfolio_mock, mock.patch.object(
-            consumer, "_buy_coin", mock.AsyncMock(return_value=["order"])
-        ) as _buy_coin_mock:
-            with pytest.raises(trading_errors.MissingMinimalExchangeTradeVolume):
-                await consumer._split_reference_market_into_indexed_coins(details)
-            get_currency_portfolio_mock.assert_called_once_with("USDT")
-            _buy_coin_mock.assert_not_called()
-            _get_symbols_and_amounts_mock.assert_called_once()
-            _get_symbols_and_amounts_mock.reset_mock()
+            consumer, "_get_simple_buy_coins", mock.Mock()
+        ) as _get_simple_buy_coins_mock:
+            with mock.patch.object(
+                    trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio,
+                    "get_currency_portfolio", mock.Mock(return_value=mock.Mock(available=decimal.Decimal("2")))
+            ) as get_currency_portfolio_mock, mock.patch.object(
+                consumer, "_buy_coin", mock.AsyncMock(return_value=["order"])
+            ) as _buy_coin_mock:
+                with pytest.raises(trading_errors.MissingMinimalExchangeTradeVolume):
+                    await consumer._split_reference_market_into_indexed_coins(details, is_simple_buy_without_selling)
+                get_currency_portfolio_mock.assert_called_once_with("USDT")
+                _buy_coin_mock.assert_not_called()
+                _get_symbols_and_amounts_mock.assert_called_once()
+                _get_symbols_and_amounts_mock.reset_mock()
+                _get_simple_buy_coins_mock.assert_not_called()
 
-        # coins to swap
-        mode.indexed_coins = []
-        details = {index_trading.RebalanceDetails.SWAP.value: {"BTC": "ETH", "ADA": "SOL"}}
-        with mock.patch.object(
-                trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio,
-                "get_currency_portfolio", mock.Mock(return_value=mock.Mock(available=decimal.Decimal("2")))
-        ) as get_currency_portfolio_mock, mock.patch.object(
-            trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder,
-            "get_traded_assets_holdings_value", mock.Mock(return_value=decimal.Decimal("2000"))
-        ) as get_traded_assets_holdings_value_mock, mock.patch.object(
-            consumer, "_buy_coin", mock.AsyncMock(return_value=["order"])
-        ) as _buy_coin_mock:
-            assert await consumer._split_reference_market_into_indexed_coins(details) == ["order", "order"]
-            _get_symbols_and_amounts_mock.assert_called_once()
-            _get_symbols_and_amounts_mock.reset_mock()
-            get_traded_assets_holdings_value_mock.assert_called_once_with("USDT", None)
-            get_currency_portfolio_mock.assert_not_called()
-            assert _buy_coin_mock.call_count == 2
-            assert _buy_coin_mock.mock_calls[0].args == ("ETH/USDT", decimal.Decimal("1"))
-            assert _buy_coin_mock.mock_calls[1].args == ("SOL/USDT", decimal.Decimal("2"))
+            # coins to swap
+            mode.indexed_coins = []
+            details = {index_trading.RebalanceDetails.SWAP.value: {"BTC": "ETH", "ADA": "SOL"}}
+            with mock.patch.object(
+                    trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio,
+                    "get_currency_portfolio", mock.Mock(return_value=mock.Mock(available=decimal.Decimal("2")))
+            ) as get_currency_portfolio_mock, mock.patch.object(
+                trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder,
+                "get_traded_assets_holdings_value", mock.Mock(return_value=decimal.Decimal("2000"))
+            ) as get_traded_assets_holdings_value_mock, mock.patch.object(
+                consumer, "_buy_coin", mock.AsyncMock(return_value=["order"])
+            ) as _buy_coin_mock:
+                assert await consumer._split_reference_market_into_indexed_coins(
+                    details, is_simple_buy_without_selling
+                ) == ["order", "order"]
+                _get_symbols_and_amounts_mock.assert_called_once()
+                _get_symbols_and_amounts_mock.reset_mock()
+                get_traded_assets_holdings_value_mock.assert_called_once_with("USDT", None)
+                get_currency_portfolio_mock.assert_not_called()
+                _get_simple_buy_coins_mock.assert_not_called()
+                assert _buy_coin_mock.call_count == 2
+                assert _buy_coin_mock.mock_calls[0].args == ("ETH/USDT", decimal.Decimal("1"))
+                assert _buy_coin_mock.mock_calls[1].args == ("SOL/USDT", decimal.Decimal("2"))
 
-        # no bought coin
-        details = {index_trading.RebalanceDetails.SWAP.value: {}}
-        mode.indexed_coins = ["ETH", "BTC"]
-        with mock.patch.object(
-                trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio,
-                "get_currency_portfolio", mock.Mock(return_value=mock.Mock(available=decimal.Decimal("2")))
-        ) as get_currency_portfolio_mock, mock.patch.object(
-            consumer, "_buy_coin", mock.AsyncMock(return_value=[])
-        ) as _buy_coin_mock:
-            with pytest.raises(trading_errors.MissingMinimalExchangeTradeVolume):
-                await consumer._split_reference_market_into_indexed_coins(details)
-            _get_symbols_and_amounts_mock.assert_called_once()
-            _get_symbols_and_amounts_mock.reset_mock()
-            get_currency_portfolio_mock.assert_called_once_with("USDT")
-            assert _buy_coin_mock.call_count == 2
+            # no bought coin
+            details = {index_trading.RebalanceDetails.SWAP.value: {}}
+            mode.indexed_coins = ["ETH", "BTC"]
+            with mock.patch.object(
+                    trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio,
+                    "get_currency_portfolio", mock.Mock(return_value=mock.Mock(available=decimal.Decimal("2")))
+            ) as get_currency_portfolio_mock, mock.patch.object(
+                consumer, "_buy_coin", mock.AsyncMock(return_value=[])
+            ) as _buy_coin_mock:
+                with pytest.raises(trading_errors.MissingMinimalExchangeTradeVolume):
+                    await consumer._split_reference_market_into_indexed_coins(details, is_simple_buy_without_selling)
+                _get_symbols_and_amounts_mock.assert_called_once()
+                _get_symbols_and_amounts_mock.reset_mock()
+                get_currency_portfolio_mock.assert_called_once_with("USDT")
+                _get_simple_buy_coins_mock.assert_not_called()
+                assert _buy_coin_mock.call_count == 2
 
-        # bought coins
-        mode.indexed_coins = ["ETH", "BTC"]
+            # bought coins
+            mode.indexed_coins = ["ETH", "BTC"]
+            with mock.patch.object(
+                    trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio,
+                    "get_currency_portfolio", mock.Mock(return_value=mock.Mock(available=decimal.Decimal("2")))
+            ) as get_currency_portfolio_mock, mock.patch.object(
+                consumer, "_buy_coin", mock.AsyncMock(return_value=["order"])
+            ) as _buy_coin_mock:
+                assert await consumer._split_reference_market_into_indexed_coins(
+                    details, is_simple_buy_without_selling
+                ) == ["order", "order"]
+                _get_symbols_and_amounts_mock.assert_called_once()
+                _get_symbols_and_amounts_mock.reset_mock()
+                get_currency_portfolio_mock.assert_called_once_with("USDT")
+                _get_simple_buy_coins_mock.assert_not_called()
+                assert _buy_coin_mock.call_count == 2
+                assert _buy_coin_mock.mock_calls[0].args[0] == "ETH/USDT"
+                assert _buy_coin_mock.mock_calls[1].args[0] == "BTC/USDT"
+
         with mock.patch.object(
-                trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio,
-                "get_currency_portfolio", mock.Mock(return_value=mock.Mock(available=decimal.Decimal("2")))
-        ) as get_currency_portfolio_mock, mock.patch.object(
-            consumer, "_buy_coin", mock.AsyncMock(return_value=["order"])
-        ) as _buy_coin_mock:
-            assert await consumer._split_reference_market_into_indexed_coins(details) == ["order", "order"]
-            _get_symbols_and_amounts_mock.assert_called_once()
-            _get_symbols_and_amounts_mock.reset_mock()
-            get_currency_portfolio_mock.assert_called_once_with("USDT")
-            assert _buy_coin_mock.call_count == 2
+            consumer, "_get_simple_buy_coins", mock.Mock(return_value=["ETH"])
+        ) as _get_simple_buy_coins_mock:
+            # simple buy without selling => buying only ETH
+            is_simple_buy_without_selling = True
+            mode.indexed_coins = ["ETH", "BTC"]
+            with mock.patch.object(
+                    trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio,
+                    "get_currency_portfolio", mock.Mock(return_value=mock.Mock(available=decimal.Decimal("2")))
+            ) as get_currency_portfolio_mock, mock.patch.object(
+                consumer, "_buy_coin", mock.AsyncMock(return_value=["order"])
+            ) as _buy_coin_mock, mock.patch.object(
+                trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder,
+                "get_traded_assets_holdings_value", mock.Mock(return_value=decimal.Decimal("2000"))
+            ) as get_traded_assets_holdings_value_mock:
+                assert await consumer._split_reference_market_into_indexed_coins(
+                    details, is_simple_buy_without_selling
+                ) == ["order"]
+                _get_symbols_and_amounts_mock.assert_called_once()
+                _get_symbols_and_amounts_mock.reset_mock()
+                get_currency_portfolio_mock.assert_not_called()
+                get_traded_assets_holdings_value_mock.assert_called_once_with("USDT", None)
+                _get_simple_buy_coins_mock.assert_called_once_with(details)
+                assert _buy_coin_mock.call_count == 1
+                assert _buy_coin_mock.mock_calls[0].args[0] == "ETH/USDT"
 
 
 async def test_get_symbols_and_amounts(tools):
