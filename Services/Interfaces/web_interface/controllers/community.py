@@ -17,6 +17,8 @@ import flask
 
 import octobot_commons.authentication as authentication
 import octobot.constants as constants
+import octobot_services.interfaces.util as interfaces_util
+import octobot.community.errors
 import tentacles.Services.Interfaces.web_interface.login as login
 import tentacles.Services.Interfaces.web_interface.models as models
 
@@ -28,11 +30,18 @@ def register(blueprint):
         authenticator = authentication.Authenticator.instance()
         logged_in_email = None
         use_preview = not authenticator.can_authenticate()
+        all_user_bots = []
         try:
             models.wait_for_login_if_processing()
             logged_in_email = authenticator.get_logged_in_email()
             all_user_bots = models.get_all_user_bots()
+        except authentication.AuthenticationError as err:
+            # force logout and redirect to login
+            flask.flash(f"Your session expired, please re-authenticate to your account.", "error")
+            interfaces_util.run_in_bot_main_loop(authentication.Authenticator.instance().logout())
+            return flask.redirect('community_login')
         except (authentication.AuthenticationRequired, authentication.UnavailableError):
+            # not authenticated
             pass
         except Exception as e:
             flask.flash(f"Error when contacting the community server: {e}", "error")
@@ -77,7 +86,7 @@ def register(blueprint):
             logged_in_email = authenticator.get_logged_in_email()
             if refresh_packages.lower() == "true":
                 models.update_owned_packages()
-        except (authentication.AuthenticationRequired, authentication.UnavailableError):
+        except (authentication.AuthenticationRequired, authentication.UnavailableError, authentication.AuthenticationError):
             pass
         except Exception as e:
             flask.flash(f"Error when contacting the community server: {e}", "error")
