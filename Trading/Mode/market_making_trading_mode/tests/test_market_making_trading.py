@@ -146,7 +146,7 @@ async def test_handle_market_making_orders_from_no_orders():
         ) as _get_daily_volume_mock:
             trigger_source = "ref_price"
             # 1. full replace as no order exist
-            assert await producer._handle_market_making_orders(price, SYMBOL_MARKET, trigger_source) is True
+            assert await producer._handle_market_making_orders(price, SYMBOL_MARKET, trigger_source, False) is True
             _get_reference_price_mock.assert_called_once()
             _get_daily_volume_mock.assert_called_once()
             submit_trading_evaluation_mock.assert_called_once()
@@ -186,11 +186,59 @@ async def test_handle_market_making_orders_from_no_orders():
             ])
             _get_reference_price_mock.reset_mock()
             submit_trading_evaluation_mock.reset_mock()
+            _get_daily_volume_mock.reset_mock()
 
             # 2. receive an update but orders are already in place: nothing to do
-            assert await producer._handle_market_making_orders(price, SYMBOL_MARKET, trigger_source) is True
+            assert await producer._handle_market_making_orders(price, SYMBOL_MARKET, trigger_source, False) is True
             _get_reference_price_mock.assert_called_once()
             submit_trading_evaluation_mock.assert_not_called()
+            _get_reference_price_mock.reset_mock()
+            _get_daily_volume_mock.reset_mock()
+
+            # 3. receive an update, orders are already in place but force_full_refresh is True: refresh orders
+            assert await producer._handle_market_making_orders(price, SYMBOL_MARKET, trigger_source, True) is True
+            _get_reference_price_mock.assert_called_once()
+            _get_daily_volume_mock.assert_called_once()
+            submit_trading_evaluation_mock.assert_called_once()
+            assert submit_trading_evaluation_mock.mock_calls[0].kwargs["symbol"] == symbol
+            data = submit_trading_evaluation_mock.mock_calls[0].kwargs["data"]
+            order_plan: market_making_trading.OrdersUpdatePlan = data[market_making_trading.MarketMakingTradingModeConsumer.ORDER_ACTIONS_PLAN_KEY]
+            assert isinstance(order_plan, market_making_trading.OrdersUpdatePlan)
+            assert len(order_plan.order_actions) == 20
+            cancel_actions = [
+                a for a in order_plan.order_actions
+                if isinstance(a, market_making_trading.CancelOrderAction)
+            ]
+            buy_actions = [
+                a for a in order_plan.order_actions
+                if isinstance(a, market_making_trading.CreateOrderAction)
+                   and a.order_data.side == trading_enums.TradeOrderSide.BUY
+            ]
+            sell_actions = [
+                a for a in order_plan.order_actions
+                if isinstance(a, market_making_trading.CreateOrderAction)
+                   and a.order_data.side == trading_enums.TradeOrderSide.SELL
+            ]
+            assert len(cancel_actions) == 10
+            assert len(buy_actions) == len(sell_actions) == 5
+            assert order_plan.cancelled == False
+            assert order_plan.cancellable == False # full replace is not cancellable
+            assert not order_plan.processed.is_set()
+            assert order_plan.trigger_source == trigger_source
+
+            # wait for orders to be created
+            for _ in range(len(order_plan.order_actions)):
+                await asyncio_tools.wait_asyncio_next_cycle()
+
+            # ensure orders are properly created
+            open_orders = exchange_manager.exchange_personal_data.orders_manager.get_open_orders(symbol)
+            assert len(open_orders) == 10
+            assert sorted([f"{o.origin_price}{o.side.value}" for o in open_orders]) == sorted([
+                f"{a.order_data.price}{a.order_data.side.value}" for a in order_plan.order_actions
+                if isinstance(a, market_making_trading.CreateOrderAction)
+            ])
+            _get_reference_price_mock.reset_mock()
+            submit_trading_evaluation_mock.reset_mock()
 
 
 async def test_handle_market_making_orders_missing_funds_for_buy_orders():
@@ -207,7 +255,7 @@ async def test_handle_market_making_orders_missing_funds_for_buy_orders():
         ) as _get_daily_volume_mock:
             trigger_source = "ref_price"
             # 1. full replace as no order exist
-            assert await producer._handle_market_making_orders(price, SYMBOL_MARKET, trigger_source) is True
+            assert await producer._handle_market_making_orders(price, SYMBOL_MARKET, trigger_source, False) is True
             _get_reference_price_mock.assert_called_once()
             _get_daily_volume_mock.assert_called_once()
             submit_trading_evaluation_mock.assert_called_once()
@@ -241,7 +289,7 @@ async def test_handle_market_making_orders_missing_funds_for_buy_orders():
             submit_trading_evaluation_mock.reset_mock()
 
             # 2. receive an update but orders are already in place: nothing to do
-            assert await producer._handle_market_making_orders(price, SYMBOL_MARKET, trigger_source) is True
+            assert await producer._handle_market_making_orders(price, SYMBOL_MARKET, trigger_source, False) is True
             _get_reference_price_mock.assert_called_once()
             submit_trading_evaluation_mock.assert_not_called()
             _get_reference_price_mock.reset_mock()
@@ -249,7 +297,7 @@ async def test_handle_market_making_orders_missing_funds_for_buy_orders():
 
             # 3. an order got cancelled: recreate book
             await exchange_manager.trader.cancel_order(open_orders[0])
-            assert await producer._handle_market_making_orders(price, SYMBOL_MARKET, trigger_source) is True
+            assert await producer._handle_market_making_orders(price, SYMBOL_MARKET, trigger_source, False) is True
             _get_reference_price_mock.assert_called_once()
             submit_trading_evaluation_mock.assert_called_once()
             data = submit_trading_evaluation_mock.mock_calls[0].kwargs["data"]
