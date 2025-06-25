@@ -158,13 +158,6 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
                   "is filled. This can generate extra profits on quick market moves.",
         )
         self.UI.user_input(
-            self.CONFIG_USE_FIXED_VOLUMES_FOR_MIRROR_ORDERS, commons_enums.UserInputTypes.BOOLEAN,
-            default_config[self.CONFIG_USE_FIXED_VOLUMES_FOR_MIRROR_ORDERS], inputs,
-            parent_input_name=self.CONFIG_PAIR_SETTINGS,
-            title="Fixed volume on mirror orders: when checked, sell and buy orders volume settings will be used for "
-                  "mirror orders. WARNING: incompatible with 'Ignore exchange fees'.",
-        )
-        self.UI.user_input(
             self.CONFIG_USE_EXISTING_ORDERS_ONLY, commons_enums.UserInputTypes.BOOLEAN,
             default_config[self.CONFIG_USE_EXISTING_ORDERS_ONLY], inputs,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
@@ -228,9 +221,8 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
           cls.CONFIG_STARTING_PRICE: 0,
           cls.CONFIG_BUY_VOLUME_PER_ORDER: 0,
           cls.CONFIG_SELL_VOLUME_PER_ORDER: 0,
-          cls.CONFIG_IGNORE_EXCHANGE_FEES: False,
+          cls.CONFIG_IGNORE_EXCHANGE_FEES: True,
           cls.CONFIG_MIRROR_ORDER_DELAY: 0,
-          cls.CONFIG_USE_FIXED_VOLUMES_FOR_MIRROR_ORDERS: False,
           cls.CONFIG_USE_EXISTING_ORDERS_ONLY: False,
           cls.CONFIG_ALLOW_FUNDS_REDISPATCH: False,
           cls.CONFIG_ENABLE_TRAILING_UP: enable_trailing_up or False,
@@ -322,15 +314,8 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
                                                                                        self.buy_volume_per_order)))
         self.limit_orders_count_if_necessary = \
             self.symbol_trading_config.get(self.trading_mode.LIMIT_ORDERS_IF_NECESSARY, True)
-        # tmp: ensure "reinvest_profits" legacy param still works
-        self.ignore_exchange_fees = self.symbol_trading_config.get("reinvest_profits", self.ignore_exchange_fees)
-        # end tmp
         self.ignore_exchange_fees = self.symbol_trading_config.get(self.trading_mode.CONFIG_IGNORE_EXCHANGE_FEES,
                                                                    self.ignore_exchange_fees)
-        self.use_fixed_volume_for_mirror_orders = self.symbol_trading_config.get(
-            self.trading_mode.CONFIG_USE_FIXED_VOLUMES_FOR_MIRROR_ORDERS,
-            self.use_fixed_volume_for_mirror_orders
-        )
         self.use_existing_orders_only = self.symbol_trading_config.get(self.trading_mode.CONFIG_USE_EXISTING_ORDERS_ONLY,
                                                                        self.use_existing_orders_only)
         self.mirror_order_delay = self.symbol_trading_config.get(self.trading_mode.CONFIG_MIRROR_ORDER_DELAY,
