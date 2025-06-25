@@ -69,17 +69,17 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
             default_config[self.CONFIG_FLAT_SPREAD], inputs,
             min_val=0, other_schema_values={"exclusiveMinimum": True},
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
-            title="Spread: price difference between the closest buy and sell orders in the quote currency "
-                  "(USDT for BTC/USDT).",
+            title="Spread: price difference between the closest buy and sell orders. Denominated in the quote currency "
+                  "(600 for a 600 USDT spread on BTC/USDT).",
         )
         self.UI.user_input(
             self.CONFIG_FLAT_INCREMENT, commons_enums.UserInputTypes.FLOAT,
             default_config[self.CONFIG_FLAT_INCREMENT], inputs,
             min_val=0, other_schema_values={"exclusiveMinimum": True},
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
-            title="Increment: price difference between two orders of the same side in the quote currency (USDT for "
-                  "BTC/USDT). WARNING: this should be lower than the Spread value: profitability is close to "
-                  "Spread-Increment.",
+            title="Increment: price difference between two orders of the same side. Denominated in the quote currency "
+                  "(200 for a 200 USDT spread on BTC/USDT). "
+                  "WARNING: this should be lower than the Spread value: profitability is close to Spread-Increment.",
         )
         self.UI.user_input(
             self.CONFIG_BUY_ORDERS_COUNT, commons_enums.UserInputTypes.INT,
@@ -102,18 +102,20 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
             default_config[self.CONFIG_BUY_FUNDS], inputs,
             min_val=0,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
-            title="[Optional] Total buy funds: total funds to use for buy orders creation (in quote currency: USDT "
-                  "for BTC/USDT). Set 0 to use all available funds in portfolio. Allows to use the same currency "
-                  "simultaneously in multiple traded pairs.",
+            title="[Optional] Total buy funds: total funds to use for buy orders creation. "
+                  "Denominated in quote currency: enter 1000 to create a grid on BTC/USDT using up to a total of 1000 "
+                  "USDT in its buy orders. Set 0 to use all available funds in portfolio. "
+                  "A value is required to use the same currency simultaneously in multiple traded pairs.",
         )
         self.UI.user_input(
             self.CONFIG_SELL_FUNDS, commons_enums.UserInputTypes.FLOAT,
             default_config[self.CONFIG_SELL_FUNDS], inputs,
             min_val=0,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
-            title="[Optional] Total sell funds: total funds to use for sell orders creation (in base currency: "
-                  "BTC for BTC/USDT). Set 0 to use all available funds in portfolio. Allows to use the same "
-                  "currency simultaneously in multiple traded pairs.",
+            title="[Optional] Total sell funds: total funds to use for sell orders creation. "
+                  "Denominated in base currency: enter 0.01 to create a grid on BTC/USDT using up to a total of 0.01 "
+                  "BTC in its sell orders. Set 0 to use all available funds in portfolio. "
+                  "A value is required to use the same currency simultaneously in multiple traded pairs.",
         )
         self.UI.user_input(
             self.CONFIG_STARTING_PRICE, commons_enums.UserInputTypes.FLOAT,
@@ -129,7 +131,7 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
             min_val=0,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="[Optional] Buy orders volume: volume of each buy order in base currency. Set 0 to use all "
-                  "available funds in portfolio (or total buy funds if set) to create orders with constant "
+                  "available funds in portfolio (or total buy funds if set) and create orders with constant "
                   "total order cost (price * volume).",
         )
         self.UI.user_input(
@@ -138,7 +140,7 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
             min_val=0,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="[Optional] Sell orders volume: volume of each sell order in base currency. Set 0 to use all "
-                  "available funds in portfolio (or total sell funds if set) to create orders with constant "
+                  "available funds in portfolio (or total sell funds if set) and create orders with constant "
                   "total order cost (price * volume).",
         )
         self.UI.user_input(
@@ -196,12 +198,11 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
             default_config[self.CONFIG_FUNDS_REDISPATCH_INTERVAL], inputs,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="Auto-dispatch interval: hours between each funds redispatch check.",
-            # dependency disabled: conditional display is not working properly
-            # editor_options={
-            #     commons_enums.UserInputOtherSchemaValuesTypes.DEPENDENCIES.value: {
-            #       self.CONFIG_ALLOW_FUNDS_REDISPATCH: True
-            #     }
-            # }
+            editor_options={
+                commons_enums.UserInputOtherSchemaValuesTypes.DEPENDENCIES.value: {
+                  self.CONFIG_ALLOW_FUNDS_REDISPATCH: True
+                }
+            }
         )
 
     @classmethod

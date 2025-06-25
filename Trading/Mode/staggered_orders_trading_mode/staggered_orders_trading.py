@@ -158,7 +158,8 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
             min_val=0, other_schema_values={"exclusiveMinimum": True},
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="Spread: price difference between buy and sell orders: percent of the current price to use as "
-                  "spread (difference between highest buy and lowest sell).",
+                  "spread (difference between highest buy and lowest sell). "
+                  "Example: enter 10 to use 10% of the current price as spread.",
         )
         self.UI.user_input(
             self.CONFIG_INCREMENT_PERCENT, commons_enums.UserInputTypes.FLOAT,
@@ -166,7 +167,8 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
             min_val=0, other_schema_values={"exclusiveMinimum": True},
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="Increment: price difference between grid orders: percent of the current price to use as increment "
-                  "between orders. WARNING: this should be lower than the Spread value: profitability is close to "
+                  "between orders. Example: enter 3 to use 3% of the current price as increment. "
+                  "WARNING: this should be lower than the Spread value: profitability is close to "
                   "Spread-Increment.",
         )
         self.UI.user_input(
@@ -174,13 +176,15 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
             min_val=0, other_schema_values={"exclusiveMinimum": True},
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="Lower bound: lower limit of the grid: minimum price to start placing buy orders from: lower "
-                  "limit of the grid.",
+                  "limit of the grid. "
+                  "Example: a lower bound of 0.2 will create a grid covering a price down to 0.2."
         )
         self.UI.user_input(
             self.CONFIG_UPPER_BOUND, commons_enums.UserInputTypes.FLOAT, 0.005, inputs,
             min_val=0, other_schema_values={"exclusiveMinimum": True},
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
-            title="Upper bound: upper limit of the grid: maximum price to stop placing sell orders from.",
+            title="Upper bound: upper limit of the grid: maximum price to stop placing sell orders. "
+                  "Example: an upper bound of 1000 will create a grid covering up to a price for 1000.",
         )
         self.UI.user_input(
             self.CONFIG_OPERATIONAL_DEPTH, commons_enums.UserInputTypes.INT, 50, inputs,
