@@ -126,7 +126,6 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
     CONFIG_BUY_VOLUME_PER_ORDER = "buy_volume_per_order"
     CONFIG_IGNORE_EXCHANGE_FEES = "ignore_exchange_fees"
     ENABLE_UPWARDS_PRICE_FOLLOW = "enable_upwards_price_follow"
-    CONFIG_USE_FIXED_VOLUMES_FOR_MIRROR_ORDERS = "use_fixed_volume_for_mirror_orders"
     CONFIG_DEFAULT_SPREAD_PERCENT = 1.5
     CONFIG_DEFAULT_INCREMENT_PERCENT = 0.5
     REQUIRE_TRADES_HISTORY = True   # set True when this trading mode needs the trade history to operate
@@ -159,7 +158,8 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
             min_val=0, other_schema_values={"exclusiveMinimum": True},
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="Spread: price difference between buy and sell orders: percent of the current price to use as "
-                  "spread (difference between highest buy and lowest sell).",
+                  "spread (difference between highest buy and lowest sell). "
+                  "Example: enter 10 to use 10% of the current price as spread.",
         )
         self.UI.user_input(
             self.CONFIG_INCREMENT_PERCENT, commons_enums.UserInputTypes.FLOAT,
@@ -167,7 +167,8 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
             min_val=0, other_schema_values={"exclusiveMinimum": True},
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="Increment: price difference between grid orders: percent of the current price to use as increment "
-                  "between orders. WARNING: this should be lower than the Spread value: profitability is close to "
+                  "between orders. Example: enter 3 to use 3% of the current price as increment. "
+                  "WARNING: this should be lower than the Spread value: profitability is close to "
                   "Spread-Increment.",
         )
         self.UI.user_input(
@@ -175,13 +176,15 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
             min_val=0, other_schema_values={"exclusiveMinimum": True},
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="Lower bound: lower limit of the grid: minimum price to start placing buy orders from: lower "
-                  "limit of the grid.",
+                  "limit of the grid. "
+                  "Example: a lower bound of 0.2 will create a grid covering a price down to 0.2."
         )
         self.UI.user_input(
             self.CONFIG_UPPER_BOUND, commons_enums.UserInputTypes.FLOAT, 0.005, inputs,
             min_val=0, other_schema_values={"exclusiveMinimum": True},
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
-            title="Upper bound: upper limit of the grid: maximum price to stop placing sell orders from.",
+            title="Upper bound: upper limit of the grid: maximum price to stop placing sell orders. "
+                  "Example: an upper bound of 1000 will create a grid covering up to a price for 1000.",
         )
         self.UI.user_input(
             self.CONFIG_OPERATIONAL_DEPTH, commons_enums.UserInputTypes.INT, 50, inputs,
@@ -197,7 +200,7 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
                   "is filled. This can generate extra profits on quick market moves.",
         )
         self.UI.user_input(
-            self.CONFIG_IGNORE_EXCHANGE_FEES, commons_enums.UserInputTypes.BOOLEAN, False, inputs,
+            self.CONFIG_IGNORE_EXCHANGE_FEES, commons_enums.UserInputTypes.BOOLEAN, True, inputs,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
             title="Ignore exchange fees: when checked, exchange fees won't be considered when creating mirror orders. "
                   "When unchecked, a part of the total volume will be reduced to take exchange "
@@ -548,8 +551,8 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         # staggered orders strategy parameters
         self.symbol_trading_config = None
 
-        self.use_existing_orders_only = self.limit_orders_count_if_necessary = \
-            self.ignore_exchange_fees = self.use_fixed_volume_for_mirror_orders = False
+        self.use_existing_orders_only = self.limit_orders_count_if_necessary = False
+        self.ignore_exchange_fees = True
         self.enable_upwards_price_follow = True
         self.mode = self.spread \
             = self.increment = self.operational_depth \
@@ -625,9 +628,6 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                                                                             self.buy_funds)))
         self.sell_funds = decimal.Decimal(str(self.symbol_trading_config.get(self.trading_mode.CONFIG_SELL_FUNDS,
                                                                              self.sell_funds)))
-        # tmp: ensure "reinvest_profits" legacy param still works
-        self.ignore_exchange_fees = self.symbol_trading_config.get("reinvest_profits", self.ignore_exchange_fees)
-        # end tmp
         self.ignore_exchange_fees = self.symbol_trading_config.get(self.trading_mode.CONFIG_IGNORE_EXCHANGE_FEES,
                                                                    self.ignore_exchange_fees)
         self.enable_upwards_price_follow = self.symbol_trading_config.get(
@@ -823,7 +823,22 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         filled_volume = decimal.Decimal(str(filled_order[trading_enums.ExchangeConstantsOrderColumns.FILLED.value]))
         fee = filled_order[trading_enums.ExchangeConstantsOrderColumns.FEE.value]
         volume = self._compute_mirror_order_volume(now_selling, filled_price, price, filled_volume, fee)
-        return OrderData(new_side, volume, price, self.symbol, False, associated_entry_id)
+        checked_volume = self._get_available_funds_confirmed_order_volume(now_selling, price, volume)
+        return OrderData(new_side, checked_volume, price, self.symbol, False, associated_entry_id)
+
+    def _get_available_funds_confirmed_order_volume(self, selling, price, volume):
+        parsed_symbol = symbol_util.parse_symbol(self.symbol)
+        try:
+            if selling:
+                available_funds = trading_api.get_portfolio_currency(self.exchange_manager, parsed_symbol.base).available
+                return min(available_funds, volume)
+            else:
+                available_funds = trading_api.get_portfolio_currency(self.exchange_manager, parsed_symbol.quote).available
+                required_cost = price * volume
+                return min(available_funds, required_cost) / price
+        except decimal.DecimalException as err:
+            self.logger.exception(err, True, f"Error when checking mirror order volume: {err}")
+        return volume
 
     def _compute_mirror_order_volume(self, now_selling, filled_price, target_price, filled_volume, paid_fees: dict):
         # use target volumes if set
@@ -1640,6 +1655,10 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             quantity = self._get_quantity_from_existing_orders(
                 price, sorted_orders, selling
             )
+            if quantity:
+                # quantity is from currently open orders: use it as is
+                return quantity
+        # quantity is not in open orders: infer it
         if not quantity:
             quantity = self._get_quantity_from_recent_trades(
                 price, limiting_amount_from_this_order, recent_trades, current_price, selling
@@ -1669,13 +1688,18 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             return None
         # always ensure ideal quantity is available
         limiting_currency_quantity = quantity
-        if limiting_currency_quantity > limiting_amount_from_this_order or \
-                limiting_currency_quantity > order_limiting_currency_available_amount:
-            return min(
+        limiting_cost = limiting_currency_quantity if selling else limiting_currency_quantity * price
+        if limiting_cost > limiting_amount_from_this_order or \
+                limiting_cost > order_limiting_currency_available_amount:
+            limiting_cost = min(
                 limiting_amount_from_this_order,
                 order_limiting_currency_available_amount
             )
-        return limiting_currency_quantity
+        try:
+            return limiting_cost if selling else limiting_cost / price
+        except decimal.DecimalException as err:
+            self.logger.exception(err, True, f"Error when computing missing order quantity: {err}")
+            return limiting_currency_quantity
 
     def _get_quantity_from_existing_orders(self, price, sorted_orders, selling):
         increment_window = self.flat_increment / 4

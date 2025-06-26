@@ -1154,7 +1154,7 @@ async def test_compute_mirror_order_volume():
         producer, _, exchange_manager = tools
         # no ignore_exchange_fees
         # no fixed volumes
-        producer.ignore_exchange_fees = producer.use_fixed_volume_for_mirror_orders = False
+        producer.ignore_exchange_fees = False
         # 1% max fees
         producer.max_fees = decimal.Decimal("0.01")
         # take exchange fees into account
@@ -1786,10 +1786,11 @@ async def test_order_notification_callback():
             _lock_portfolio_and_create_order_when_possible.assert_called_once()
 
 
-async def test_create_mirror_order():
+async def test_create_mirror_order_considering_exchange_fees():
     symbol = "BTC/USD"
     async with _get_tools(symbol) as tools:
         producer, _, exchange_manager = tools
+        producer.ignore_exchange_fees = False
         # create orders
         price = 100
         producer.mode = staggered_orders_trading.StrategyModes.NEUTRAL
@@ -1813,7 +1814,7 @@ async def test_create_mirror_order():
         assert buy_1_mirror_order.side == trading_enums.TradeOrderSide.SELL
         assert buy_1_mirror_order.symbol == symbol
         assert buy_1_mirror_order.price == decimal.Decimal("99") == buy_1.origin_price + buy_sell_increment
-        assert buy_1_mirror_order.quantity < buy_1.origin_quantity
+        assert buy_1_mirror_order.quantity < buy_1.origin_quantity  # adapted for exchange fees
         assert buy_1_mirror_order.quantity == decimal.Decimal('0.4595400')
 
         # mirroring sell order
@@ -1861,6 +1862,69 @@ async def test_create_mirror_order():
         # new buy order quantity is larger than previous one as sell order was filled at a higher price
         assert sell_2_mirror_order.quantity > sell_1_mirror_order.quantity
         assert sell_2_mirror_order.quantity == decimal.Decimal('0.005055854530099009900990099009')
+
+
+async def test_create_mirror_order_ignoring_exchange_fees():
+    symbol = "BTC/USD"
+    async with _get_tools(symbol) as tools:
+        producer, _, exchange_manager = tools
+        producer.ignore_exchange_fees = True
+        # create orders
+        price = 100
+        producer.mode = staggered_orders_trading.StrategyModes.NEUTRAL
+        trading_api.force_set_mark_price(exchange_manager, producer.symbol, price)
+        await producer._ensure_staggered_orders()
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, producer.operational_depth))
+
+        open_orders = exchange_manager.exchange_personal_data.orders_manager.get_open_orders()
+        buy_orders = [order for order in open_orders if order.side == trading_enums.TradeOrderSide.BUY]
+        sell_orders = [order for order in open_orders if order.side == trading_enums.TradeOrderSide.SELL]
+        buy_sell_increment = producer.flat_spread - producer.flat_increment
+
+        # mirroring buy order with enough remaining funds in portfolio to keep the same quantity
+        buy_1 = buy_orders[0]
+        assert buy_1.origin_price == decimal.Decimal("97")
+        assert buy_1.origin_quantity == decimal.Decimal("0.46")
+        assert buy_1.side == trading_enums.TradeOrderSide.BUY
+        buy_1_mirror_order = producer._create_mirror_order(buy_1.to_dict())
+        assert isinstance(buy_1_mirror_order, staggered_orders_trading.OrderData)
+        assert buy_1_mirror_order.associated_entry_id == buy_1.order_id
+        assert buy_1_mirror_order.side == trading_enums.TradeOrderSide.SELL
+        assert buy_1_mirror_order.symbol == symbol
+        assert buy_1_mirror_order.price == decimal.Decimal("99") == buy_1.origin_price + buy_sell_increment
+        assert buy_1_mirror_order.quantity == buy_1.origin_quantity  # NOT adapted for exchange fees
+        assert buy_1_mirror_order.quantity == decimal.Decimal('0.46')
+
+        # mirroring buy order WITHOUT enough remaining funds in portfolio to keep the same quantity:
+        # => sell order adapted to available funds
+        buy_1 = buy_orders[0]
+        assert buy_1.origin_price == decimal.Decimal("97")
+        assert buy_1.origin_quantity == decimal.Decimal("0.46")
+        assert buy_1.side == trading_enums.TradeOrderSide.BUY
+        exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio["BTC"].available = decimal.Decimal("0.3")
+        buy_1_mirror_order = producer._create_mirror_order(buy_1.to_dict())
+        assert isinstance(buy_1_mirror_order, staggered_orders_trading.OrderData)
+        assert buy_1_mirror_order.associated_entry_id == buy_1.order_id
+        assert buy_1_mirror_order.side == trading_enums.TradeOrderSide.SELL
+        assert buy_1_mirror_order.symbol == symbol
+        assert buy_1_mirror_order.price == decimal.Decimal("99") == buy_1.origin_price + buy_sell_increment
+        assert buy_1_mirror_order.quantity < buy_1.origin_quantity  # adapted for available funds
+        assert buy_1_mirror_order.quantity == decimal.Decimal('0.3')    # equals to available funds
+
+        # => buy order adapted to available funds
+        sell_1 = sell_orders[0]
+        assert sell_1.origin_price == decimal.Decimal("103")
+        assert sell_1.origin_quantity == decimal.Decimal('0.00464646') # cost ~= 0.04
+        assert sell_1.side == trading_enums.TradeOrderSide.SELL
+        exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio["USD"].available = decimal.Decimal("0.33")
+        sell_1_mirror_order = producer._create_mirror_order(sell_1.to_dict())
+        assert isinstance(sell_1_mirror_order, staggered_orders_trading.OrderData)
+        assert sell_1_mirror_order.associated_entry_id is None
+        assert sell_1_mirror_order.side == trading_enums.TradeOrderSide.BUY
+        assert sell_1_mirror_order.symbol == symbol
+        assert sell_1_mirror_order.price == decimal.Decimal("101") == sell_1.origin_price - buy_sell_increment
+        assert sell_1_mirror_order.quantity < sell_1.origin_quantity
+        assert sell_1_mirror_order.quantity == decimal.Decimal('0.003267326732673267326732673267')  # adapted to available USDT
 
 
 async def _wait_for_orders_creation(orders_count=1):
