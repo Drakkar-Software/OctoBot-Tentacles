@@ -586,14 +586,16 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
             symbol=self.symbol,
             timeout=self.PRICE_FETCHING_TIMEOUT
         )
-        return await self.create_state(current_price, symbol_market, trigger_source)
+        return await self.create_state(current_price, symbol_market, trigger_source, False)
 
-    async def create_state(self, current_price, symbol_market, trigger_source: str):
+    async def create_state(self, current_price, symbol_market, trigger_source: str, force_full_refresh: bool):
         if current_price is not None:
             async with self.trading_mode_trigger(skip_health_check=True):
                 if self.exchange_manager.trader.is_enabled:
                     try:
-                        if await self._handle_market_making_orders(current_price, symbol_market, trigger_source):
+                        if await self._handle_market_making_orders(
+                            current_price, symbol_market, trigger_source, force_full_refresh
+                        ):
                             self.is_first_execution = False
                             self._started_at = self.exchange_manager.exchange.get_exchange_current_time()
                             return True
@@ -617,7 +619,9 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
                         return True
         return False
 
-    async def _handle_market_making_orders(self, current_price, symbol_market, trigger_source: str):
+    async def _handle_market_making_orders(
+        self, current_price, symbol_market, trigger_source: str, force_full_refresh: bool
+    ):
         # 1. get price from external source
         reference_price = await self._get_reference_price()
         if not reference_price:
@@ -756,6 +760,8 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
         cancelled_orders = created_orders = []
         missing_all_orders_sides = []
         try:
+            if force_full_refresh:
+                raise order_book_distribution.FullBookRebalanceRequired("Forced full refresh")
             book_orders_after_swaps, cancelled_orders, created_orders = (
                 self._get_swapped_book_orders(
                     sorted_orders, outdated_orders, available_base, available_quote, reference_price,
