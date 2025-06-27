@@ -240,6 +240,17 @@ class hollaexConnector(exchanges.CCXTConnector):
         }
 
     @classmethod
+    def _get_default_fee_symbol(cls, exchange: str):
+        try:
+            exchange_fees = _EXCHANGE_FEE_TIERS_BY_EXCHANGE_NAME[exchange]
+            first_fee_tier = next(iter(exchange_fees.values()))
+            return next(iter(first_fee_tier))
+        except (StopIteration, KeyError) as err:
+            raise errors.MissingFeeDetailsError(
+                f"No available {exchange} fee details {err} ({err.__class__.__name__})"
+            ) from err
+
+    @classmethod
     def _get_fetched_fees(cls, exchange: str, tier_to_use: FeeTiers, symbol: str):
         try:
             exchange_fees = _EXCHANGE_FEE_TIERS_BY_EXCHANGE_NAME[exchange]
@@ -248,9 +259,18 @@ class hollaexConnector(exchanges.CCXTConnector):
         try:
             return exchange_fees[tier_to_use.value][symbol]
         except KeyError as err:
-            if tier_to_use.value not in exchange_fees and (
-                FeeTiers.BASIC.value in tier_to_use.value and symbol in exchange_fees[FeeTiers.BASIC.value]
-            ):
+            if symbol not in exchange_fees[FeeTiers.BASIC.value]:
+                default_fee_symbol = cls._get_default_fee_symbol(exchange)
+                if symbol == default_fee_symbol:
+                    raise errors.MissingFeeDetailsError(
+                        f"No available {exchange} {tier_to_use.name} {symbol} fee details"
+                    ) from err
+                logging.get_logger(cls.__name__).error(
+                    f"No {symbol} fee tier info on {exchange}: using {default_fee_symbol} fees as default value"
+                )
+                return cls._get_fetched_fees(exchange, tier_to_use, default_fee_symbol)
+            if tier_to_use.value not in exchange_fees and FeeTiers.BASIC.value in tier_to_use.value:
+                # symbol is in exchange_fees[FeeTiers.BASIC.value] or previous condition would have triggered
                 logging.get_logger(cls.__name__).info(
                     f"Falling back on {FeeTiers.BASIC.name} fee tier for {exchange}: no {tier_to_use.name} value"
                 )
