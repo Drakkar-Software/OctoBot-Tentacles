@@ -25,6 +25,7 @@ import octobot_trading.exchanges as exchanges
 import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
 import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
 import octobot_trading.exchanges.connectors.ccxt.ccxt_connector as ccxt_connector
+import octobot_trading.exchanges.connectors.ccxt.ccxt_client_util as ccxt_client_util
 import octobot_trading.personal_data.orders.order_util as order_util
 import octobot_commons.enums as commons_enums
 import octobot_commons.constants as commons_constants
@@ -41,6 +42,7 @@ DEFAULT_TAKER_FEE_VALUE = 0.012  # 1.2%: base Coinbase taker fees tier
 DEFAULT_MAKER_FEE_VALUE = 0.006  # 0.6%: base Coinbase maker fees tier
 # disabled by default
 FORCE_COINBASE_BASE_FEES = os_util.parse_boolean_environment_var("FORCE_COINBASE_BASE_FEES", "false")
+_MAX_CURSOR_ITERATIONS = 10
 
 
 def _refresh_alias_symbols(client):
@@ -161,6 +163,54 @@ class CoinbaseConnector(ccxt_connector.CCXTConnector):
         return await super()._edit_order_by_cancel_and_create(
             exchange_order_id, symbol, order_type, side, quantity, price, params
         )
+
+
+    @ccxt_client_util.converted_ccxt_common_errors
+    async def get_balance(self, **kwargs: dict):
+        """
+        Local override to handle pagination of coinbase's max of 250 assets per request
+        fetch balance (free + used) by currency
+        :return: balance dict
+        """
+        if not kwargs:
+            kwargs = {}
+        with self.error_describer():
+            results = await self._paginated_request(self.client.fetch_balance, params=kwargs)
+            merged_balances = {}
+            for result in results:
+                merged_balances.update(result)
+            return self.adapter.adapt_balance(merged_balances)
+
+    @_coinbase_retrier
+    async def _paginated_request(self, func, *args, **kwargs):
+        results = [await func(*args, **kwargs)]
+        if "params" not in kwargs:
+            kwargs["params"] = {}
+        next_cursor = ""
+        i = 0
+        for i in range(_MAX_CURSOR_ITERATIONS):
+            if next_cursor := self._get_next_cursor(results[-1], func.__name__):
+                self.logger.info(f"Large portfolio fetch in progress: request [{i}] processing ...")
+                kwargs["params"]["cursor"] = next_cursor
+                results.append(await func(*args, **kwargs))
+            else:
+                break
+        if next_cursor:
+            self.logger.error(
+                f"Not all {self.exchange_manager.exchange_name} {func.__name__} was fetched after [{i + 1}] "
+                f"iterations. This is unexpected."
+            )
+        return results
+
+    def _get_next_cursor(self, response: dict, func_name: str) -> str:
+        try:
+            return response[ccxt_constants.CCXT_INFO]["cursor"]
+        except KeyError:
+            self.logger.error(
+                f"Unexpected missing cursor key in {self.exchange_manager.exchange_name} {func_name} response info, "
+                f"available keys: {list(response[ccxt_constants.CCXT_INFO])}"
+            )
+        return ""
 
 
 class Coinbase(exchanges.RestExchange):
@@ -353,7 +403,6 @@ class Coinbase(exchanges.RestExchange):
         # override for retrier
         return await super().cancel_order(exchange_order_id, symbol, order_type, **kwargs)
 
-    @_coinbase_retrier
     async def get_balance(self, **kwargs: dict):
         if "v3" not in kwargs:
             # use v3 to get free and total amounts (default is only returning free amounts)
