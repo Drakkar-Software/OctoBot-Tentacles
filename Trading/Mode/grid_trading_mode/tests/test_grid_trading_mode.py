@@ -35,6 +35,7 @@ import octobot_trading.enums as trading_enums
 import octobot_trading.personal_data as trading_personal_data
 import octobot_trading.constants as trading_constants
 import tentacles.Trading.Mode.grid_trading_mode.grid_trading as grid_trading
+import tentacles.Trading.Mode.grid_trading_mode.tests.open_orders_data as open_orders_data
 import tentacles.Trading.Mode.staggered_orders_trading_mode.staggered_orders_trading as staggered_orders_trading
 import tests.test_utils.config as test_utils_config
 import tests.test_utils.memory_check_util as memory_check_util
@@ -1821,6 +1822,44 @@ async def test_start_after_offline_only_sell_orders_remaining():
         # did not replace orders: replace should not happen
         new_orders = copy.copy(trading_api.get_open_orders(exchange_manager))
         assert sorted(new_orders, key=lambda x: x.origin_price)[-1] is sorted(open_orders, key=lambda x: x.origin_price)[-1]
+
+
+async def test_start_after_offline_no_missing_order():
+    symbol = "SOL/USDT"
+    async with _get_tools(symbol) as (producer, _, exchange_manager):
+        producer.buy_funds = trading_constants.ZERO
+        producer.sell_funds = trading_constants.ZERO
+        producer.flat_spread = decimal.Decimal('0.714792')
+        producer.flat_increment = decimal.Decimal('0.34310016')
+        producer.buy_orders_count = 25
+        producer.sell_orders_count = 25
+        producer.enable_trailing_up = True
+        producer.enable_trailing_down = False
+        producer.use_existing_orders_only = False
+        producer.funds_redispatch_interval = 24
+        producer.use_existing_orders_only = False
+        producer.ignore_exchange_fees = True
+
+        pre_portfolio_usdt = trading_api.get_portfolio_currency(exchange_manager, "USDT")
+        pre_portfolio_sol = trading_api.get_portfolio_currency(exchange_manager, "SOL")
+        pre_portfolio_usdt.total = decimal.Decimal("59.25023354")
+        pre_portfolio_usdt.available = pre_portfolio_usdt.total
+        pre_portfolio_sol.total = decimal.Decimal("0.397005")
+        pre_portfolio_sol.available = pre_portfolio_sol.total
+
+        price = 148.736
+        trading_api.force_set_mark_price(exchange_manager, producer.symbol, price)
+        open_orders = await open_orders_data.get_full_sol_usdt_open_orders(exchange_manager)
+        for order in open_orders:
+            await order.initialize()
+            await exchange_manager.exchange_personal_data.orders_manager.upsert_order_instance(order)
+
+        with mock.patch.object(producer, "_create_not_virtual_orders", mock.Mock()) as _create_not_virtual_orders_mock:
+
+            await producer._ensure_staggered_orders()
+            assert _create_not_virtual_orders_mock.call_count == 1
+            assert _create_not_virtual_orders_mock.mock_calls[0].args[0] == []
+            # should not find any missing order and should not trail
 
 
 async def test_trailing_up():

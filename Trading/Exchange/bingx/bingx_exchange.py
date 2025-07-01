@@ -18,7 +18,6 @@ import typing
 import octobot_trading.exchanges as exchanges
 import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
 import octobot_trading.exchanges.connectors.ccxt.ccxt_connector as ccxt_connector
-import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
 import octobot_trading.enums as trading_enums
 
 
