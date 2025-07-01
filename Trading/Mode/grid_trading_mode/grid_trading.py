@@ -539,6 +539,7 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         four = decimal.Decimal("4")
         increment_lower_bound = - self.flat_increment / four
         increment_higher_bound = self.flat_increment / four
+        filtered_out_orders = []
         for first_element_index in range(len(sorted_elements)):
             grid_trades_or_orders = []
             previous_element = None
@@ -554,9 +555,22 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
                         first_sided_element_price += self.flat_spread
                     delta_increment = (self.get_trade_or_order_price(trade_or_order) - first_sided_element_price) \
                         % self.flat_increment
-                    if increment_lower_bound < delta_increment < increment_higher_bound:
+                    if (
+                        # delta is between -25%*increment and 25%*increment
+                        increment_lower_bound < delta_increment < increment_higher_bound
+                    ) or (
+                        # delta is between 75%*increment and increment
+                        self.flat_increment - increment_higher_bound < delta_increment < self.flat_increment
+                    ):
                         grid_trades_or_orders.append(trade_or_order)
+                    else:
+                        filtered_out_orders.append(trade_or_order)
                 previous_element = trade_or_order
+            if filtered_out_orders:
+                self.logger.info(
+                    f"Filtered out {len(filtered_out_orders)} {self.symbol} non grid orders out of "
+                    f"{len(trades_or_orders)} [{self.exchange_manager.exchange_name}] orders"
+                )
             if len(grid_trades_or_orders) / len(sorted_elements) > 0.5:
                 # make sure that we did not miss every grid trade by basing computations on a non grid trade
                 # more than 50% match of grid trades: grid trades are found
