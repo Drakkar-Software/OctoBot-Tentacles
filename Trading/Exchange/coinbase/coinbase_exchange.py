@@ -342,9 +342,6 @@ class Coinbase(exchanges.RestExchange):
     async def get_account_id(self, **kwargs: dict) -> str:
         try:
             with self.connector.error_describer():
-                # warning might become deprecated
-                # https://docs.cloud.coinbase.com/sign-in-with-coinbase/docs/api-users
-                portfolio_id = None
                 accounts = await self.connector.client.fetch_accounts()
                 # use portfolio id when possible to enable "coinbase subaccounts" which are called "portfolios"
                 # note: oldest portfolio portfolio id == user id (from previous v2PrivateGetUser) when
@@ -373,6 +370,8 @@ class Coinbase(exchanges.RestExchange):
                 else:
                     portfolio_id = next(iter(portfolio_ids))
                 return portfolio_id
+        except ccxt.AuthenticationError:
+            raise
         except (ccxt.BaseError, octobot_trading.errors.OctoBotExchangeError) as err:
             self.logger.exception(
                 err, True,
