@@ -202,9 +202,9 @@ class Okx(exchanges.RestExchange):
         try:
             with self.connector.error_describer():
                 return accounts[0]["id"]
-        except IndexError:
+        except IndexError as err:
             # should never happen as at least one account should be available
-            return None
+            raise
 
     def get_max_orders_count(self, symbol: str, order_type: trading_enums.TraderOrderType) -> int:
         # unknown (05/06/2025)
