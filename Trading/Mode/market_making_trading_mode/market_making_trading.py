@@ -147,7 +147,7 @@ class MarketMakingTradingMode(trading_modes.AbstractTradingMode):
         )
 
     def get_current_state(self) -> (str, float):
-        order = self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders(self.symbol)
+        order = self.producers[0].get_market_making_orders() if self.producers else []
         bids = [o for o in order if o.side == trading_enums.TradeOrderSide.SELL]
         asks = [o for o in order if o.side == trading_enums.TradeOrderSide.BUY]
         if len(bids) > len(asks):
@@ -646,7 +646,7 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
             f"daily {quote} vol: {octobot_commons.pretty_printer.get_min_string_from_number(daily_quote_volume)} "
             f"[trigger source: {trigger_source}]"
         )
-        open_orders = self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders(self.symbol)
+        open_orders = self.get_market_making_orders()
         require_data_refresh = False
         if self.latest_actions_plan is not None and not self.latest_actions_plan.processed.is_set():
             # if previous plan is still processing but being cancelled: skip call (another one is waiting for cancel)
@@ -731,7 +731,7 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
                 )
                 return False
             # update open orders in case it changed after waiting
-            open_orders = self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders(self.symbol)
+            open_orders = self.get_market_making_orders()
 
         sorted_orders = self._sort_orders(open_orders)
         available_base, available_quote = self._get_available_funds()
@@ -1177,13 +1177,20 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
                 technically_available_base += order.origin_quantity - filled_quantity
         return technically_available_base, technically_available_quote
 
+    def get_market_making_orders(self):
+        return [
+            order
+            for order in self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders(
+                symbol=self.symbol
+            )
+            # exclude market and stop orders
+            if isinstance(order, (trading_personal_data.BuyLimitOrder, trading_personal_data.SellLimitOrder))
+        ]
 
     async def _on_reference_price_update(self):
         trigger = False
         if reference_price := await self._get_reference_price():
-            open_orders = self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders(
-                symbol=self.symbol
-            )
+            open_orders = self.get_market_making_orders()
             buy_orders = [
                 order
                 for order in open_orders

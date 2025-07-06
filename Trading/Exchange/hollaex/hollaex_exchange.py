@@ -28,6 +28,7 @@ import octobot_trading.constants as trading_constants
 import octobot_trading.exchanges as exchanges
 import octobot_trading.errors as errors
 import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
+import octobot_trading.exchanges.connectors.ccxt.ccxt_clients_cache as ccxt_clients_cache
 
 
 _EXCHANGE_FEE_TIERS_BY_EXCHANGE_NAME: dict[str, dict] = {}
@@ -77,9 +78,11 @@ class hollaexConnector(exchanges.CCXTConnector):
         await super().load_symbol_markets(reload=reload, market_filter=market_filter)
         # also refresh fee tiers when necessary
         if self.exchange_manager.exchange_name not in _REFRESHED_EXCHANGE_FEE_TIERS_BY_EXCHANGE_NAME:
-            await self._refresh_exchange_fee_tiers()
+            # always update fees cache using all markets to avoid market filter side effects from the current client
+            all_markets = ccxt_clients_cache.get_exchange_parsed_markets(ccxt_clients_cache.get_client_key(self.client))
+            await self._refresh_exchange_fee_tiers(all_markets)
 
-    async def _refresh_exchange_fee_tiers(self):
+    async def _refresh_exchange_fee_tiers(self, all_markets: list[dict]):
         self.logger.info(f"Refreshing {self.exchange_manager.exchange_name} fee tiers")
         response = await self.client.publicGetTiers()
         # similar to ccxt's fetch_trading_fees except that we parse all tiers
@@ -91,15 +94,26 @@ class hollaexConnector(exchanges.CCXTConnector):
             makerFees = self.client.safe_value(fees, 'maker', {})
             takerFees = self.client.safe_value(fees, 'taker', {})
             result: dict = {}
-            for symbol in self.client.symbols:
-                market = self.client.market(symbol)
-                makerString = self.client.safe_string(makerFees, market['id'])
-                takerString = self.client.safe_string(takerFees, market['id'])
+            for market in all_markets:
+                # get symbol, taker and maker fee for each traded pair identified by its id
+                symbol = market[trading_enums.ExchangeConstantsMarketStatusColumns.SYMBOL.value]
+                maker_string = self.client.safe_string(
+                    makerFees, market[trading_enums.ExchangeConstantsMarketStatusColumns.ID.value]
+                )
+                taker_string = self.client.safe_string(
+                    takerFees, market[trading_enums.ExchangeConstantsMarketStatusColumns.ID.value]
+                )
+                if not (maker_string and taker_string):
+                    self.logger.error(
+                        f"Missing fee details for {symbol} in fetched {self.exchange_manager.exchange_name} fees "
+                        f"(using {market[trading_enums.ExchangeConstantsMarketStatusColumns.ID.value]} as market id)"
+                    )
+                    continue
                 result[symbol] = {
                     trading_enums.ExchangeConstantsMarketPropertyColumns.MAKER.value:
-                        self.client.parse_number(ccxt.Precise.string_div(makerString, '100')),
+                        self.client.parse_number(ccxt.Precise.string_div(maker_string, '100')),
                     trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER.value:
-                        self.client.parse_number(ccxt.Precise.string_div(takerString, '100')),
+                        self.client.parse_number(ccxt.Precise.string_div(taker_string, '100')),
                     trading_enums.ExchangeConstantsMarketPropertyColumns.FEE_SIDE.value: market.get(
                         trading_enums.ExchangeConstantsMarketPropertyColumns.FEE_SIDE.value, DEFAULT_FEE_SIDE
                     )
@@ -117,7 +131,11 @@ class hollaexConnector(exchanges.CCXTConnector):
             tier: next(iter(fees.values())) if fees else None
             for tier, fees in fees_by_tier.items()
         }
-        self.logger.info(f"Refreshed {exchange_name} fee tiers: {sample}")
+        fee_pairs = list(fees_by_tier[next(iter(fees_by_tier))]) if fees_by_tier else []
+        self.logger.info(
+            f"Refreshed {exchange_name} fee tiers. Sample: {sample}. {len(sample)} tiers: {list(sample)} "
+            f"over {len(fee_pairs)} pairs: {fee_pairs}."
+        )
 
     @classmethod
     def simulator_connector_calculate_fees_factory(cls, exchange_name: str, tiers: FeeTiers):
