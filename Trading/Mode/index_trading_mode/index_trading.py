@@ -47,6 +47,7 @@ class RebalanceDetails(enum.Enum):
     REMOVE = "REMOVE"
     ADD = "ADD"
     SWAP = "SWAP"
+    FORCED_REBALANCE = "FORCED_REBALANCE"
 
 
 class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
@@ -180,6 +181,7 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             details[RebalanceDetails.SWAP.value]
             or details[RebalanceDetails.SELL_SOME.value]
             or details[RebalanceDetails.REMOVE.value]
+            or details[RebalanceDetails.FORCED_REBALANCE.value]
         ):
             added_coins = list(details[RebalanceDetails.ADD.value]) + list(details[RebalanceDetails.BUY_MORE.value])
             return [
@@ -325,11 +327,13 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
     REFRESH_INTERVAL = "refresh_interval"
     CANCEL_OPEN_ORDERS = "cancel_open_orders"
     REBALANCE_TRIGGER_MIN_PERCENT = "rebalance_trigger_min_percent"
+    QUOTE_ASSET_REBALANCE_TRIGGER_MIN_PERCENT = "quote_asset_rebalance_trigger_min_percent"
     SELL_UNINDEXED_TRADED_COINS = "sell_unindexed_traded_coins"
     INDEX_CONTENT = "index_content"
     MIN_INDEXED_COINS = 1
     ALLOWED_1_TO_1_SWAP_COUNTS = 1
     MIN_RATIO_TO_SELL = decimal.Decimal("0.0001")  # 1/10000
+    QUOTE_ASSET_TO_INDEXED_SWAP_RATIO_THRESHOLD = decimal.Decimal("0.1")  # 10%
 
     def __init__(self, channel, config, trading_mode, exchange_manager):
         super().__init__(channel, config, trading_mode, exchange_manager)
@@ -438,6 +442,7 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
             RebalanceDetails.REMOVE.value: {},
             RebalanceDetails.ADD.value: {},
             RebalanceDetails.SWAP.value: {},
+            RebalanceDetails.FORCED_REBALANCE.value: False,
         }
         should_rebalance = False
         # look for coins update in indexed_coins
@@ -470,13 +475,15 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
                         f"Ignoring {coin} holding: Can't sell {coin} as it is not in any trading pair"
                         f" but is not in index anymore. This is unexpected"
                     )
+        total_indexed_coins_ratio = trading_constants.ZERO
         # compute coins to buy or sell
-        for coin in self.trading_mode.indexed_coins:
+        for coin in set(self.trading_mode.indexed_coins):
+            target_ratio = self.trading_mode.get_target_ratio(coin)
             coin_ratio = self.exchange_manager.exchange_personal_data.portfolio_manager. \
                 portfolio_value_holder.get_holdings_ratio(
                     coin, traded_symbols_only=True
                 )
-            target_ratio = self.trading_mode.get_target_ratio(coin)
+            total_indexed_coins_ratio += coin_ratio
             beyond_ratio = True
             if coin_ratio == trading_constants.ZERO and target_ratio > trading_constants.ZERO:
                 # missing coin in portfolio
@@ -497,24 +504,84 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
                     f"{coin} is beyond the target ratio of {round(target_ratio * trading_constants.ONE_HUNDRED, 3)}%, "
                     f"ratio: {round(coin_ratio * trading_constants.ONE_HUNDRED, 3)}%. A rebalance is required."
                 )
-        self._resolve_swaps(rebalance_details)
-        for origin, target in rebalance_details[RebalanceDetails.SWAP.value].items():
-            origin_ratio = round(
-                rebalance_details[RebalanceDetails.REMOVE.value][origin] * trading_constants.ONE_HUNDRED,
-                3
-            )
-            target_ratio = round(
-                rebalance_details[RebalanceDetails.ADD.value].get(
-                    target,
-                    rebalance_details[RebalanceDetails.BUY_MORE.value].get(target, trading_constants.ZERO)
-                ) * trading_constants.ONE_HUNDRED,
-                3
-            ) or "???"
+        
+        non_indexed_quote_assets_ratio = self._get_non_indexed_quote_assets_ratio()
+        if self._should_rebalance_due_to_non_indexed_quote_assets_ratio(
+            non_indexed_quote_assets_ratio, rebalance_details
+        ):
+            rebalance_details[RebalanceDetails.FORCED_REBALANCE.value] = True
             self.logger.info(
-                f"Swapping {origin} (holding ratio: {origin_ratio}%) for {target} (to buy ratio: {target_ratio}%) "
-                f"on [{self.exchange_manager.exchange_name}]: ratios are similar enough to allow swapping."
+                f"Rebalancing due to a high non-indexed quote asset holdings ratio: "
+                f"{round(non_indexed_quote_assets_ratio * trading_constants.ONE_HUNDRED, 2)}%, quote rebalance "
+                f"threshold = {self.trading_mode.quote_asset_rebalance_ratio_threshold * trading_constants.ONE_HUNDRED}%"
             )
-        return should_rebalance, rebalance_details
+        if not rebalance_details[RebalanceDetails.FORCED_REBALANCE.value]:
+            self._resolve_swaps(rebalance_details)
+            for origin, target in rebalance_details[RebalanceDetails.SWAP.value].items():
+                origin_ratio = round(
+                    rebalance_details[RebalanceDetails.REMOVE.value][origin] * trading_constants.ONE_HUNDRED,
+                    3
+                )
+                target_ratio = round(
+                    rebalance_details[RebalanceDetails.ADD.value].get(
+                        target,
+                        rebalance_details[RebalanceDetails.BUY_MORE.value].get(target, trading_constants.ZERO)
+                    ) * trading_constants.ONE_HUNDRED,
+                    3
+                ) or "???"
+                self.logger.info(
+                    f"Swapping {origin} (holding ratio: {origin_ratio}%) for {target} (to buy ratio: {target_ratio}%) "
+                    f"on [{self.exchange_manager.exchange_name}]: ratios are similar enough to allow swapping."
+                )
+        return (should_rebalance or rebalance_details[RebalanceDetails.FORCED_REBALANCE.value]), rebalance_details
+
+    def _should_rebalance_due_to_non_indexed_quote_assets_ratio(self, non_indexed_quote_assets_ratio: decimal.Decimal, rebalance_details: dict) -> bool:
+        total_added_ratio = (
+            self._sum_ratios(rebalance_details, RebalanceDetails.ADD.value) 
+            + self._sum_ratios(rebalance_details, RebalanceDetails.BUY_MORE.value)
+        )
+        
+        if (
+            total_added_ratio * (trading_constants.ONE - self.QUOTE_ASSET_TO_INDEXED_SWAP_RATIO_THRESHOLD)
+            <= non_indexed_quote_assets_ratio
+            <= total_added_ratio * (trading_constants.ONE + self.QUOTE_ASSET_TO_INDEXED_SWAP_RATIO_THRESHOLD)
+        ):
+            total_removed_ratio = (
+                self._sum_ratios(rebalance_details, RebalanceDetails.REMOVE.value) 
+                + self._sum_ratios(rebalance_details, RebalanceDetails.SELL_SOME.value)
+            )
+            # added coins are equivalent to free quote assets: just buy with quote assets
+            if total_removed_ratio == trading_constants.ZERO:
+                return False
+        # there are removed coins or added ratio is not equivalent to free quote assets: rebalance if necessary
+        min_ratio = min(
+            min(
+                self.trading_mode.get_target_ratio(coin)
+                for coin in self.trading_mode.indexed_coins
+            ) if self.trading_mode.indexed_coins else self.trading_mode.quote_asset_rebalance_ratio_threshold,
+            self.trading_mode.quote_asset_rebalance_ratio_threshold
+        )
+        return non_indexed_quote_assets_ratio >= min_ratio
+
+    @staticmethod
+    def _sum_ratios(rebalance_details: dict, key: str) -> decimal.Decimal:
+        return decimal.Decimal(str(sum(
+            ratio
+            for ratio in rebalance_details[key].values()
+        ))) if rebalance_details[key] else trading_constants.ZERO 
+
+    def _get_non_indexed_quote_assets_ratio(self) -> decimal.Decimal:
+        return decimal.Decimal(str(sum(
+            self.exchange_manager.exchange_personal_data.portfolio_manager. \
+                portfolio_value_holder.get_holdings_ratio(
+                    quote, traded_symbols_only=True
+                )
+            for quote in set(
+                symbol.quote
+                for symbol in self.exchange_manager.exchange_config.traded_symbols
+                if symbol.quote not in self.trading_mode.indexed_coins
+            )
+        )))
 
     def _resolve_swaps(self, details: dict):
         removed = details[RebalanceDetails.REMOVE.value]
@@ -588,6 +655,7 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
         self.sell_unindexed_traded_coins = True
         self.cancel_open_orders = True
         self.total_ratio_per_asset = trading_constants.ZERO
+        self.quote_asset_rebalance_ratio_threshold = decimal.Decimal("0.1")  # 10%
         self.indexed_coins = []
 
     def init_user_inputs(self, inputs: dict) -> None:
@@ -609,6 +677,13 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
             min_val=0, max_val=100,
             title="Rebalance cap: maximum allowed percent holding of a coin beyond initial ratios before "
                   "triggering a rebalance.",
+        ))) / trading_constants.ONE_HUNDRED
+        self.quote_asset_rebalance_ratio_threshold = decimal.Decimal(str(self.UI.user_input(
+            IndexTradingModeProducer.QUOTE_ASSET_REBALANCE_TRIGGER_MIN_PERCENT, commons_enums.UserInputTypes.FLOAT,
+            float(self.quote_asset_rebalance_ratio_threshold * trading_constants.ONE_HUNDRED), inputs,
+            min_val=0, max_val=100,
+            title="Quote asset rebalance cap: maximum allowed percent holding of traded pairs' quote asset before "
+                  "triggering a rebalance. Useful to force a rebalance when adding quote asset to the portfolio",
         ))) / trading_constants.ONE_HUNDRED
         self.cancel_open_orders = float(self.UI.user_input(
             IndexTradingModeProducer.CANCEL_OPEN_ORDERS, commons_enums.UserInputTypes.BOOLEAN,
