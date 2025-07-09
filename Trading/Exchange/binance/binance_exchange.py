@@ -84,6 +84,8 @@ class Binance(exchanges.RestExchange):
     EXCHANGE_ACCOUNT_TRADED_SYMBOL_PERMISSION_ERRORS: typing.List[typing.Iterable[str]] = [
         # Binance ex: InvalidOrder binance {"code":-2010,"msg":"This symbol is not permitted for this account."}
         ("symbol", "not permitted", "for this account"),
+        # ccxt.base.errors.InvalidOrder: binance {"code":-2010,"msg":"Symbol not whitelisted for API key."}
+        ("symbol", "not whitelisted"),
     ]
     # text content of errors due to a closed position on the exchange. Relevant for reduce-only orders
     EXCHANGE_CLOSED_POSITION_ERRORS: typing.List[typing.Iterable[str]] = [

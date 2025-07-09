@@ -524,9 +524,15 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         self.symbol_market = None
         self.min_max_order_details = {}
         fees = trading_api.get_fees(exchange_manager, self.symbol)
-        self.max_fees = decimal.Decimal(str(max(fees[trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER.value],
-                                                fees[trading_enums.ExchangeConstantsMarketPropertyColumns.MAKER.value]
-                                                )))
+        try:
+            self.max_fees = decimal.Decimal(str(max(fees[trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER.value],
+                                                    fees[trading_enums.ExchangeConstantsMarketPropertyColumns.MAKER.value]
+                                                    )))
+        except TypeError as err:
+            # don't crash if fees are not available
+            market_status = self.exchange_manager.exchange.get_market_status(self.symbol, with_fixer=False)
+            self.logger.error(f"Error reading fees for {self.symbol}: {err}. Market status: {market_status}")
+            self.max_fees = decimal.Decimal(str(trading_constants.CONFIG_DEFAULT_FEES))
         self.flat_increment = None
         self.flat_spread = None
         self.current_price = None
