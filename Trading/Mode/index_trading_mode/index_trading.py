@@ -50,6 +50,11 @@ class RebalanceDetails(enum.Enum):
     FORCED_REBALANCE = "FORCED_REBALANCE"
 
 
+class SynchronizationPolicy(enum.Enum):
+    SELL_REMOVED_INDEX_COINS_ON_RATIO_REBALANCE = "sell removed index coins on ratio rebalance"
+    SELL_REMOVED_INDEX_COINS_AS_SOON_AS_POSSIBLE = "sell removed index coins as soon as possible"
+
+
 class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     FILL_ORDER_TIMEOUT = 60
     SIMPLE_ADD_MIN_TOLERANCE_RATIO = decimal.Decimal("0.8")  # 20% tolerance
@@ -328,6 +333,7 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
     CANCEL_OPEN_ORDERS = "cancel_open_orders"
     REBALANCE_TRIGGER_MIN_PERCENT = "rebalance_trigger_min_percent"
     QUOTE_ASSET_REBALANCE_TRIGGER_MIN_PERCENT = "quote_asset_rebalance_trigger_min_percent"
+    SYNCHRONIZATION_POLICY = "synchronization_policy"
     SELL_UNINDEXED_TRADED_COINS = "sell_unindexed_traded_coins"
     INDEX_CONTENT = "index_content"
     MIN_INDEXED_COINS = 1
@@ -358,7 +364,7 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
         if (
             current_time - self._last_trigger_time
         ) >= self.trading_mode.refresh_interval_days * commons_constants.DAYS_TO_SECONDS:
-            if self.trading_mode.supports_historical_config():
+            if self.trading_mode.automatically_update_historical_config_on_set_intervals():
                 self.trading_mode.update_config_and_user_inputs_if_necessary()
             if len(self.trading_mode.indexed_coins) < self.MIN_INDEXED_COINS:
                 self.logger.error(
@@ -383,6 +389,9 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
         )
         if self.trading_mode.cancel_open_orders:
             await self.cancel_traded_pairs_open_orders_if_any()
+        if self.trading_mode.requires_initializing_appropriate_coins_distribution:
+            self.trading_mode.ensure_updated_coins_distribution(adapt_to_holdings=True)
+            self.trading_mode.requires_initializing_appropriate_coins_distribution = False
         is_rebalance_required, rebalance_details = self._get_rebalance_details()
         if is_rebalance_required:
             await self._trigger_rebalance(rebalance_details)
@@ -435,6 +444,32 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
                     f"Traded: {self.trading_mode.indexed_coins}, configured: {ideal_distribution}"
                 )
 
+    def _register_removed_coin(self, coin, rebalance_details: dict, available_traded_bases: set[str]) -> bool:
+        if coin in available_traded_bases:
+            coin_ratio = self.exchange_manager.exchange_personal_data.portfolio_manager. \
+                portfolio_value_holder.get_holdings_ratio(
+                    coin, traded_symbols_only=True
+                )
+            if coin_ratio >= self.MIN_RATIO_TO_SELL:
+                # coin to sell in portfolio
+                rebalance_details[RebalanceDetails.REMOVE.value][coin] = coin_ratio
+                self.logger.info(
+                    f"{coin} (holdings: {round(coin_ratio * trading_constants.ONE_HUNDRED, 3)}%) is not in index "
+                    f"anymore. A rebalance is required."
+                )
+                return True
+        else:
+            if trading_util.is_symbol_disabled(self.exchange_manager.config, coin):
+                self.logger.info(
+                    f"Ignoring {coin} holding: {coin} is not in index anymore but is disabled."
+                )
+            else:
+                self.logger.error(
+                    f"Ignoring {coin} holding: Can't sell {coin} as it is not in any trading pair"
+                    f" but is not in index anymore. This is unexpected"
+                )
+        return False
+
     def _get_rebalance_details(self) -> (bool, dict):
         rebalance_details = {
             RebalanceDetails.SELL_SOME.value: {},
@@ -451,30 +486,10 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
             for symbol in self.exchange_manager.exchange_config.traded_symbols
         )
 
-        for coin in self.trading_mode.get_removed_coins_from_config(available_traded_bases):
-            if coin in available_traded_bases:
-                coin_ratio = self.exchange_manager.exchange_personal_data.portfolio_manager. \
-                    portfolio_value_holder.get_holdings_ratio(
-                        coin, traded_symbols_only=True
-                    )
-                if coin_ratio >= self.MIN_RATIO_TO_SELL:
-                    # coin to sell in portfolio
-                    rebalance_details[RebalanceDetails.REMOVE.value][coin] = coin_ratio
+        if self.trading_mode.synchronization_policy == SynchronizationPolicy.SELL_REMOVED_INDEX_COINS_AS_SOON_AS_POSSIBLE:
+            for coin in self.trading_mode.get_removed_coins_from_config(available_traded_bases):
+                if self._register_removed_coin(coin, rebalance_details, available_traded_bases):
                     should_rebalance = True
-                    self.logger.info(
-                        f"{coin} (holdings: {round(coin_ratio * trading_constants.ONE_HUNDRED, 3)}%) is not in index "
-                        f"anymore. A rebalance is required."
-                    )
-            else:
-                if trading_util.is_symbol_disabled(self.exchange_manager.config, coin):
-                    self.logger.info(
-                        f"Ignoring {coin} holding: {coin} is not in index anymore but is disabled."
-                    )
-                else:
-                    self.logger.error(
-                        f"Ignoring {coin} holding: Can't sell {coin} as it is not in any trading pair"
-                        f" but is not in index anymore. This is unexpected"
-                    )
         total_indexed_coins_ratio = trading_constants.ZERO
         # compute coins to buy or sell
         for coin in set(self.trading_mode.indexed_coins):
@@ -510,11 +525,21 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
             non_indexed_quote_assets_ratio, rebalance_details
         ):
             rebalance_details[RebalanceDetails.FORCED_REBALANCE.value] = True
+            should_rebalance = True
             self.logger.info(
                 f"Rebalancing due to a high non-indexed quote asset holdings ratio: "
                 f"{round(non_indexed_quote_assets_ratio * trading_constants.ONE_HUNDRED, 2)}%, quote rebalance "
                 f"threshold = {self.trading_mode.quote_asset_rebalance_ratio_threshold * trading_constants.ONE_HUNDRED}%"
             )
+        if (
+            should_rebalance 
+            and self.trading_mode.synchronization_policy == SynchronizationPolicy.SELL_REMOVED_INDEX_COINS_ON_RATIO_REBALANCE
+        ):
+            self.trading_mode.ensure_updated_coins_distribution(force_latest=True)
+            # trading mode is now configured to use the latest available config
+            for coin in self.trading_mode.get_removed_coins_from_config(available_traded_bases):
+                self._register_removed_coin(coin, rebalance_details, available_traded_bases)
+
         if not rebalance_details[RebalanceDetails.FORCED_REBALANCE.value]:
             self._resolve_swaps(rebalance_details)
             for origin, target in rebalance_details[RebalanceDetails.SWAP.value].items():
@@ -532,7 +557,7 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
                 self.logger.info(
                     f"Swapping {origin} (holding ratio: {origin_ratio}%) for {target} (to buy ratio: {target_ratio}%) "
                     f"on [{self.exchange_manager.exchange_name}]: ratios are similar enough to allow swapping."
-                )
+                )   
         return (should_rebalance or rebalance_details[RebalanceDetails.FORCED_REBALANCE.value]), rebalance_details
 
     def _should_rebalance_due_to_non_indexed_quote_assets_ratio(self, non_indexed_quote_assets_ratio: decimal.Decimal, rebalance_details: dict) -> bool:
@@ -656,7 +681,9 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
         self.cancel_open_orders = True
         self.total_ratio_per_asset = trading_constants.ZERO
         self.quote_asset_rebalance_ratio_threshold = decimal.Decimal("0.1")  # 10%
-        self.indexed_coins = []
+        self.synchronization_policy: SynchronizationPolicy = SynchronizationPolicy.SELL_REMOVED_INDEX_COINS_AS_SOON_AS_POSSIBLE
+        self.requires_initializing_appropriate_coins_distribution = False
+        self.indexed_coins = [] 
 
     def init_user_inputs(self, inputs: dict) -> None:
         """
@@ -685,6 +712,20 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
             title="Quote asset rebalance cap: maximum allowed percent holding of traded pairs' quote asset before "
                   "triggering a rebalance. Useful to force a rebalance when adding quote asset to the portfolio",
         ))) / trading_constants.ONE_HUNDRED
+        sync_policy: str = self.UI.user_input(
+            IndexTradingModeProducer.SYNCHRONIZATION_POLICY, commons_enums.UserInputTypes.OPTIONS,
+            self.synchronization_policy.value, inputs, 
+            options=[p.value for p in SynchronizationPolicy],
+            title="Synchronization policy: should coins that are removed from index be sold as soon as possible or only when rebalancing is triggered when coins don't follow the configured ratios.",
+        )
+        try:
+            self.synchronization_policy = SynchronizationPolicy(sync_policy)
+        except TypeError as err:
+            self.logger.exception(
+                err, 
+                True, 
+                f"Impossible to parse synchronization policy: {err}. Using default policy: {self.synchronization_policy.value}."
+            )
         self.cancel_open_orders = float(self.UI.user_input(
             IndexTradingModeProducer.CANCEL_OPEN_ORDERS, commons_enums.UserInputTypes.BOOLEAN,
             self.cancel_open_orders, inputs,
@@ -714,7 +755,8 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
                                min_val=0,
                                parent_input_name=IndexTradingModeProducer.INDEX_CONTENT,
                                title="Weight of the coin within this distribution.")
-        self._update_coins_distribution()
+        self.requires_initializing_appropriate_coins_distribution = self.synchronization_policy == SynchronizationPolicy.SELL_REMOVED_INDEX_COINS_ON_RATIO_REBALANCE
+        self.ensure_updated_coins_distribution()
 
     @classmethod
     def get_tentacle_config_traded_symbols(cls, config: dict, reference_market: str) -> list:
@@ -726,8 +768,14 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
     def is_updating_at_each_price_change(self):
         return self.refresh_interval_days == 0
 
-    def _update_coins_distribution(self):
-        distribution = self._get_supported_distribution()
+    def automatically_update_historical_config_on_set_intervals(self) -> bool:
+        return (
+            self.supports_historical_config() 
+            and self.synchronization_policy == SynchronizationPolicy.SELL_REMOVED_INDEX_COINS_AS_SOON_AS_POSSIBLE
+        )
+
+    def ensure_updated_coins_distribution(self, adapt_to_holdings: bool = False, force_latest: bool = False):
+        distribution = self._get_supported_distribution(adapt_to_holdings, force_latest)
         self.ratio_per_asset = {
             asset[index_distribution.DISTRIBUTION_NAME]: asset
             for asset in distribution
@@ -736,20 +784,19 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
             asset[index_distribution.DISTRIBUTION_VALUE]
             for asset in self.ratio_per_asset.values()
         ))
-        self.indexed_coins = self._get_filtered_traded_coins()
+        self.indexed_coins = self._get_filtered_traded_coins(self.ratio_per_asset)
 
-    def _get_filtered_traded_coins(self):
+    def _get_filtered_traded_coins(self, ratio_per_asset: dict):
         if self.exchange_manager:
+            ref_market = self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market
             coins = set(
                 symbol.base
                 for symbol in self.exchange_manager.exchange_config.traded_symbols
-                if symbol.base in self.ratio_per_asset
-                and symbol.quote == self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market
+                if symbol.base in ratio_per_asset and symbol.quote == ref_market
             )
-            if self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market in self.ratio_per_asset \
-               and coins:
+            if ref_market in ratio_per_asset and coins:
                 # there is at least 1 coin traded against ref market, can add ref market if necessary
-                coins.add(self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market)
+                coins.add(ref_market)
             return sorted(list(coins))
         return []
 
@@ -760,21 +807,103 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
     def get_ideal_distribution(cls, config: dict):
         return config.get(IndexTradingModeProducer.INDEX_CONTENT, None)
 
-    def _get_supported_distribution(self) -> list:
-        if full_distribution := self.get_ideal_distribution(self.trading_config):
+    def _get_currently_applied_historical_config_according_to_holdings(
+        self, config: dict, traded_bases: set[str]
+    ) -> dict:
+        # 1. check if latest config is the running one
+        if self._is_index_config_applied(config, traded_bases):
+            self.logger.info(f"Using {self.get_name()} latest config.")
+            return config
+        # 2. check if historical configs are available (iterating from most recent to oldest)
+        historical_configs = self.get_historical_configs(
+            0, self.exchange_manager.exchange.get_exchange_current_time()
+        )
+        if not historical_configs or (
+            # only 1 historical config which is the same as the latest config
+            len(historical_configs) == 1 and (
+                self.get_ideal_distribution(historical_configs[0]) == self.get_ideal_distribution(config)
+                and historical_configs[0][IndexTradingModeProducer.REBALANCE_TRIGGER_MIN_PERCENT] == config[IndexTradingModeProducer.REBALANCE_TRIGGER_MIN_PERCENT]
+            )
+        ):
+            # current config is the first historical config
+            self.logger.info(f"Using {self.get_name()} latest config as no historical configs are available.")
+            return config
+        for index, historical_config in enumerate(historical_configs):
+            if self._is_index_config_applied(historical_config, traded_bases):
+                self.logger.info(f"Using [N-{index}] {self.get_name()} historical config: {historical_config}.")
+                return historical_config
+        # 3. no suitable config found: return latest config
+        self.logger.error(f"No suitable {self.get_name()} config found: using latest config: {config}.")
+        return config
+
+    def _is_index_config_applied(self, config: dict, traded_bases: set[str]) -> bool:
+        full_assets_distribution = self.get_ideal_distribution(config)
+        if not full_assets_distribution:
+            return False
+        # ignore assets that are not traded (handle delisted coins)
+        assets_distribution = [
+            asset
+            for asset in full_assets_distribution
+            if asset[index_distribution.DISTRIBUTION_NAME] in traded_bases
+        ]
+        total_ratio = decimal.Decimal(sum(
+            asset[index_distribution.DISTRIBUTION_VALUE]
+            for asset in assets_distribution
+        ))
+        if total_ratio == trading_constants.ZERO:
+            return False
+        if config_min_ratio := config.get(IndexTradingModeProducer.REBALANCE_TRIGGER_MIN_PERCENT):
+            min_trigger_ratio = decimal.Decimal(str(config_min_ratio)) / trading_constants.ONE_HUNDRED
+        else:
+            min_trigger_ratio =  self.rebalance_trigger_min_ratio
+        for asset_distrib in assets_distribution:
+            target_ratio = decimal.Decimal(str(asset_distrib[index_distribution.DISTRIBUTION_VALUE])) / total_ratio
+            coin_ratio = self.exchange_manager.exchange_personal_data.portfolio_manager. \
+                portfolio_value_holder.get_holdings_ratio(
+                    asset_distrib[index_distribution.DISTRIBUTION_NAME], traded_symbols_only=True
+                )
+            if not (target_ratio - min_trigger_ratio <= coin_ratio <= target_ratio + min_trigger_ratio):
+                # not enough or too much in portfolio
+                return False
+        return True
+
+    def _get_supported_distribution(self, adapt_to_holdings: bool, force_latest: bool) -> list:
+        if detailed_distribution := self.get_ideal_distribution(self.trading_config):
             traded_bases = set(
                 symbol.base
                 for symbol in self.exchange_manager.exchange_config.traded_symbols
             )
             traded_bases.add(self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market)
+            if (
+                (adapt_to_holdings or force_latest) 
+                and self.synchronization_policy == SynchronizationPolicy.SELL_REMOVED_INDEX_COINS_ON_RATIO_REBALANCE
+            ):
+                if adapt_to_holdings:
+                    # when policy is SELL_REMOVED_INDEX_COINS_ON_RATIO_REBALANCE, the latest config might not be the 
+                    # running one: confirm this using historical configs
+                    index_config = self._get_currently_applied_historical_config_according_to_holdings(
+                        self.trading_config, traded_bases
+                    )
+                else:
+                    # force latest available config
+                    try:
+                        index_config = self.get_historical_configs(
+                            0, self.exchange_manager.exchange.get_exchange_current_time()
+                        )[0]
+                        self.logger.info(f"Updated {self.get_name()} to use latest config: {index_config}.")
+                    except IndexError:
+                        index_config = self.trading_config
+                detailed_distribution = self.get_ideal_distribution(index_config)
+                if not detailed_distribution:
+                    raise ValueError(f"No distribution found in historical index config: {index_config}")
             distribution = [
                 asset
-                for asset in full_distribution
+                for asset in detailed_distribution
                 if asset[index_distribution.DISTRIBUTION_NAME] in traded_bases
             ]
             if removed_assets := [
                 asset[index_distribution.DISTRIBUTION_NAME]
-                for asset in full_distribution
+                for asset in detailed_distribution
                 if asset not in distribution
             ]:
                 self.logger.info(
@@ -797,24 +926,49 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
                 coin
                 for coin in available_traded_bases
                 if coin not in self.indexed_coins
-                   and coin != self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market
+                and coin != self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market
             ]
-
-        if not (self.previous_trading_config and self.trading_config):
-            return removed_coins
-        current_coins = [
-            asset[index_distribution.DISTRIBUTION_NAME]
-            for asset in (self.get_ideal_distribution(self.trading_config) or [])
-        ]
-        return list(set(removed_coins + [
-            asset[index_distribution.DISTRIBUTION_NAME]
-            for asset in self.previous_trading_config[IndexTradingModeProducer.INDEX_CONTENT]
-            if asset[index_distribution.DISTRIBUTION_NAME] not in current_coins
-                and (
-                    asset[index_distribution.DISTRIBUTION_NAME]
-                    != self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market
-                )
-        ]))
+        if self.synchronization_policy == SynchronizationPolicy.SELL_REMOVED_INDEX_COINS_AS_SOON_AS_POSSIBLE:
+            # identify coins to sell from previous config
+            if not (self.previous_trading_config and self.trading_config):
+                return removed_coins
+            current_coins = [
+                asset[index_distribution.DISTRIBUTION_NAME]
+                for asset in (self.get_ideal_distribution(self.trading_config) or [])
+            ]
+            ref_market = self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market
+            return list(set(removed_coins + [
+                asset[index_distribution.DISTRIBUTION_NAME]
+                for asset in self.previous_trading_config[IndexTradingModeProducer.INDEX_CONTENT]
+                if asset[index_distribution.DISTRIBUTION_NAME] not in current_coins
+                    and (
+                        asset[index_distribution.DISTRIBUTION_NAME]
+                        != self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market
+                    )
+            ]))
+        elif self.synchronization_policy == SynchronizationPolicy.SELL_REMOVED_INDEX_COINS_ON_RATIO_REBALANCE:
+            # identify coins to sell from historical configs
+            historical_configs = self.get_historical_configs(
+                # use 0 a the initial config time as only relevant historical configs should be available
+                0, self.exchange_manager.exchange.get_exchange_current_time()
+            )
+            if not (historical_configs and self.trading_config):
+                return removed_coins
+            current_coins = [
+                asset[index_distribution.DISTRIBUTION_NAME]
+                for asset in (self.get_ideal_distribution(self.trading_config) or [])
+            ]
+            ref_market = self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market
+            removed_coins_from_historical_configs = set()
+            for historical_config in historical_configs:
+                for asset in historical_config[IndexTradingModeProducer.INDEX_CONTENT]:
+                    asset_name = asset[index_distribution.DISTRIBUTION_NAME]
+                    if asset_name not in current_coins and asset_name != ref_market:
+                        removed_coins_from_historical_configs.add(asset_name)
+            return list(removed_coins_from_historical_configs)
+        else:
+            self.logger.error(f"Unknown synchronization policy: {self.synchronization_policy}")
+            return []
 
     def get_target_ratio(self, currency) -> decimal.Decimal:
         if currency in self.ratio_per_asset:
