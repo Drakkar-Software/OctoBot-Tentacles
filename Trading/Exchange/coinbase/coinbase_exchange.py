@@ -38,8 +38,8 @@ ALIASED_SYMBOLS = set()
 
 # hard code Coinbase base tier fees as long as there is no way to fetch it
 # https://www.coinbase.com/advanced-fees
-DEFAULT_TAKER_FEE_VALUE = 0.012  # 1.2%: base Coinbase taker fees tier
-DEFAULT_MAKER_FEE_VALUE = 0.006  # 0.6%: base Coinbase maker fees tier
+DEFAULT_TAKER_FEE_VALUE = 0.0075  # 0.75%: >1k monthly trading volume Coinbase taker fees tier
+DEFAULT_MAKER_FEE_VALUE = 0.0035  # 0.35%: >1k monthly trading volume Coinbase maker fees tier
 # disabled by default
 FORCE_COINBASE_BASE_FEES = os_util.parse_boolean_environment_var("FORCE_COINBASE_BASE_FEES", "false")
 _MAX_CURSOR_ITERATIONS = 10
