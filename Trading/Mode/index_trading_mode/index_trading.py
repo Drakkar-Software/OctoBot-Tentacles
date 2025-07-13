@@ -444,61 +444,14 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
                     f"Traded: {self.trading_mode.indexed_coins}, configured: {ideal_distribution}"
                 )
 
-    def _register_removed_coin(self, coin, rebalance_details: dict, available_traded_bases: set[str]) -> bool:
-        if coin in available_traded_bases:
-            coin_ratio = self.exchange_manager.exchange_personal_data.portfolio_manager. \
-                portfolio_value_holder.get_holdings_ratio(
-                    coin, traded_symbols_only=True
-                )
-            if coin_ratio >= self.MIN_RATIO_TO_SELL:
-                # coin to sell in portfolio
-                rebalance_details[RebalanceDetails.REMOVE.value][coin] = coin_ratio
-                self.logger.info(
-                    f"{coin} (holdings: {round(coin_ratio * trading_constants.ONE_HUNDRED, 3)}%) is not in index "
-                    f"anymore. A rebalance is required."
-                )
-                return True
-        else:
-            if trading_util.is_symbol_disabled(self.exchange_manager.config, coin):
-                self.logger.info(
-                    f"Ignoring {coin} holding: {coin} is not in index anymore but is disabled."
-                )
-            else:
-                self.logger.error(
-                    f"Ignoring {coin} holding: Can't sell {coin} as it is not in any trading pair"
-                    f" but is not in index anymore. This is unexpected"
-                )
-        return False
-
-    def _get_rebalance_details(self) -> (bool, dict):
-        rebalance_details = {
-            RebalanceDetails.SELL_SOME.value: {},
-            RebalanceDetails.BUY_MORE.value: {},
-            RebalanceDetails.REMOVE.value: {},
-            RebalanceDetails.ADD.value: {},
-            RebalanceDetails.SWAP.value: {},
-            RebalanceDetails.FORCED_REBALANCE.value: False,
-        }
+    def _register_coins_update(self, rebalance_details: dict) -> bool:
         should_rebalance = False
-        # look for coins update in indexed_coins
-        available_traded_bases = set(
-            symbol.base
-            for symbol in self.exchange_manager.exchange_config.traded_symbols
-        )
-
-        if self.trading_mode.synchronization_policy == SynchronizationPolicy.SELL_REMOVED_INDEX_COINS_AS_SOON_AS_POSSIBLE:
-            for coin in self.trading_mode.get_removed_coins_from_config(available_traded_bases):
-                if self._register_removed_coin(coin, rebalance_details, available_traded_bases):
-                    should_rebalance = True
-        total_indexed_coins_ratio = trading_constants.ZERO
-        # compute coins to buy or sell
         for coin in set(self.trading_mode.indexed_coins):
             target_ratio = self.trading_mode.get_target_ratio(coin)
             coin_ratio = self.exchange_manager.exchange_personal_data.portfolio_manager. \
                 portfolio_value_holder.get_holdings_ratio(
                     coin, traded_symbols_only=True
                 )
-            total_indexed_coins_ratio += coin_ratio
             beyond_ratio = True
             if coin_ratio == trading_constants.ZERO and target_ratio > trading_constants.ZERO:
                 # missing coin in portfolio
@@ -519,28 +472,89 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
                     f"{coin} is beyond the target ratio of {round(target_ratio * trading_constants.ONE_HUNDRED, 3)}%, "
                     f"ratio: {round(coin_ratio * trading_constants.ONE_HUNDRED, 3)}%. A rebalance is required."
                 )
-        
+        return should_rebalance
+
+    def _register_removed_coin(self, rebalance_details: dict, available_traded_bases: set[str]) -> bool:
+        should_rebalance = False
+        for coin in self.trading_mode.get_removed_coins_from_config(available_traded_bases):
+            if coin in available_traded_bases:
+                coin_ratio = self.exchange_manager.exchange_personal_data.portfolio_manager. \
+                    portfolio_value_holder.get_holdings_ratio(
+                        coin, traded_symbols_only=True
+                    )
+                if coin_ratio >= self.MIN_RATIO_TO_SELL:
+                    # coin to sell in portfolio
+                    rebalance_details[RebalanceDetails.REMOVE.value][coin] = coin_ratio
+                    self.logger.info(
+                        f"{coin} (holdings: {round(coin_ratio * trading_constants.ONE_HUNDRED, 3)}%) is not in index "
+                        f"anymore. A rebalance is required."
+                    )
+                    should_rebalance = True
+            else:
+                if trading_util.is_symbol_disabled(self.exchange_manager.config, coin):
+                    self.logger.info(
+                        f"Ignoring {coin} holding: {coin} is not in index anymore but is disabled."
+                    )
+                else:
+                    self.logger.error(
+                        f"Ignoring {coin} holding: Can't sell {coin} as it is not in any trading pair"
+                        f" but is not in index anymore. This is unexpected"
+                    )
+        return should_rebalance
+
+    def _register_quote_asset_rebalance(self, rebalance_details: dict) -> bool:
         non_indexed_quote_assets_ratio = self._get_non_indexed_quote_assets_ratio()
         if self._should_rebalance_due_to_non_indexed_quote_assets_ratio(
             non_indexed_quote_assets_ratio, rebalance_details
         ):
             rebalance_details[RebalanceDetails.FORCED_REBALANCE.value] = True
-            should_rebalance = True
             self.logger.info(
                 f"Rebalancing due to a high non-indexed quote asset holdings ratio: "
                 f"{round(non_indexed_quote_assets_ratio * trading_constants.ONE_HUNDRED, 2)}%, quote rebalance "
                 f"threshold = {self.trading_mode.quote_asset_rebalance_ratio_threshold * trading_constants.ONE_HUNDRED}%"
             )
+            return True
+        return False
+    
+    def _empty_rebalance_details(self) -> dict:
+        return {
+            RebalanceDetails.SELL_SOME.value: {},
+            RebalanceDetails.BUY_MORE.value: {},
+            RebalanceDetails.REMOVE.value: {},
+            RebalanceDetails.ADD.value: {},
+            RebalanceDetails.SWAP.value: {},
+            RebalanceDetails.FORCED_REBALANCE.value: False,
+        }
+
+    def _get_rebalance_details(self) -> (bool, dict):
+        rebalance_details = self._empty_rebalance_details()
+        should_rebalance = False
+        # look for coins update in indexed_coins
+        available_traded_bases = set(
+            symbol.base
+            for symbol in self.exchange_manager.exchange_config.traded_symbols
+        )
+
+        # compute rebalance details for current coins distribution
+        if self.trading_mode.synchronization_policy == SynchronizationPolicy.SELL_REMOVED_INDEX_COINS_AS_SOON_AS_POSSIBLE:
+            should_rebalance = self._register_removed_coin(rebalance_details, available_traded_bases)
+        should_rebalance = self._register_coins_update(rebalance_details) or should_rebalance
+        should_rebalance = self._register_quote_asset_rebalance(rebalance_details) or should_rebalance
         if (
             should_rebalance 
             and self.trading_mode.synchronization_policy == SynchronizationPolicy.SELL_REMOVED_INDEX_COINS_ON_RATIO_REBALANCE
         ):
+            # use latest coins distribution to compute rebalance details
             self.trading_mode.ensure_updated_coins_distribution(force_latest=True)
-            # trading mode is now configured to use the latest available config
-            for coin in self.trading_mode.get_removed_coins_from_config(available_traded_bases):
-                self._register_removed_coin(coin, rebalance_details, available_traded_bases)
+            # re-compute the whole rebalance details for latest coins distribution 
+            # to avoid side effects from previous distribution
+            rebalance_details = self._empty_rebalance_details()
+            self._register_removed_coin(rebalance_details, available_traded_bases)
+            self._register_coins_update(rebalance_details)
+            self._register_quote_asset_rebalance(rebalance_details)
 
         if not rebalance_details[RebalanceDetails.FORCED_REBALANCE.value]:
+            # finally, compute swaps when no forced rebalance is required
             self._resolve_swaps(rebalance_details)
             for origin, target in rebalance_details[RebalanceDetails.SWAP.value].items():
                 origin_ratio = round(
@@ -833,7 +847,7 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
                 self.logger.info(f"Using [N-{index}] {self.get_name()} historical config: {historical_config}.")
                 return historical_config
         # 3. no suitable config found: return latest config
-        self.logger.error(f"No suitable {self.get_name()} config found: using latest config: {config}.")
+        self.logger.info(f"No suitable {self.get_name()} config found: using latest config: {config}.")
         return config
 
     def _is_index_config_applied(self, config: dict, traded_bases: set[str]) -> bool:
@@ -965,7 +979,7 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
                     asset_name = asset[index_distribution.DISTRIBUTION_NAME]
                     if asset_name not in current_coins and asset_name != ref_market:
                         removed_coins_from_historical_configs.add(asset_name)
-            return list(removed_coins_from_historical_configs)
+            return list(removed_coins_from_historical_configs.union(removed_coins))
         else:
             self.logger.error(f"Unknown synchronization policy: {self.synchronization_policy}")
             return []
