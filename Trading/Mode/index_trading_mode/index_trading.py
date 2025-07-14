@@ -16,6 +16,7 @@
 import asyncio
 import decimal
 import enum
+import typing
 
 import octobot_commons.constants as commons_constants
 import octobot_commons.enums as commons_enums
@@ -53,6 +54,10 @@ class RebalanceDetails(enum.Enum):
 class SynchronizationPolicy(enum.Enum):
     SELL_REMOVED_INDEX_COINS_ON_RATIO_REBALANCE = "sell removed index coins on ratio rebalance"
     SELL_REMOVED_INDEX_COINS_AS_SOON_AS_POSSIBLE = "sell removed index coins as soon as possible"
+
+
+DEFAULT_QUOTE_ASSET_REBALANCE_TRIGGER_MIN_RATIO = 0.1  # 10%
+DEFAULT_REBALANCE_TRIGGER_MIN_RATIO = 0.05  # 5%
 
 
 class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
@@ -332,6 +337,10 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
     REFRESH_INTERVAL = "refresh_interval"
     CANCEL_OPEN_ORDERS = "cancel_open_orders"
     REBALANCE_TRIGGER_MIN_PERCENT = "rebalance_trigger_min_percent"
+    SELECTED_REBALANCE_TRIGGER_PROFILE = "selected_rebalance_trigger_profile"
+    REBALANCE_TRIGGER_PROFILES = "rebalance_trigger_profiles"
+    REBALANCE_TRIGGER_PROFILE_NAME = "name"
+    REBALANCE_TRIGGER_PROFILE_MIN_PERCENT = "min_percent"
     QUOTE_ASSET_REBALANCE_TRIGGER_MIN_PERCENT = "quote_asset_rebalance_trigger_min_percent"
     SYNCHRONIZATION_POLICY = "synchronization_policy"
     SELL_UNINDEXED_TRADED_COINS = "sell_unindexed_traded_coins"
@@ -689,12 +698,14 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
     def __init__(self, config, exchange_manager):
         super().__init__(config, exchange_manager)
         self.refresh_interval_days = 1
-        self.rebalance_trigger_min_ratio = decimal.Decimal("0.05")  # 5%
+        self.rebalance_trigger_min_ratio = decimal.Decimal(float(DEFAULT_REBALANCE_TRIGGER_MIN_RATIO))
+        self.rebalance_trigger_profiles: typing.Optional[list] = None
+        self.selected_rebalance_trigger_profile: typing.Optional[dict] = None
         self.ratio_per_asset = {}
         self.sell_unindexed_traded_coins = True
         self.cancel_open_orders = True
         self.total_ratio_per_asset = trading_constants.ZERO
-        self.quote_asset_rebalance_ratio_threshold = decimal.Decimal("0.1")  # 10%
+        self.quote_asset_rebalance_ratio_threshold = decimal.Decimal(str(DEFAULT_QUOTE_ASSET_REBALANCE_TRIGGER_MIN_RATIO))
         self.synchronization_policy: SynchronizationPolicy = SynchronizationPolicy.SELL_REMOVED_INDEX_COINS_AS_SOON_AS_POSSIBLE
         self.requires_initializing_appropriate_coins_distribution = False
         self.indexed_coins = [] 
@@ -712,6 +723,13 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
             title="Trigger period: Days to wait between each rebalance. Can be a fraction of a day. "
                   "When set to 0, every new price will trigger a rebalance check.",
         ))
+        self.quote_asset_rebalance_ratio_threshold = decimal.Decimal(str(self.UI.user_input(
+            IndexTradingModeProducer.QUOTE_ASSET_REBALANCE_TRIGGER_MIN_PERCENT, commons_enums.UserInputTypes.FLOAT,
+            float(self.quote_asset_rebalance_ratio_threshold * trading_constants.ONE_HUNDRED), inputs,
+            min_val=0, max_val=100,
+            title="Quote asset rebalance cap: maximum allowed percent holding of traded pairs' quote asset before "
+                "triggering a rebalance. Useful to force a rebalance when adding quote asset to the portfolio",
+        ))) / trading_constants.ONE_HUNDRED
         self.rebalance_trigger_min_ratio = decimal.Decimal(str(self.UI.user_input(
             IndexTradingModeProducer.REBALANCE_TRIGGER_MIN_PERCENT, commons_enums.UserInputTypes.FLOAT,
             float(self.rebalance_trigger_min_ratio * trading_constants.ONE_HUNDRED), inputs,
@@ -719,13 +737,57 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
             title="Rebalance cap: maximum allowed percent holding of a coin beyond initial ratios before "
                   "triggering a rebalance.",
         ))) / trading_constants.ONE_HUNDRED
-        self.quote_asset_rebalance_ratio_threshold = decimal.Decimal(str(self.UI.user_input(
-            IndexTradingModeProducer.QUOTE_ASSET_REBALANCE_TRIGGER_MIN_PERCENT, commons_enums.UserInputTypes.FLOAT,
-            float(self.quote_asset_rebalance_ratio_threshold * trading_constants.ONE_HUNDRED), inputs,
-            min_val=0, max_val=100,
-            title="Quote asset rebalance cap: maximum allowed percent holding of traded pairs' quote asset before "
-                  "triggering a rebalance. Useful to force a rebalance when adding quote asset to the portfolio",
-        ))) / trading_constants.ONE_HUNDRED
+
+        self.rebalance_trigger_profiles = self.trading_config.get(IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILES, None)
+        if self.rebalance_trigger_profiles:
+            # only display selector if there are profiles to display
+            rebalance_trigger_profiles_inputs = [{
+                IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_NAME: self.UI.user_input(
+                    IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_NAME, commons_enums.UserInputTypes.TEXT,
+                    "profile name", inputs,
+                    parent_input_name=IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILES,
+                    array_indexes=[0],
+                    title=f"Name: name of the reference trigger profile"
+                ),
+                IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_MIN_PERCENT: self.UI.user_input(
+                    IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_MIN_PERCENT, commons_enums.UserInputTypes.FLOAT,
+                    float(self.rebalance_trigger_min_ratio * trading_constants.ONE_HUNDRED), inputs,
+                    parent_input_name=IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILES,
+                    array_indexes=[0],
+                    min_val=0, max_val=100,
+                    title=(
+                    "Rebalance cap: maximum allowed percent holding of a coin beyond initial ratios before "
+                    "triggering a rebalance when this profile is selected."
+                    )
+                ),
+            }]
+            self.UI.user_input(
+                IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILES, commons_enums.UserInputTypes.OBJECT_ARRAY, rebalance_trigger_profiles_inputs, inputs,
+                other_schema_values={"minItems": 1, "uniqueItems": True},
+                item_title="Rebalance trigger profile",
+                title="Rebalance trigger profiles",
+            )
+            selected_rebalance_trigger_profile_name = self.UI.user_input(
+                IndexTradingModeProducer.SELECTED_REBALANCE_TRIGGER_PROFILE, commons_enums.UserInputTypes.OPTIONS,
+                None, inputs,
+                options=[p[IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_NAME] for p in self.rebalance_trigger_profiles],
+                title="Selected rebalance trigger profile, override the default Rebalance cap value.",
+            )
+            selected_profile = [
+                p for p in self.rebalance_trigger_profiles 
+                if p[IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_NAME] == selected_rebalance_trigger_profile_name
+            ]
+            if selected_profile:
+                self.selected_rebalance_trigger_profile = selected_profile[0]
+                # apply selected rebalance trigger profile ratio
+                self.rebalance_trigger_min_ratio = decimal.Decimal(str(
+                    self.selected_rebalance_trigger_profile[IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_MIN_PERCENT])
+                ) / trading_constants.ONE_HUNDRED
+            else:
+                self.logger.warning(
+                    f"Selected rebalance trigger profile {selected_rebalance_trigger_profile_name} not found in rebalance trigger profiles: {self.rebalance_trigger_profiles}"
+                )
+                self.selected_rebalance_trigger_profile = None
         sync_policy: str = self.UI.user_input(
             IndexTradingModeProducer.SYNCHRONIZATION_POLICY, commons_enums.UserInputTypes.OPTIONS,
             self.synchronization_policy.value, inputs, 
@@ -878,10 +940,7 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
         ))
         if total_ratio == trading_constants.ZERO:
             return False
-        if config_min_ratio := config.get(IndexTradingModeProducer.REBALANCE_TRIGGER_MIN_PERCENT):
-            min_trigger_ratio = decimal.Decimal(str(config_min_ratio)) / trading_constants.ONE_HUNDRED
-        else:
-            min_trigger_ratio =  self.rebalance_trigger_min_ratio
+        min_trigger_ratio = self._get_config_min_ratio(config)
         for asset_distrib in assets_distribution:
             target_ratio = decimal.Decimal(str(asset_distrib[index_distribution.DISTRIBUTION_VALUE])) / total_ratio
             coin_ratio = self.exchange_manager.exchange_personal_data.portfolio_manager. \
@@ -892,6 +951,27 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
                 # not enough or too much in portfolio
                 return False
         return True
+
+    def _get_config_min_ratio(self, config: dict) -> decimal.Decimal:
+        ratio = None
+        rebalance_trigger_profiles = config.get(IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILES, None)
+        if rebalance_trigger_profiles:
+            # 1. try to get ratio from selected rebalance trigger profile
+            selected_rebalance_trigger_profile_name =config.get(IndexTradingModeProducer.SELECTED_REBALANCE_TRIGGER_PROFILE, None)
+            selected_profile = [
+                p for p in rebalance_trigger_profiles 
+                if p[IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_NAME] == selected_rebalance_trigger_profile_name
+            ]
+            if selected_profile:
+                selected_rebalance_trigger_profile = selected_profile[0]
+                ratio = selected_rebalance_trigger_profile[IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_MIN_PERCENT]
+        if ratio is None:
+            # 2. try to get ratio from direct config
+            ratio = config.get(IndexTradingModeProducer.REBALANCE_TRIGGER_MIN_PERCENT)
+        if ratio is None:
+            # 3. default to current config ratio
+            return self.rebalance_trigger_min_ratio
+        return decimal.Decimal(str(ratio)) / trading_constants.ONE_HUNDRED
 
     def _get_supported_distribution(self, adapt_to_holdings: bool, force_latest: bool) -> list:
         if detailed_distribution := self.get_ideal_distribution(self.trading_config):

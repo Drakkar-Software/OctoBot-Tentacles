@@ -109,19 +109,33 @@ def _get_config(tools, update):
 async def test_init_default_values(tools):
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, {}))
     assert mode.refresh_interval_days == 1
-    assert mode.rebalance_trigger_min_ratio == decimal.Decimal("0.05")
+    assert mode.rebalance_trigger_min_ratio == decimal.Decimal(str(index_trading.DEFAULT_REBALANCE_TRIGGER_MIN_RATIO))
+    assert mode.quote_asset_rebalance_ratio_threshold == decimal.Decimal(str(index_trading.DEFAULT_QUOTE_ASSET_REBALANCE_TRIGGER_MIN_RATIO))
     assert mode.ratio_per_asset == {'BTC': {'name': 'BTC', 'value': decimal.Decimal(100)}}
     assert mode.total_ratio_per_asset == decimal.Decimal(100)
     assert mode.synchronization_policy == index_trading.SynchronizationPolicy.SELL_REMOVED_INDEX_COINS_AS_SOON_AS_POSSIBLE
     assert mode.requires_initializing_appropriate_coins_distribution is False
     assert mode.indexed_coins == ["BTC"]
+    assert mode.selected_rebalance_trigger_profile is None
+    assert mode.rebalance_trigger_profiles is None
 
 
 async def test_init_config_values(tools):
     update = {
         index_trading.IndexTradingModeProducer.REFRESH_INTERVAL: 72,
-        index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_MIN_PERCENT: 10.2,
         index_trading.IndexTradingModeProducer.SYNCHRONIZATION_POLICY: index_trading.SynchronizationPolicy.SELL_REMOVED_INDEX_COINS_ON_RATIO_REBALANCE.value,
+        index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_MIN_PERCENT: 10.2,
+        index_trading.IndexTradingModeProducer.SELECTED_REBALANCE_TRIGGER_PROFILE: None,
+        index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILES: [
+            {
+                index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_NAME: "profile-1",
+                index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_MIN_PERCENT: 5.2,
+            },
+            {
+                index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_NAME: "profile-2",
+                index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_MIN_PERCENT: 20.2,
+            },
+        ],
         index_trading.IndexTradingModeProducer.INDEX_CONTENT: [
             {
                 index_distribution.DISTRIBUTION_NAME: "ETH",
@@ -137,9 +151,21 @@ async def test_init_config_values(tools):
             },
         ]
     }
+    # no selected rebalance trigger profile
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
     assert mode.refresh_interval_days == 72
     assert mode.rebalance_trigger_min_ratio == decimal.Decimal("0.102")
+    assert mode.selected_rebalance_trigger_profile is None
+    assert mode.rebalance_trigger_profiles ==  [
+        {
+            index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_NAME: "profile-1",
+            index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_MIN_PERCENT: 5.2,
+        },
+        {
+            index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_NAME: "profile-2",
+            index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_MIN_PERCENT: 20.2,
+        },
+    ]
     assert mode.synchronization_policy == index_trading.SynchronizationPolicy.SELL_REMOVED_INDEX_COINS_ON_RATIO_REBALANCE
     assert mode.requires_initializing_appropriate_coins_distribution is True
     assert mode.ratio_per_asset == {
@@ -156,9 +182,24 @@ async def test_init_config_values(tools):
         commons_symbols.parse_symbol(symbol)
         for symbol in ["ETH/USDT", "ADA/USDT", "BTC/USDT"]
     ]
+    mode.trading_config[index_trading.IndexTradingModeProducer.SELECTED_REBALANCE_TRIGGER_PROFILE] = "profile-1"
     mode.init_user_inputs({})
     assert mode.refresh_interval_days == 72
-    assert mode.rebalance_trigger_min_ratio == decimal.Decimal("0.102")
+    assert mode.rebalance_trigger_profiles ==  [
+        {
+            index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_NAME: "profile-1",
+            index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_MIN_PERCENT: 5.2,
+        },
+        {
+            index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_NAME: "profile-2",
+            index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_MIN_PERCENT: 20.2,
+        },
+    ]
+    assert mode.selected_rebalance_trigger_profile == {
+        index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_NAME: "profile-1",
+        index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_MIN_PERCENT: 5.2,
+    }   # applied profile
+    assert mode.rebalance_trigger_min_ratio == decimal.Decimal("0.052")
     assert mode.ratio_per_asset == {
         "ETH": {
             index_distribution.DISTRIBUTION_NAME: "ETH",
@@ -180,7 +221,7 @@ async def test_init_config_values(tools):
     ]
     mode.init_user_inputs({})
     assert mode.refresh_interval_days == 72
-    assert mode.rebalance_trigger_min_ratio == decimal.Decimal("0.102")
+    assert mode.rebalance_trigger_min_ratio == decimal.Decimal("0.052")
     assert mode.ratio_per_asset == {
         "ETH": {
             index_distribution.DISTRIBUTION_NAME: "ETH",
@@ -209,9 +250,15 @@ async def test_init_config_values(tools):
             index_distribution.DISTRIBUTION_VALUE: 25,
         },
     ]
+    # select profile 2
+    mode.trading_config[index_trading.IndexTradingModeProducer.SELECTED_REBALANCE_TRIGGER_PROFILE] = "profile-2"
     mode.init_user_inputs({})
     assert mode.refresh_interval_days == 72
-    assert mode.rebalance_trigger_min_ratio == decimal.Decimal("0.102")
+    assert mode.selected_rebalance_trigger_profile == {
+        index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_NAME: "profile-2",
+        index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_MIN_PERCENT: 20.2,
+    }   # applied profile
+    assert mode.rebalance_trigger_min_ratio == decimal.Decimal("0.202")
     assert mode.ratio_per_asset == {
         "BTC": {
             index_distribution.DISTRIBUTION_NAME: "BTC",
@@ -224,6 +271,23 @@ async def test_init_config_values(tools):
     }
     assert mode.total_ratio_per_asset == decimal.Decimal("100")
     assert mode.indexed_coins == ["BTC", "USDT"]  # sorted list
+
+    # unknown profile
+    mode.trading_config[index_trading.IndexTradingModeProducer.SELECTED_REBALANCE_TRIGGER_PROFILE] = "unknown"
+    mode.init_user_inputs({})
+    # back to non-profile config values bu profiles are loaded
+    assert mode.rebalance_trigger_profiles ==  [
+        {
+            index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_NAME: "profile-1",
+            index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_MIN_PERCENT: 5.2,
+        },
+        {
+            index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_NAME: "profile-2",
+            index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_MIN_PERCENT: 20.2,
+        },
+    ]
+    assert mode.selected_rebalance_trigger_profile is None
+    assert mode.rebalance_trigger_min_ratio == decimal.Decimal(str(10.2 / 100))
 
 
 async def test_single_exchange_process_optimize_initial_portfolio(tools):
@@ -2435,7 +2499,6 @@ async def test_is_index_config_applied(tools):
         for symbol in trader.exchange_manager.exchange_config.traded_symbols
     )
     
-    
     # Test 1: No ideal distribution - should return False
     config_without_distribution = {}
     assert mode._is_index_config_applied(config_without_distribution, traded_bases) is False
@@ -2547,7 +2610,7 @@ async def test_is_index_config_applied(tools):
         assert get_holdings_ratio_mock.mock_calls[1].args[0] == "ETH"
         get_holdings_ratio_mock.reset_mock()
     
-    # Test 10: Custom rebalance trigger ratio in config
+    # Test 10a: Custom rebalance trigger ratio in config from REBALANCE_TRIGGER_MIN_PERCENT
     config_with_custom_trigger = {
         index_trading.IndexTradingModeProducer.INDEX_CONTENT: [
             {
@@ -2575,6 +2638,53 @@ async def test_is_index_config_applied(tools):
         get_holdings_ratio_mock.reset_mock()
     
     # Holdings outside 10% tolerance
+    with mock.patch.object(
+        trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder,
+        "get_holdings_ratio", mock.Mock(side_effect=lambda coin, **kwargs: {
+            "BTC": decimal.Decimal("0.65"),  # 50% target + 15% (outside 10% tolerance)
+            "ETH": decimal.Decimal("0.35"),  # 50% target - 15% (outside 10% tolerance)
+        }.get(coin, decimal.Decimal("0")))
+    ) as get_holdings_ratio_mock:
+        assert mode._is_index_config_applied(config_with_custom_trigger, traded_bases) is False
+        assert get_holdings_ratio_mock.call_count == 1  # only BTC is considered
+        get_holdings_ratio_mock.assert_called_once_with("BTC", traded_symbols_only=True)
+        get_holdings_ratio_mock.reset_mock()
+    
+    # Test 10b: Custom rebalance trigger ratio in config from REBALANCE_TRIGGER_MIN_PERCENT
+    config_with_custom_trigger = {
+        index_trading.IndexTradingModeProducer.INDEX_CONTENT: [
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "BTC",
+                index_trading.index_distribution.DISTRIBUTION_VALUE: 50
+            },
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "ETH",
+                index_trading.index_distribution.DISTRIBUTION_VALUE: 50
+            }
+        ],
+        index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILES: [
+            {
+                index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_NAME: "profile-1",
+                index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_MIN_PERCENT: 10.0  # 10% tolerance
+            }
+        ],
+        index_trading.IndexTradingModeProducer.SELECTED_REBALANCE_TRIGGER_PROFILE: "profile-1",
+        index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_MIN_PERCENT: 99.0  # 99% tolerance
+    }
+    
+    # Holdings within 10% tolerance (profile 1)
+    with mock.patch.object(
+        trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder,
+        "get_holdings_ratio", mock.Mock(side_effect=lambda coin, **kwargs: {
+            "BTC": decimal.Decimal("0.57"),  # 50% target + 7% (within 10% tolerance)
+            "ETH": decimal.Decimal("0.43"),  # 50% target - 7% (within 10% tolerance)
+        }.get(coin, decimal.Decimal("0")))
+    ) as get_holdings_ratio_mock:
+        assert mode._is_index_config_applied(config_with_custom_trigger, traded_bases) is True
+        assert get_holdings_ratio_mock.call_count == 2
+        get_holdings_ratio_mock.reset_mock()
+    
+    # Holdings outside 10% tolerance (profile 1)
     with mock.patch.object(
         trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder,
         "get_holdings_ratio", mock.Mock(side_effect=lambda coin, **kwargs: {
@@ -2640,3 +2750,48 @@ async def test_is_index_config_applied(tools):
         assert get_holdings_ratio_mock.call_count == 1  # only BTC considered
         get_holdings_ratio_mock.assert_called_once_with("BTC", traded_symbols_only=True)
         get_holdings_ratio_mock.reset_mock()
+
+
+async def test_get_config_min_ratio(tools):
+    mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, {}))
+    # 1. With selected profile
+    config_with_profiles = {
+        index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILES: [
+            {
+                index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_NAME: "profile-1",
+                index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_MIN_PERCENT: 7.5,
+            },
+            {
+                index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_NAME: "profile-2",
+                index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_MIN_PERCENT: 15.0,
+            },
+        ],
+        index_trading.IndexTradingModeProducer.SELECTED_REBALANCE_TRIGGER_PROFILE: "profile-2",
+    }
+    # Should pick 15.0% from profile-2
+    assert mode._get_config_min_ratio(config_with_profiles) == decimal.Decimal("0.15")
+
+    # 2. With direct config value only
+    config_with_direct = {
+        index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_MIN_PERCENT: 3.3
+    }
+    # Should pick 3.3% from direct config
+    assert mode._get_config_min_ratio(config_with_direct) == decimal.Decimal("0.033")
+
+    # 3. With neither, should fall back to mode.rebalance_trigger_min_ratio
+    mode.rebalance_trigger_min_ratio = decimal.Decimal("0.123")
+    config_empty = {}
+    assert mode._get_config_min_ratio(config_empty) == decimal.Decimal("0.123")
+
+    # 4. With profiles but no selected profile matches, should fall back to direct config
+    config_profiles_no_match = {
+        index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILES: [
+            {
+                index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_NAME: "profile-1",
+                index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_MIN_PERCENT: 7.5,
+            }
+        ],
+        index_trading.IndexTradingModeProducer.SELECTED_REBALANCE_TRIGGER_PROFILE: "profile-x",
+        index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_MIN_PERCENT: 2.2
+    }
+    assert mode._get_config_min_ratio(config_profiles_no_match) == decimal.Decimal("0.022")
