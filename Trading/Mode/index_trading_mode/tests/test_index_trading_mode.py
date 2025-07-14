@@ -2277,7 +2277,7 @@ async def test_get_supported_distribution(tools):
             mock.patch.object(mode, "get_historical_configs", mock.Mock()) as get_historical_configs_mock:
             assert mode._get_supported_distribution(True, False) == holding_adapted_config[
                 index_trading.IndexTradingModeProducer.INDEX_CONTENT
-                ]
+            ]
             assert get_ideal_distribution_mock.call_count == 2
             _get_currently_applied_historical_config_according_to_holdings_mock.assert_called_once_with(
                 mode.trading_config, {'ADA', 'BTC', 'SOL', 'USDT', 'ETH'}
@@ -2304,7 +2304,7 @@ async def test_get_supported_distribution(tools):
             assert mode._get_supported_distribution(False, True) == latest_config[
                 index_trading.IndexTradingModeProducer.INDEX_CONTENT
             ]
-            assert get_ideal_distribution_mock.call_count == 2
+            assert get_ideal_distribution_mock.call_count == 3
             _get_currently_applied_historical_config_according_to_holdings_mock.assert_not_called()
             get_historical_configs_mock.assert_called_once_with(
                 0, mode.exchange_manager.exchange.get_exchange_current_time()
@@ -2434,6 +2434,7 @@ async def test_is_index_config_applied(tools):
         symbol.base
         for symbol in trader.exchange_manager.exchange_config.traded_symbols
     )
+    
     
     # Test 1: No ideal distribution - should return False
     config_without_distribution = {}
@@ -2612,9 +2613,8 @@ async def test_is_index_config_applied(tools):
             "ETH": decimal.Decimal("0.3333333333333333333333333333"),  # 30/90 = 33.33%
         }.get(coin, decimal.Decimal("0")))
     ) as get_holdings_ratio_mock:
-        assert mode._is_index_config_applied(config_with_mixed_assets, traded_bases) is True
-        assert get_holdings_ratio_mock.call_count == 2  # Only BTC and ETH
-        get_holdings_ratio_mock.reset_mock()
+        assert mode._is_index_config_applied(config_with_mixed_assets, traded_bases) is False
+        get_holdings_ratio_mock.assert_not_called()
     
     # Test 12: All assets non-traded
     config_all_non_traded = {

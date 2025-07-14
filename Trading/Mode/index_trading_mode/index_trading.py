@@ -844,22 +844,34 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
             return config
         for index, historical_config in enumerate(historical_configs):
             if self._is_index_config_applied(historical_config, traded_bases):
-                self.logger.info(f"Using [N-{index}] {self.get_name()} historical config: {historical_config}.")
+                self.logger.info(f"Using [N-{index}] {self.get_name()} historical config distribution: {self.get_ideal_distribution(historical_config)}.")
                 return historical_config
         # 3. no suitable config found: return latest config
-        self.logger.info(f"No suitable {self.get_name()} config found: using latest config: {config}.")
+        self.logger.info(f"No suitable {self.get_name()} config found: using latest config distribution: {self.get_ideal_distribution(config)}.")
         return config
 
     def _is_index_config_applied(self, config: dict, traded_bases: set[str]) -> bool:
         full_assets_distribution = self.get_ideal_distribution(config)
         if not full_assets_distribution:
             return False
-        # ignore assets that are not traded (handle delisted coins)
         assets_distribution = [
             asset
             for asset in full_assets_distribution
             if asset[index_distribution.DISTRIBUTION_NAME] in traded_bases
         ]
+        if len(assets_distribution) != len(full_assets_distribution):
+            # if assets are missing from traded pairs, the config is not applied
+            # might be due to delisted or renamed coins
+            missing_assets = [
+                asset[index_distribution.DISTRIBUTION_NAME]
+                for asset in full_assets_distribution
+                if asset not in assets_distribution
+            ]
+            self.logger.warning(
+                f"Ignored {self.get_name()} config candidate as {len(missing_assets)} configured assets {missing_assets} are missing from {self.exchange_manager.exchange_name} traded pairs."
+            )
+            return False
+
         total_ratio = decimal.Decimal(sum(
             asset[index_distribution.DISTRIBUTION_VALUE]
             for asset in assets_distribution
@@ -904,7 +916,7 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
                         index_config = self.get_historical_configs(
                             0, self.exchange_manager.exchange.get_exchange_current_time()
                         )[0]
-                        self.logger.info(f"Updated {self.get_name()} to use latest config: {index_config}.")
+                        self.logger.info(f"Updated {self.get_name()} to use latest config, distribution: {self.get_ideal_distribution(index_config)}.")
                     except IndexError:
                         index_config = self.trading_config
                 detailed_distribution = self.get_ideal_distribution(index_config)
