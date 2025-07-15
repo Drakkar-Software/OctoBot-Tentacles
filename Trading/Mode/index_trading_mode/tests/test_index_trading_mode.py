@@ -289,6 +289,12 @@ async def test_init_config_values(tools):
     assert mode.selected_rebalance_trigger_profile is None
     assert mode.rebalance_trigger_min_ratio == decimal.Decimal(str(10.2 / 100))
 
+    # invalid synchronization policy
+    mode.trading_config[index_trading.IndexTradingModeProducer.SYNCHRONIZATION_POLICY] = "invalid_policy"
+    mode.init_user_inputs({})   # does no raise error
+    # use current or default value
+    assert mode.synchronization_policy == index_trading.SynchronizationPolicy.SELL_REMOVED_INDEX_COINS_ON_RATIO_REBALANCE
+
 
 async def test_single_exchange_process_optimize_initial_portfolio(tools):
     update = {}
