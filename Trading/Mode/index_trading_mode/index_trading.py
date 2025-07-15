@@ -52,8 +52,8 @@ class RebalanceDetails(enum.Enum):
 
 
 class SynchronizationPolicy(enum.Enum):
-    SELL_REMOVED_INDEX_COINS_ON_RATIO_REBALANCE = "sell removed index coins on ratio rebalance"
-    SELL_REMOVED_INDEX_COINS_AS_SOON_AS_POSSIBLE = "sell removed index coins as soon as possible"
+    SELL_REMOVED_INDEX_COINS_ON_RATIO_REBALANCE = "sell_removed_index_coins_on_ratio_rebalance"
+    SELL_REMOVED_INDEX_COINS_AS_SOON_AS_POSSIBLE = "sell_removed_index_coins_as_soon_as_possible"
 
 
 DEFAULT_QUOTE_ASSET_REBALANCE_TRIGGER_MIN_RATIO = 0.1  # 10%
@@ -792,11 +792,12 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
             IndexTradingModeProducer.SYNCHRONIZATION_POLICY, commons_enums.UserInputTypes.OPTIONS,
             self.synchronization_policy.value, inputs, 
             options=[p.value for p in SynchronizationPolicy],
+            editor_options={"enum_titles": [p.value.replace("_", " ") for p in SynchronizationPolicy]},
             title="Synchronization policy: should coins that are removed from index be sold as soon as possible or only when rebalancing is triggered when coins don't follow the configured ratios.",
         )
         try:
             self.synchronization_policy = SynchronizationPolicy(sync_policy)
-        except TypeError as err:
+        except ValueError as err:
             self.logger.exception(
                 err, 
                 True, 
