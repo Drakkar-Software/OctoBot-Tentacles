@@ -38,8 +38,17 @@ ALIASED_SYMBOLS = set()
 
 # hard code Coinbase base tier fees as long as there is no way to fetch it
 # https://www.coinbase.com/advanced-fees
-DEFAULT_TAKER_FEE_VALUE = 0.0075  # 0.75%: >1k monthly trading volume Coinbase taker fees tier
-DEFAULT_MAKER_FEE_VALUE = 0.0035  # 0.35%: >1k monthly trading volume Coinbase maker fees tier
+INTRO_1_TAKER_MAKER_FEES = (0.012, 0.006) # Intro 1: 1.2%, 0.6%: <1k monthly trading volume Coinbase taker fees tier
+INTRO_2_TAKER_MAKER_FEES = (0.0075, 0.0035) # Intro 2: 0.75%, 0.35%: >1k & <10k monthly trading volume Coinbase taker fees tier
+
+
+# simulate live fees considering the INTRO_1_TAKER_MAKER_FEES as the base tier fees to avoid 
+# fees issues for intro 1 tier users
+DEFAULT_LIVE_TAKER_FEE_VALUE = INTRO_1_TAKER_MAKER_FEES[0]
+DEFAULT_LIVE_MAKER_FEE_VALUE = INTRO_1_TAKER_MAKER_FEES[1]
+# compute backtesting fees considering the INTRO_2_TAKER_MAKER_FEES as the base tier fees
+DEFAULT_BACKTESTING_TAKER_FEE_VALUE = INTRO_2_TAKER_MAKER_FEES[0]
+DEFAULT_BACKTESTING_MAKER_FEE_VALUE = INTRO_2_TAKER_MAKER_FEES[1]
 # disabled by default
 FORCE_COINBASE_BASE_FEES = os_util.parse_boolean_environment_var("FORCE_COINBASE_BASE_FEES", "false")
 _MAX_CURSOR_ITERATIONS = 10
@@ -115,6 +124,25 @@ class CoinbaseConnector(ccxt_connector.CCXTConnector):
             # always use base fee tiers inside OctoBot to avoid issues with coinbase high fees
             self._apply_base_fee_tiers()
 
+    @classmethod
+    def register_simulator_connector_fee_methods(
+        cls, exchange_name: str, simulator_connector: exchanges.ExchangeSimulatorConnector
+    ):
+        if FORCE_COINBASE_BASE_FEES:
+            # only called in backtesting
+            # overrides exchange simulator connector get_fees to use backtesting fees
+            simulator_connector.get_fees = cls.simulator_connector_get_fees
+
+    @classmethod
+    def simulator_connector_get_fees(cls, symbol: str):
+        # same signature as ExchangeSimulatorConnector.get_fees
+        # force selecetd fee tier in backtesting
+        return {
+            trading_enums.ExchangeConstantsMarketPropertyColumns.TAKER.value: DEFAULT_BACKTESTING_TAKER_FEE_VALUE,
+            trading_enums.ExchangeConstantsMarketPropertyColumns.MAKER.value: DEFAULT_BACKTESTING_MAKER_FEE_VALUE,
+            trading_enums.ExchangeConstantsMarketPropertyColumns.FEE.value: trading_constants.CONFIG_DEFAULT_SIMULATOR_FEES
+        }
+
     def _apply_base_fee_tiers(self):
         taker_fee, maker_fee = self._get_base_tier_fees()
         self.logger.info(
@@ -127,7 +155,7 @@ class CoinbaseConnector(ccxt_connector.CCXTConnector):
 
     def _get_base_tier_fees(self) -> (float, float):
         return (
-            DEFAULT_TAKER_FEE_VALUE, DEFAULT_MAKER_FEE_VALUE
+            DEFAULT_LIVE_TAKER_FEE_VALUE, DEFAULT_LIVE_MAKER_FEE_VALUE
         )
         # TODO uncomment this in case there is a way to fetch tier 0 fees in Coinbase
         # try:
