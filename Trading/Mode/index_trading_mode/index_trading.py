@@ -409,8 +409,9 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
                 rebalance_details,
             )
         else:
+            allowance = round(self.trading_mode.rebalance_trigger_min_ratio * trading_constants.ONE_HUNDRED, 2)
             self.logger.info(
-                f"[{self.exchange_manager.exchange_name}] is following the index: no rebalance is required."
+                f"[{self.exchange_manager.exchange_name}] is following the index [+/-{allowance}%], no rebalance is required."
             )
             self.last_activity = trading_modes.TradingModeActivity(IndexActivity.REBALANCING_SKIPPED)
 
@@ -477,9 +478,10 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
             else:
                 beyond_ratio = False
             if beyond_ratio:
+                allowance = round(self.trading_mode.rebalance_trigger_min_ratio * trading_constants.ONE_HUNDRED, 2)
                 self.logger.info(
-                    f"{coin} is beyond the target ratio of {round(target_ratio * trading_constants.ONE_HUNDRED, 3)}%, "
-                    f"ratio: {round(coin_ratio * trading_constants.ONE_HUNDRED, 3)}%. A rebalance is required."
+                    f"{coin} is beyond the target ratio of {round(target_ratio * trading_constants.ONE_HUNDRED, 2)}[+/-{allowance}]%, "
+                    f"ratio: {round(coin_ratio * trading_constants.ONE_HUNDRED, 2)}%. A rebalance is required."
                 )
         return should_rebalance
 
@@ -910,7 +912,7 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
                 self.logger.info(f"Using [N-{index}] {self.get_name()} historical config distribution: {self.get_ideal_distribution(historical_config)}.")
                 return historical_config
         # 3. no suitable config found: return latest config
-        self.logger.info(f"No suitable {self.get_name()} config found: using latest config distribution: {self.get_ideal_distribution(config)}.")
+        self.logger.info(f"No suitable {self.get_name()} config found: using latest distribution: {self.get_ideal_distribution(config)}.")
         return config
 
     def _is_index_config_applied(self, config: dict, traded_bases: set[str]) -> bool:
@@ -997,7 +999,7 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
                         index_config = self.get_historical_configs(
                             0, self.exchange_manager.exchange.get_exchange_current_time()
                         )[0]
-                        self.logger.info(f"Updated {self.get_name()} to use latest config, distribution: {self.get_ideal_distribution(index_config)}.")
+                        self.logger.info(f"Updated {self.get_name()} to use latest distribution: {self.get_ideal_distribution(index_config)}.")
                     except IndexError:
                         index_config = self.trading_config
                 detailed_distribution = self.get_ideal_distribution(index_config)
