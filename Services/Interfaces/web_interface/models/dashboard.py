@@ -66,7 +66,10 @@ def format_trades(dict_trade_history):
             trade_time = dict_trade[trading_enums.ExchangeConstantsOrderColumns.TIMESTAMP.value]
             if trade_time > trading_constants.MINIMUM_VAL_TRADE_TIME:
                 trades[trade_time_key].append(
-                    timestamp_util.convert_timestamp_to_datetime(trade_time, time_format="%y-%m-%d %H:%M:%S"))
+                    timestamp_util.convert_timestamp_to_datetime(
+                        trade_time, time_format="%y-%m-%d %H:%M:%S", local_timezone=True
+                    )
+                )
                 trades[trade_price_key].append(
                     float(dict_trade[trading_enums.ExchangeConstantsOrderColumns.PRICE.value]))
                 trades[trade_description_key].append(
@@ -96,7 +99,7 @@ def format_orders(order, min_order_time):
             formatted_orders[time_key].append(
                 timestamp_util.convert_timestamp_to_datetime(
                     max(min_order_time, order.creation_time),
-                    time_format="%y-%m-%d %H:%M:%S"
+                    time_format="%y-%m-%d %H:%M:%S", local_timezone=True
                 )
             )
             formatted_orders[price_key].append(float(order.origin_price))
@@ -227,7 +230,7 @@ def _create_candles_data(exchange_manager, symbol, time_frame, historical_candle
                 kline[commons_enums.PriceIndexes.IND_PRICE_VOL.value])
         data_x = timestamp_util.convert_timestamps_to_datetime(data[commons_enums.PriceIndexes.IND_PRICE_TIME.value],
                                                                time_format="%y-%m-%d %H:%M:%S",
-                                                               force_timezone=False)
+                                                               local_timezone=True)
         if not ignore_trades:
             # handle trades after the 1st displayed candle start time for dashboard
             first_time_to_handle_in_board = data[commons_enums.PriceIndexes.IND_PRICE_TIME.value][0]
