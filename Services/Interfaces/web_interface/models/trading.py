@@ -230,7 +230,7 @@ def get_pnl_history_symbols(exchange=None, quote=None, symbol=None, since=None):
 
 
 def _convert_timestamp(timestamp):
-    return timestamp_util.convert_timestamp_to_datetime(timestamp, time_format='%Y-%m-%d %H:%M:%S')
+    return timestamp_util.convert_timestamp_to_datetime(timestamp, time_format='%Y-%m-%d %H:%M:%S', local_timezone=True)
 
 
 def get_pnl_history(exchange=None, quote=None, symbol=None, since=None, scale=None):
