@@ -257,8 +257,13 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             if ratio == trading_constants.ZERO:
                 # coin is not to handle
                 continue
-            ideal_amount = ratio * reference_market_to_split / price
-            # worse case (ex with 5USDT min order size): exactly 5 USDT can be in portfolio, we therefore want to
+            try:
+                ideal_amount = ratio * reference_market_to_split / price
+            except decimal.DecimalException as err:
+                raise err.__class__(
+                    f"Error computing {symbol} ideal amount ({ratio=}, {reference_market_to_split=}, {price=}): {err=}"
+                ) from err
+            # worse case (ex with 5 USDT min order size): exactly 5 USDT can be in portfolio, we therefore want to
             # trade at lease 5 USDT to be able to buy more.
             # - we want ideal_amount - min_cost > min_cost
             # - in other words ideal_amount > 2*min_cost => ideal_amount/2 > min cost
