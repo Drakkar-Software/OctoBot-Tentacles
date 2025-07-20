@@ -116,7 +116,13 @@ class CoinbaseConnector(ccxt_connector.CCXTConnector):
     @_coinbase_retrier
     async def _load_markets(self, client, reload: bool):
         # override for retrier and populate ALIASED_SYMBOLS
-        await client.load_markets(reload=reload)
+        try:
+            await client.load_markets(reload=reload)
+        except Exception as err:
+            # ensure this is not a proxy error, raise dedicated error if it is
+            if proxy_error := ccxt_client_util.get_proxy_error_if_any(self, err):
+                raise ccxt_client_util.get_proxy_error_class(proxy_error)(proxy_error) from err
+            raise
         # only call _refresh_alias_symbols from here as markets just got reloaded,
         # no market can be missing unlike when using cached markets
         _refresh_alias_symbols(client)

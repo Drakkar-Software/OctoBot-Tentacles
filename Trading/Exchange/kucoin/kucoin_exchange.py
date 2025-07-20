@@ -26,6 +26,7 @@ import octobot_trading.exchanges as exchanges
 import octobot_trading.exchanges.connectors.ccxt.ccxt_connector as ccxt_connector
 import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
 import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
+import octobot_trading.exchanges.connectors.ccxt.ccxt_client_util as ccxt_client_util
 import octobot_trading.constants as constants
 import octobot_trading.enums as trading_enums
 import octobot_trading.errors as trading_errors
@@ -68,7 +69,13 @@ class KucoinConnector(ccxt_connector.CCXTConnector):
     @_kucoin_retrier
     async def _load_markets(self, client, reload: bool):
         # override for retrier
-        await client.load_markets(reload=reload)
+        try:
+            await client.load_markets(reload=reload)
+        except Exception as err:
+            # ensure this is not a proxy error, raise dedicated error if it is
+            if proxy_error := ccxt_client_util.get_proxy_error_if_any(self, err):
+                raise ccxt_client_util.get_proxy_error_class(proxy_error)(proxy_error) from err
+            raise
 
 
 class Kucoin(exchanges.RestExchange):
