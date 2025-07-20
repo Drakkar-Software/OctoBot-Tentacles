@@ -1268,6 +1268,47 @@ async def test_rebalance_portfolio(tools):
                 _split_reference_market_into_indexed_coins_mock.reset_mock()
                 _update_producer_last_activity_mock.reset_mock()
 
+        with mock.patch.object(
+            consumer, "_ensure_enough_funds_to_buy_after_selling", mock.AsyncMock()
+        ) as _ensure_enough_funds_to_buy_after_selling_mock, \
+        mock.patch.object(
+            consumer, "_sell_indexed_coins_for_reference_market", mock.AsyncMock(return_value=["sell"])
+        ) as _sell_indexed_coins_for_reference_market_mock, mock.patch.object(
+            consumer, "_split_reference_market_into_indexed_coins", mock.AsyncMock(
+                side_effect=index_trading.RebalanceAborted
+            )
+        ) as _split_reference_market_into_indexed_coins_mock:
+            with mock.patch.object(
+                consumer, "_can_simply_buy_coins_without_selling", mock.Mock(return_value=False)
+            ) as _can_simply_buy_coins_without_selling_mock:
+                assert await consumer._rebalance_portfolio("details") == ["sell"]
+                _ensure_enough_funds_to_buy_after_selling_mock.assert_called_once()
+                _sell_indexed_coins_for_reference_market_mock.assert_called_once_with("details")
+                _split_reference_market_into_indexed_coins_mock.assert_called_once_with("details", False)
+                _update_producer_last_activity_mock.assert_called_once_with(
+                    index_trading.IndexActivity.REBALANCING_SKIPPED,
+                    index_trading.RebalanceSkipDetails.NOT_ENOUGH_AVAILABLE_FOUNDS.value
+                )
+                _ensure_enough_funds_to_buy_after_selling_mock.reset_mock()
+                _sell_indexed_coins_for_reference_market_mock.reset_mock()
+                _split_reference_market_into_indexed_coins_mock.reset_mock()
+                _update_producer_last_activity_mock.reset_mock()
+            with mock.patch.object(
+                consumer, "_can_simply_buy_coins_without_selling", mock.Mock(return_value=True)
+            ) as _can_simply_buy_coins_without_selling_mock:
+                assert await consumer._rebalance_portfolio("details") == []
+                _ensure_enough_funds_to_buy_after_selling_mock.assert_called_once()
+                _sell_indexed_coins_for_reference_market_mock.assert_not_called()
+                _split_reference_market_into_indexed_coins_mock.assert_called_once_with("details", True)
+                _update_producer_last_activity_mock.assert_called_once_with(
+                    index_trading.IndexActivity.REBALANCING_SKIPPED,
+                    index_trading.RebalanceSkipDetails.NOT_ENOUGH_AVAILABLE_FOUNDS.value
+                )
+                _ensure_enough_funds_to_buy_after_selling_mock.reset_mock()
+                _sell_indexed_coins_for_reference_market_mock.reset_mock()
+                _split_reference_market_into_indexed_coins_mock.reset_mock()
+                _update_producer_last_activity_mock.reset_mock()
+
 
 async def test_ensure_enough_funds_to_buy_after_selling(tools):
     update = {}

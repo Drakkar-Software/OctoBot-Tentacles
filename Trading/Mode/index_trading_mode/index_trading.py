@@ -56,6 +56,10 @@ class SynchronizationPolicy(enum.Enum):
     SELL_REMOVED_INDEX_COINS_AS_SOON_AS_POSSIBLE = "sell_removed_index_coins_as_soon_as_possible"
 
 
+class RebalanceAborted(Exception):
+    pass
+
+
 DEFAULT_QUOTE_ASSET_REBALANCE_TRIGGER_MIN_RATIO = 0.1  # 10%
 DEFAULT_REBALANCE_TRIGGER_MIN_RATIO = 0.05  # 5%
 
@@ -63,6 +67,10 @@ DEFAULT_REBALANCE_TRIGGER_MIN_RATIO = 0.05  # 5%
 class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     FILL_ORDER_TIMEOUT = 60
     SIMPLE_ADD_MIN_TOLERANCE_RATIO = decimal.Decimal("0.8")  # 20% tolerance
+
+    def __init__(self, trading_mode):
+        super().__init__(trading_mode)
+        self._already_logged_aborted_rebalance_error = False
 
     async def create_new_orders(self, symbol, _, state, **kwargs):
         details = kwargs["data"]
@@ -97,14 +105,22 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 f"{self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market}"
             )
             orders += await self._split_reference_market_into_indexed_coins(details, is_simple_buy_without_selling)
-        except trading_errors.MissingMinimalExchangeTradeVolume as err:
-            self.logger.warning(f"Aborting rebalance on {self.exchange_manager.exchange_name}: {err}")
+            # reset flag to relog if a next rebalance is aborted
+            self._already_logged_aborted_rebalance_error = False
+        except (trading_errors.MissingMinimalExchangeTradeVolume, RebalanceAborted) as err:
+            log_level = self.logger.warning
+            if isinstance(err, RebalanceAborted) and not self._already_logged_aborted_rebalance_error:
+                log_level = self.logger.error
+                self._already_logged_aborted_rebalance_error = True
+            log_level(
+                f"Aborting rebalance on {self.exchange_manager.exchange_name}: {err} ({err.__class__.__name__})"
+            )
             self._update_producer_last_activity(
                 IndexActivity.REBALANCING_SKIPPED,
                 RebalanceSkipDetails.NOT_ENOUGH_AVAILABLE_FOUNDS.value
             )
         finally:
-            self.logger.info("Portoflio rebalance complete")
+            self.logger.info("Portoflio rebalance process complete")
         return orders
 
     async def _sell_indexed_coins_for_reference_market(self, details: dict) -> list:
@@ -260,7 +276,7 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             try:
                 ideal_amount = ratio * reference_market_to_split / price
             except decimal.DecimalException as err:
-                raise err.__class__(
+                raise RebalanceAborted(
                     f"Error computing {symbol} ideal amount ({ratio=}, {reference_market_to_split=}, {price=}): {err=}"
                 ) from err
             # worse case (ex with 5 USDT min order size): exactly 5 USDT can be in portfolio, we therefore want to
