@@ -26,6 +26,7 @@ import octobot_commons.enums as commons_enum
 import octobot_commons.tests.test_config as test_config
 import octobot_commons.constants as commons_constants
 import octobot_commons.symbols as commons_symbols
+import octobot_commons.configuration as commons_configuration
 
 import octobot_backtesting.api as backtesting_api
 
@@ -108,17 +109,34 @@ def _get_config(tools, update):
 async def test_init_default_values(tools):
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, {}))
     assert mode.refresh_interval_days == 1
-    assert mode.rebalance_trigger_min_ratio == decimal.Decimal("0.05")
+    assert mode.rebalance_trigger_min_ratio == decimal.Decimal(str(index_trading.DEFAULT_REBALANCE_TRIGGER_MIN_RATIO))
+    assert mode.quote_asset_rebalance_ratio_threshold == decimal.Decimal(str(index_trading.DEFAULT_QUOTE_ASSET_REBALANCE_TRIGGER_MIN_RATIO))
     assert mode.ratio_per_asset == {'BTC': {'name': 'BTC', 'value': decimal.Decimal(100)}}
     assert mode.total_ratio_per_asset == decimal.Decimal(100)
+    assert mode.synchronization_policy == index_trading.SynchronizationPolicy.SELL_REMOVED_INDEX_COINS_AS_SOON_AS_POSSIBLE
+    assert mode.requires_initializing_appropriate_coins_distribution is False
     assert mode.indexed_coins == ["BTC"]
+    assert mode.selected_rebalance_trigger_profile is None
+    assert mode.rebalance_trigger_profiles is None
 
 
 async def test_init_config_values(tools):
     update = {
-        "refresh_interval": 72,
-        "rebalance_trigger_min_percent": 10.2,
-        "index_content": [
+        index_trading.IndexTradingModeProducer.REFRESH_INTERVAL: 72,
+        index_trading.IndexTradingModeProducer.SYNCHRONIZATION_POLICY: index_trading.SynchronizationPolicy.SELL_REMOVED_INDEX_COINS_ON_RATIO_REBALANCE.value,
+        index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_MIN_PERCENT: 10.2,
+        index_trading.IndexTradingModeProducer.SELECTED_REBALANCE_TRIGGER_PROFILE: None,
+        index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILES: [
+            {
+                index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_NAME: "profile-1",
+                index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_MIN_PERCENT: 5.2,
+            },
+            {
+                index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_NAME: "profile-2",
+                index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_MIN_PERCENT: 20.2,
+            },
+        ],
+        index_trading.IndexTradingModeProducer.INDEX_CONTENT: [
             {
                 index_distribution.DISTRIBUTION_NAME: "ETH",
                 index_distribution.DISTRIBUTION_VALUE: 53,
@@ -133,9 +151,23 @@ async def test_init_config_values(tools):
             },
         ]
     }
+    # no selected rebalance trigger profile
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
     assert mode.refresh_interval_days == 72
     assert mode.rebalance_trigger_min_ratio == decimal.Decimal("0.102")
+    assert mode.selected_rebalance_trigger_profile is None
+    assert mode.rebalance_trigger_profiles ==  [
+        {
+            index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_NAME: "profile-1",
+            index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_MIN_PERCENT: 5.2,
+        },
+        {
+            index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_NAME: "profile-2",
+            index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_MIN_PERCENT: 20.2,
+        },
+    ]
+    assert mode.synchronization_policy == index_trading.SynchronizationPolicy.SELL_REMOVED_INDEX_COINS_ON_RATIO_REBALANCE
+    assert mode.requires_initializing_appropriate_coins_distribution is True
     assert mode.ratio_per_asset == {
         "BTC": {
             index_distribution.DISTRIBUTION_NAME: "BTC",
@@ -150,9 +182,24 @@ async def test_init_config_values(tools):
         commons_symbols.parse_symbol(symbol)
         for symbol in ["ETH/USDT", "ADA/USDT", "BTC/USDT"]
     ]
+    mode.trading_config[index_trading.IndexTradingModeProducer.SELECTED_REBALANCE_TRIGGER_PROFILE] = "profile-1"
     mode.init_user_inputs({})
     assert mode.refresh_interval_days == 72
-    assert mode.rebalance_trigger_min_ratio == decimal.Decimal("0.102")
+    assert mode.rebalance_trigger_profiles ==  [
+        {
+            index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_NAME: "profile-1",
+            index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_MIN_PERCENT: 5.2,
+        },
+        {
+            index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_NAME: "profile-2",
+            index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_MIN_PERCENT: 20.2,
+        },
+    ]
+    assert mode.selected_rebalance_trigger_profile == {
+        index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_NAME: "profile-1",
+        index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_MIN_PERCENT: 5.2,
+    }   # applied profile
+    assert mode.rebalance_trigger_min_ratio == decimal.Decimal("0.052")
     assert mode.ratio_per_asset == {
         "ETH": {
             index_distribution.DISTRIBUTION_NAME: "ETH",
@@ -174,7 +221,7 @@ async def test_init_config_values(tools):
     ]
     mode.init_user_inputs({})
     assert mode.refresh_interval_days == 72
-    assert mode.rebalance_trigger_min_ratio == decimal.Decimal("0.102")
+    assert mode.rebalance_trigger_min_ratio == decimal.Decimal("0.052")
     assert mode.ratio_per_asset == {
         "ETH": {
             index_distribution.DISTRIBUTION_NAME: "ETH",
@@ -203,9 +250,15 @@ async def test_init_config_values(tools):
             index_distribution.DISTRIBUTION_VALUE: 25,
         },
     ]
+    # select profile 2
+    mode.trading_config[index_trading.IndexTradingModeProducer.SELECTED_REBALANCE_TRIGGER_PROFILE] = "profile-2"
     mode.init_user_inputs({})
     assert mode.refresh_interval_days == 72
-    assert mode.rebalance_trigger_min_ratio == decimal.Decimal("0.102")
+    assert mode.selected_rebalance_trigger_profile == {
+        index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_NAME: "profile-2",
+        index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_MIN_PERCENT: 20.2,
+    }   # applied profile
+    assert mode.rebalance_trigger_min_ratio == decimal.Decimal("0.202")
     assert mode.ratio_per_asset == {
         "BTC": {
             index_distribution.DISTRIBUTION_NAME: "BTC",
@@ -218,6 +271,29 @@ async def test_init_config_values(tools):
     }
     assert mode.total_ratio_per_asset == decimal.Decimal("100")
     assert mode.indexed_coins == ["BTC", "USDT"]  # sorted list
+
+    # unknown profile
+    mode.trading_config[index_trading.IndexTradingModeProducer.SELECTED_REBALANCE_TRIGGER_PROFILE] = "unknown"
+    mode.init_user_inputs({})
+    # back to non-profile config values bu profiles are loaded
+    assert mode.rebalance_trigger_profiles ==  [
+        {
+            index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_NAME: "profile-1",
+            index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_MIN_PERCENT: 5.2,
+        },
+        {
+            index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_NAME: "profile-2",
+            index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_MIN_PERCENT: 20.2,
+        },
+    ]
+    assert mode.selected_rebalance_trigger_profile is None
+    assert mode.rebalance_trigger_min_ratio == decimal.Decimal(str(10.2 / 100))
+
+    # invalid synchronization policy
+    mode.trading_config[index_trading.IndexTradingModeProducer.SYNCHRONIZATION_POLICY] = "invalid_policy"
+    mode.init_user_inputs({})   # does no raise error
+    # use current or default value
+    assert mode.synchronization_policy == index_trading.SynchronizationPolicy.SELL_REMOVED_INDEX_COINS_ON_RATIO_REBALANCE
 
 
 async def test_single_exchange_process_optimize_initial_portfolio(tools):
@@ -312,7 +388,7 @@ async def test_get_target_ratio_without_config(tools):
         commons_symbols.parse_symbol(symbol)
         for symbol in ["ETH/USDT", "SOL/USDT", "BTC/USDT"]
     ]
-    mode._update_coins_distribution()
+    mode.ensure_updated_coins_distribution()
     assert mode.get_target_ratio("ETH") == decimal.Decimal('0.3333333333333333617834929233')
     assert mode.get_target_ratio("BTC") == decimal.Decimal("0.3333333333333333617834929233")
     assert mode.get_target_ratio("SOL") == decimal.Decimal("0.3333333333333333617834929233")
@@ -322,7 +398,7 @@ async def test_get_target_ratio_without_config(tools):
         commons_symbols.parse_symbol(symbol)
         for symbol in ["ETH/USDT", "BTC/USDT"]
     ]
-    mode._update_coins_distribution()
+    mode.ensure_updated_coins_distribution()
     assert mode.get_target_ratio("ETH") == decimal.Decimal('0.5')
     assert mode.get_target_ratio("BTC") == decimal.Decimal("0.5")
     assert mode.get_target_ratio("SOL") == decimal.Decimal("0")
@@ -331,7 +407,7 @@ async def test_get_target_ratio_without_config(tools):
         commons_symbols.parse_symbol(symbol)
         for symbol in ["ETH/USDT", "BTC/USDT", "ADA/USDT", "SOL/USDT"]
     ]
-    mode._update_coins_distribution()
+    mode.ensure_updated_coins_distribution()
     assert mode.get_target_ratio("ETH") == decimal.Decimal('0.25')
     assert mode.get_target_ratio("BTC") == decimal.Decimal("0.25")
     assert mode.get_target_ratio("SOL") == decimal.Decimal("0.25")
@@ -439,6 +515,84 @@ async def test_ensure_index(tools):
                 _cancel_traded_pairs_open_orders_if_any.assert_not_called()
                 _trigger_rebalance_mock.assert_called_once_with({"plop": 1})
 
+        # Test with requires_initializing_appropriate_coins_distribution = True
+        with mock.patch.object(producer, "_trigger_rebalance", mock.AsyncMock()) as _trigger_rebalance_mock:
+            with mock.patch.object(
+                    producer, "_get_rebalance_details", mock.Mock(return_value=(False, {}))
+            ) as _get_rebalance_details_mock:
+                with mock.patch.object(
+                        mode, "ensure_updated_coins_distribution", mock.Mock()
+                ) as ensure_updated_coins_distribution_mock:
+                    # Set the flag to True
+                    mode.requires_initializing_appropriate_coins_distribution = True
+                    producer.trading_mode.cancel_open_orders = True
+                    await producer.ensure_index()
+                    # Verify ensure_updated_coins_distribution was called with adapt_to_holdings=True
+                    ensure_updated_coins_distribution_mock.assert_called_once_with(adapt_to_holdings=True)
+                    # Verify the flag was set to False
+                    assert mode.requires_initializing_appropriate_coins_distribution is False
+                    assert producer.last_activity == octobot_trading.modes.TradingModeActivity(
+                        index_trading.IndexActivity.REBALANCING_SKIPPED
+                    )
+                    _cancel_traded_pairs_open_orders_if_any.assert_called_once()
+                    _wait_for_symbol_prices_and_profitability_init_mock.assert_called_once()
+                    _get_rebalance_details_mock.assert_called_once()
+                    _trigger_rebalance_mock.assert_not_called()
+                    ensure_updated_coins_distribution_mock.reset_mock()
+                    _cancel_traded_pairs_open_orders_if_any.reset_mock()
+                    _wait_for_symbol_prices_and_profitability_init_mock.reset_mock()
+                    _get_rebalance_details_mock.reset_mock()
+
+            with mock.patch.object(
+                    producer, "_get_rebalance_details", mock.Mock(return_value=(True, {"plop": 1}))
+            ) as _get_rebalance_details_mock:
+                with mock.patch.object(
+                        mode, "ensure_updated_coins_distribution", mock.Mock()
+                ) as ensure_updated_coins_distribution_mock:
+                    # Set the flag to True and disable cancel_open_orders
+                    mode.requires_initializing_appropriate_coins_distribution = True
+                    producer.trading_mode.cancel_open_orders = False
+                    await producer.ensure_index()
+                    # Verify ensure_updated_coins_distribution was called with adapt_to_holdings=True
+                    ensure_updated_coins_distribution_mock.assert_called_once_with(adapt_to_holdings=True)
+                    # Verify the flag was set to False
+                    assert mode.requires_initializing_appropriate_coins_distribution is False
+                    assert producer.last_activity == octobot_trading.modes.TradingModeActivity(
+                        index_trading.IndexActivity.REBALANCING_DONE, {"plop": 1}
+                    )
+                    _wait_for_symbol_prices_and_profitability_init_mock.assert_called_once()
+                    _get_rebalance_details_mock.assert_called_once()
+                    _cancel_traded_pairs_open_orders_if_any.assert_not_called()
+                    _trigger_rebalance_mock.assert_called_once_with({"plop": 1})
+                    ensure_updated_coins_distribution_mock.reset_mock()
+                    _wait_for_symbol_prices_and_profitability_init_mock.reset_mock()
+                    _get_rebalance_details_mock.reset_mock()
+                    _trigger_rebalance_mock.reset_mock()
+
+        # Test with requires_initializing_appropriate_coins_distribution = False (default)
+        with mock.patch.object(producer, "_trigger_rebalance", mock.AsyncMock()) as _trigger_rebalance_mock:
+            with mock.patch.object(
+                    producer, "_get_rebalance_details", mock.Mock(return_value=(False, {}))
+            ) as _get_rebalance_details_mock:
+                with mock.patch.object(
+                        mode, "ensure_updated_coins_distribution", mock.Mock()
+                ) as ensure_updated_coins_distribution_mock:
+                    # Ensure the flag is False (default state)
+                    mode.requires_initializing_appropriate_coins_distribution = False
+                    producer.trading_mode.cancel_open_orders = True
+                    await producer.ensure_index()
+                    # Verify ensure_updated_coins_distribution was NOT called
+                    ensure_updated_coins_distribution_mock.assert_not_called()
+                    # Verify the flag remains False
+                    assert mode.requires_initializing_appropriate_coins_distribution is False
+                    assert producer.last_activity == octobot_trading.modes.TradingModeActivity(
+                        index_trading.IndexActivity.REBALANCING_SKIPPED
+                    )
+                    _cancel_traded_pairs_open_orders_if_any.assert_called_once()
+                    _wait_for_symbol_prices_and_profitability_init_mock.assert_called_once()
+                    _get_rebalance_details_mock.assert_called_once()
+                    _trigger_rebalance_mock.assert_not_called()
+
 
 async def test_cancel_traded_pairs_open_orders_if_any(tools):
     update = {}
@@ -486,7 +640,7 @@ async def test_get_rebalance_details(tools):
         commons_symbols.parse_symbol(symbol)
         for symbol in ["ETH/USDT", "BTC/USDT", "SOL/USDT"]
     ]
-    mode._update_coins_distribution()
+    mode.ensure_updated_coins_distribution()
     mode.rebalance_trigger_min_ratio = decimal.Decimal("0.1")
     portfolio_value_holder = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder
     with mock.patch.object(producer, "_resolve_swaps", mock.Mock()) as _resolve_swaps_mock:
@@ -711,17 +865,19 @@ async def test_get_rebalance_details(tools):
             _resolve_swaps_mock.assert_called_once_with(details)
             _resolve_swaps_mock.reset_mock()
         
-async def test_get_rebalance_details_with_usdt(tools):
+async def test_get_rebalance_details_with_usdt_without_coin_distribution_update(tools):
     update = {}
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
     trader.exchange_manager.exchange_config.traded_symbols = [
         commons_symbols.parse_symbol(symbol)
         for symbol in ["ETH/USDT", "BTC/USDT", "SOL/USDT"]
     ]
-    mode._update_coins_distribution()
+    mode.ensure_updated_coins_distribution()
     mode.rebalance_trigger_min_ratio = decimal.Decimal("0.1")
+    mode.synchronization_policy = index_trading.SynchronizationPolicy.SELL_REMOVED_INDEX_COINS_AS_SOON_AS_POSSIBLE
     portfolio_value_holder = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder
-    with mock.patch.object(producer, "_resolve_swaps", mock.Mock()) as _resolve_swaps_mock:
+    with mock.patch.object(producer, "_resolve_swaps", mock.Mock()) as _resolve_swaps_mock, \
+        mock.patch.object(mode, "ensure_updated_coins_distribution", mock.Mock()) as ensure_updated_coins_distribution_mock:
         def _get_holdings_ratio(coin, **kwargs):
             # USDT is 1/3 of the portfolio
             if coin == "USDT":
@@ -748,6 +904,52 @@ async def test_get_rebalance_details_with_usdt(tools):
                 index_trading.RebalanceDetails.FORCED_REBALANCE.value: True,
             }
             assert get_holdings_ratio_mock.call_count == len(mode.indexed_coins) + 1  # called to check non-indexed assets ratio
+            ensure_updated_coins_distribution_mock.assert_not_called()
+            get_holdings_ratio_mock.reset_mock()
+            _resolve_swaps_mock.assert_not_called()
+            _resolve_swaps_mock.reset_mock()
+        
+async def test_get_rebalance_details_with_usdt_and_coin_distribution_update(tools):
+    update = {}
+    mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
+    trader.exchange_manager.exchange_config.traded_symbols = [
+        commons_symbols.parse_symbol(symbol)
+        for symbol in ["ETH/USDT", "BTC/USDT", "SOL/USDT"]
+    ]
+    mode.ensure_updated_coins_distribution()
+    mode.rebalance_trigger_min_ratio = decimal.Decimal("0.1")
+    portfolio_value_holder = trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder
+    mode.synchronization_policy = index_trading.SynchronizationPolicy.SELL_REMOVED_INDEX_COINS_ON_RATIO_REBALANCE
+    with mock.patch.object(producer, "_resolve_swaps", mock.Mock()) as _resolve_swaps_mock, \
+        mock.patch.object(mode, "ensure_updated_coins_distribution", mock.Mock()) as ensure_updated_coins_distribution_mock:
+        def _get_holdings_ratio(coin, **kwargs):
+            # USDT is 1/3 of the portfolio
+            if coin == "USDT":
+                return decimal.Decimal("0.33")
+            # other coins are 2/3 of the portfolio
+            return decimal.Decimal("0.33") * decimal.Decimal("2") / decimal.Decimal("3")
+
+        # with added USDT to the portfolio
+        with mock.patch.object(
+            portfolio_value_holder, "get_holdings_ratio", mock.Mock(side_effect=_get_holdings_ratio)
+        ) as get_holdings_ratio_mock:
+            should_rebalance, details = producer._get_rebalance_details()
+            assert should_rebalance is True
+            assert details == {
+                index_trading.RebalanceDetails.SELL_SOME.value: {},
+                index_trading.RebalanceDetails.BUY_MORE.value: {
+                    'BTC': decimal.Decimal('0.3333333333333333617834929233'),
+                    'ETH': decimal.Decimal('0.3333333333333333617834929233'),
+                    'SOL': decimal.Decimal('0.3333333333333333617834929233')
+                },
+                index_trading.RebalanceDetails.REMOVE.value: {},
+                index_trading.RebalanceDetails.ADD.value: {},
+                index_trading.RebalanceDetails.SWAP.value: {},
+                index_trading.RebalanceDetails.FORCED_REBALANCE.value: True,
+            }
+            # 2 x called to check non-indexed assets ratio (once for current and one for latest distribution)
+            assert get_holdings_ratio_mock.call_count == 2 * (len(mode.indexed_coins) + 1)  
+            ensure_updated_coins_distribution_mock.assert_called_once()
             get_holdings_ratio_mock.reset_mock()
             _resolve_swaps_mock.assert_not_called()
             _resolve_swaps_mock.reset_mock()
@@ -807,11 +1009,11 @@ async def test_should_rebalance_due_to_non_indexed_quote_assets_ratio(tools):
     assert producer._should_rebalance_due_to_non_indexed_quote_assets_ratio(decimal.Decimal("0.2"), rebalance_details) is True  # is False when no coins are to remove
     assert producer._should_rebalance_due_to_non_indexed_quote_assets_ratio(decimal.Decimal("0.03"), rebalance_details) is False  # bellow threshold: still false
 
-    
 
-async def test_get_removed_coins_from_config(tools):
+async def test_get_removed_coins_from_config_sell_removed_coins_asap(tools):
     update = {}
     mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
+    mode.synchronization_policy = index_trading.SynchronizationPolicy.SELL_REMOVED_INDEX_COINS_AS_SOON_AS_POSSIBLE
     mode.sell_unindexed_traded_coins = False
     assert mode.get_removed_coins_from_config([]) == []
     mode.trading_config = {
@@ -862,6 +1064,72 @@ async def test_get_removed_coins_from_config(tools):
         ]
     }
     assert sorted(mode.get_removed_coins_from_config(["BTC", "ETH"])) == sorted(["ETH", "BB"])
+
+
+async def test_get_removed_coins_from_config_sell_removed_on_ratio_rebalance(tools):
+    update = {}
+    mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
+    mode.synchronization_policy = index_trading.SynchronizationPolicy.SELL_REMOVED_INDEX_COINS_ON_RATIO_REBALANCE
+    mode.sell_unindexed_traded_coins = False
+    assert mode.get_removed_coins_from_config([]) == []
+    # without historical config
+    mode.trading_config = {
+        index_trading.IndexTradingModeProducer.INDEX_CONTENT: [
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "BTC"
+            },
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "SOL"
+            }
+        ]
+    }
+    assert mode.get_removed_coins_from_config([]) == []
+    # with sell_unindexed_traded_coins=True
+    mode.sell_unindexed_traded_coins = True
+    mode.indexed_coins = ["BTC"]
+    assert mode.get_removed_coins_from_config(["BTC", "ETH"]) == ["ETH"]
+
+    # with historical config
+    historical_config_1 = {
+        index_trading.IndexTradingModeProducer.INDEX_CONTENT: [
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "BTC"
+            },
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "ADA"
+            }
+        ]
+    }
+    historical_config_2 = {
+        index_trading.IndexTradingModeProducer.INDEX_CONTENT: [
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "BTC"
+            },
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "DOT"
+            }
+        ]
+    }
+    commons_configuration.add_historical_tentacle_config(mode.trading_config, 1, historical_config_1)
+    commons_configuration.add_historical_tentacle_config(mode.trading_config, 2, historical_config_2)
+    mode.historical_master_config = mode.trading_config
+    with mock.patch.object(mode.exchange_manager.exchange, "get_exchange_current_time", mock.Mock(return_value=0)):
+        assert mode.get_removed_coins_from_config(["BTC", "ETH", "SOL"]) == ["ETH", "SOL"]
+    with mock.patch.object(mode.exchange_manager.exchange, "get_exchange_current_time", mock.Mock(return_value=2)):
+        assert sorted(mode.get_removed_coins_from_config(["BTC", "ETH", "SOL"])) == sorted(
+            ["ETH", "SOL", "ADA", "DOT"]
+        )
+        assert sorted(mode.get_removed_coins_from_config(["BTC", "ETH"])) == sorted(['ADA', 'DOT', 'ETH'])
+
+    # with sell_unindexed_traded_coins=False
+    mode.sell_unindexed_traded_coins = False
+    with mock.patch.object(mode.exchange_manager.exchange, "get_exchange_current_time", mock.Mock(return_value=0)):
+        assert mode.get_removed_coins_from_config(["BTC", "ETH", "SOL"]) == []
+    with mock.patch.object(mode.exchange_manager.exchange, "get_exchange_current_time", mock.Mock(return_value=2)):
+        assert sorted(mode.get_removed_coins_from_config(["BTC", "ETH", "SOL"])) == sorted(
+            ["ADA", "DOT"]
+        )
+        assert sorted(mode.get_removed_coins_from_config(["BTC", "ETH"])) == sorted(['ADA', 'DOT'])
 
 
 async def test_create_new_orders(tools):
@@ -967,6 +1235,47 @@ async def test_rebalance_portfolio(tools):
         ) as _sell_indexed_coins_for_reference_market_mock, mock.patch.object(
             consumer, "_split_reference_market_into_indexed_coins", mock.AsyncMock(
                 side_effect=trading_errors.MissingMinimalExchangeTradeVolume
+            )
+        ) as _split_reference_market_into_indexed_coins_mock:
+            with mock.patch.object(
+                consumer, "_can_simply_buy_coins_without_selling", mock.Mock(return_value=False)
+            ) as _can_simply_buy_coins_without_selling_mock:
+                assert await consumer._rebalance_portfolio("details") == ["sell"]
+                _ensure_enough_funds_to_buy_after_selling_mock.assert_called_once()
+                _sell_indexed_coins_for_reference_market_mock.assert_called_once_with("details")
+                _split_reference_market_into_indexed_coins_mock.assert_called_once_with("details", False)
+                _update_producer_last_activity_mock.assert_called_once_with(
+                    index_trading.IndexActivity.REBALANCING_SKIPPED,
+                    index_trading.RebalanceSkipDetails.NOT_ENOUGH_AVAILABLE_FOUNDS.value
+                )
+                _ensure_enough_funds_to_buy_after_selling_mock.reset_mock()
+                _sell_indexed_coins_for_reference_market_mock.reset_mock()
+                _split_reference_market_into_indexed_coins_mock.reset_mock()
+                _update_producer_last_activity_mock.reset_mock()
+            with mock.patch.object(
+                consumer, "_can_simply_buy_coins_without_selling", mock.Mock(return_value=True)
+            ) as _can_simply_buy_coins_without_selling_mock:
+                assert await consumer._rebalance_portfolio("details") == []
+                _ensure_enough_funds_to_buy_after_selling_mock.assert_called_once()
+                _sell_indexed_coins_for_reference_market_mock.assert_not_called()
+                _split_reference_market_into_indexed_coins_mock.assert_called_once_with("details", True)
+                _update_producer_last_activity_mock.assert_called_once_with(
+                    index_trading.IndexActivity.REBALANCING_SKIPPED,
+                    index_trading.RebalanceSkipDetails.NOT_ENOUGH_AVAILABLE_FOUNDS.value
+                )
+                _ensure_enough_funds_to_buy_after_selling_mock.reset_mock()
+                _sell_indexed_coins_for_reference_market_mock.reset_mock()
+                _split_reference_market_into_indexed_coins_mock.reset_mock()
+                _update_producer_last_activity_mock.reset_mock()
+
+        with mock.patch.object(
+            consumer, "_ensure_enough_funds_to_buy_after_selling", mock.AsyncMock()
+        ) as _ensure_enough_funds_to_buy_after_selling_mock, \
+        mock.patch.object(
+            consumer, "_sell_indexed_coins_for_reference_market", mock.AsyncMock(return_value=["sell"])
+        ) as _sell_indexed_coins_for_reference_market_mock, mock.patch.object(
+            consumer, "_split_reference_market_into_indexed_coins", mock.AsyncMock(
+                side_effect=index_trading.RebalanceAborted
             )
         ) as _split_reference_market_into_indexed_coins_mock:
             with mock.patch.object(
@@ -1526,7 +1835,7 @@ async def test_get_symbols_and_amounts(tools):
         commons_symbols.parse_symbol(symbol)
         for symbol in ["BTC/USDT"]
     ]
-    mode._update_coins_distribution()
+    mode.ensure_updated_coins_distribution()
     assert await consumer._get_symbols_and_amounts(["BTC"], decimal.Decimal(3000)) == {
         "BTC/USDT": decimal.Decimal(3)
     }
@@ -1542,7 +1851,7 @@ async def test_get_symbols_and_amounts(tools):
             commons_symbols.parse_symbol(symbol)
             for symbol in ["BTC/USDT", "ETH/USDT"]
         ]
-        mode._update_coins_distribution()
+        mode.ensure_updated_coins_distribution()
         assert await consumer._get_symbols_and_amounts(["BTC", "ETH"], decimal.Decimal(3000)) == {
             "BTC/USDT": decimal.Decimal("1.5"),
             "ETH/USDT": decimal.Decimal("1.5")
@@ -1575,7 +1884,7 @@ async def test_get_symbols_and_amounts(tools):
         "required_strategies": [],
         "rebalance_trigger_min_percent": 5
     }
-    mode._update_coins_distribution()
+    mode.ensure_updated_coins_distribution()
     with mock.patch.object(
             trading_personal_data, "get_up_to_date_price", mock.AsyncMock(return_value=decimal.Decimal(1000))
     ) as get_up_to_date_price_mock:
@@ -1821,3 +2130,715 @@ async def _stop(exchange_manager):
         await backtesting_api.stop_importer(importer)
     await exchange_manager.exchange.backtesting.stop()
     await exchange_manager.stop()
+
+
+async def test_automatically_update_historical_config_on_set_intervals(tools):
+    update = {}
+    mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, update))
+    
+    # Test with SELL_REMOVED_INDEX_COINS_AS_SOON_AS_POSSIBLE policy
+    mode.synchronization_policy = index_trading.SynchronizationPolicy.SELL_REMOVED_INDEX_COINS_AS_SOON_AS_POSSIBLE
+    with mock.patch.object(mode, "supports_historical_config", mock.Mock(return_value=True)) as supports_historical_config_mock:
+        assert mode.automatically_update_historical_config_on_set_intervals() is True
+        supports_historical_config_mock.assert_called_once()
+        supports_historical_config_mock.reset_mock()
+    
+    with mock.patch.object(mode, "supports_historical_config", mock.Mock(return_value=False)) as supports_historical_config_mock:
+        assert mode.automatically_update_historical_config_on_set_intervals() is False
+        supports_historical_config_mock.assert_called_once()
+        supports_historical_config_mock.reset_mock()
+    
+    # Test with SELL_REMOVED_INDEX_COINS_ON_RATIO_REBALANCE policy
+    mode.synchronization_policy = index_trading.SynchronizationPolicy.SELL_REMOVED_INDEX_COINS_ON_RATIO_REBALANCE
+    with mock.patch.object(mode, "supports_historical_config", mock.Mock(return_value=True)) as supports_historical_config_mock:
+        assert mode.automatically_update_historical_config_on_set_intervals() is False
+        supports_historical_config_mock.assert_called_once()
+        supports_historical_config_mock.reset_mock()
+    
+    with mock.patch.object(mode, "supports_historical_config", mock.Mock(return_value=False)) as supports_historical_config_mock:
+        assert mode.automatically_update_historical_config_on_set_intervals() is False
+        supports_historical_config_mock.assert_called_once()
+        supports_historical_config_mock.reset_mock()
+
+
+async def test_ensure_updated_coins_distribution(tools):
+    mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, {}))
+    trader.exchange_manager.exchange_config.traded_symbols = [
+        commons_symbols.parse_symbol(symbol)
+        for symbol in ["ETH/USDT", "SOL/USDT", "BTC/USDT"]
+    ]
+    distribution = [
+        {
+            index_trading.index_distribution.DISTRIBUTION_NAME: "BTC",
+            index_trading.index_distribution.DISTRIBUTION_VALUE: 50
+        },
+        {
+            index_trading.index_distribution.DISTRIBUTION_NAME: "ETH",
+            index_trading.index_distribution.DISTRIBUTION_VALUE: 30
+        },
+        {
+            index_trading.index_distribution.DISTRIBUTION_NAME: "SOL",
+            index_trading.index_distribution.DISTRIBUTION_VALUE: 20
+        },
+    ]
+    with mock.patch.object(mode, "_get_supported_distribution", mock.Mock(return_value=distribution)) as _get_supported_distribution_mock:
+        mode.ensure_updated_coins_distribution()
+        _get_supported_distribution_mock.assert_called_once()
+        _get_supported_distribution_mock.reset_mock()
+        assert mode.ratio_per_asset == {
+            "BTC": {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "BTC",
+                index_trading.index_distribution.DISTRIBUTION_VALUE: 50
+            },
+            "ETH": {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "ETH",
+                index_trading.index_distribution.DISTRIBUTION_VALUE: 30
+            },
+            "SOL": {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "SOL",
+                index_trading.index_distribution.DISTRIBUTION_VALUE: 20
+            }
+        }
+        assert mode.total_ratio_per_asset == 100
+        assert mode.indexed_coins == ["BTC", "ETH", "SOL"]
+    
+    # include ref market in distribution
+    distribution = [
+        {
+            index_trading.index_distribution.DISTRIBUTION_NAME: "BTC",
+            index_trading.index_distribution.DISTRIBUTION_VALUE: 50
+        },
+        {
+            index_trading.index_distribution.DISTRIBUTION_NAME: "ETH",
+            index_trading.index_distribution.DISTRIBUTION_VALUE: 30
+        },
+        {
+            index_trading.index_distribution.DISTRIBUTION_NAME: "USDT",
+            index_trading.index_distribution.DISTRIBUTION_VALUE: 20
+        },
+    ]
+    with mock.patch.object(mode, "_get_supported_distribution", mock.Mock(return_value=distribution)) as _get_supported_distribution_mock:
+        mode.ensure_updated_coins_distribution()
+        _get_supported_distribution_mock.assert_called_once()
+        _get_supported_distribution_mock.reset_mock()
+        assert mode.ratio_per_asset == {
+            "BTC": {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "BTC",
+                index_trading.index_distribution.DISTRIBUTION_VALUE: 50
+            },
+            "ETH": {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "ETH",
+                index_trading.index_distribution.DISTRIBUTION_VALUE: 30
+            },
+            "USDT": {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "USDT",
+                index_trading.index_distribution.DISTRIBUTION_VALUE: 20
+            }
+        }
+        assert mode.total_ratio_per_asset == 100
+        assert mode.indexed_coins == ["BTC", "ETH", "USDT"]
+
+
+async def test_get_supported_distribution(tools):
+    mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, {}))
+    trader.exchange_manager.exchange_config.traded_symbols = [
+        commons_symbols.parse_symbol(symbol)
+        for symbol in ["BTC/USDT", "ETH/USDT", "SOL/USDT", "ADA/USDT"]
+    ]
+    mode.trading_config = {
+        index_trading.IndexTradingModeProducer.INDEX_CONTENT:  [
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "BTC",
+                index_trading.index_distribution.DISTRIBUTION_VALUE: 25
+            },
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "ETH",
+                index_trading.index_distribution.DISTRIBUTION_VALUE: 25
+            },
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "SOL",
+                index_trading.index_distribution.DISTRIBUTION_VALUE: 25
+            },
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "ADA",
+                index_trading.index_distribution.DISTRIBUTION_VALUE: 25
+            },
+        ]
+    }
+    with mock.patch.object(mode, "get_ideal_distribution", mock.Mock(wraps=mode.get_ideal_distribution)) as get_ideal_distribution_mock:
+        # no ideal distribution: return uniform distribution over traded assets
+        assert mode._get_supported_distribution(False, False) == mode.trading_config[
+            index_trading.IndexTradingModeProducer.INDEX_CONTENT
+        ]
+        get_ideal_distribution_mock.assert_called_once()
+
+    mode.trading_config = {
+        index_trading.IndexTradingModeProducer.INDEX_CONTENT:  [
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "BTC",
+                index_trading.index_distribution.DISTRIBUTION_VALUE: 50
+            },
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "ETH",
+                index_trading.index_distribution.DISTRIBUTION_VALUE: 30
+            },
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "USDT",
+                index_trading.index_distribution.DISTRIBUTION_VALUE: 20
+            },
+        ]
+    }
+    with mock.patch.object(mode, "get_ideal_distribution", mock.Mock(wraps=mode.get_ideal_distribution)) as get_ideal_distribution_mock:
+        assert mode._get_supported_distribution(False, False) == mode.trading_config[
+            index_trading.IndexTradingModeProducer.INDEX_CONTENT
+        ]
+        get_ideal_distribution_mock.assert_called_once()
+
+    mode.trading_config = {
+        index_trading.IndexTradingModeProducer.INDEX_CONTENT:  [
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "BTC",
+                index_trading.index_distribution.DISTRIBUTION_VALUE: 50
+            },
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "ETH",
+                index_trading.index_distribution.DISTRIBUTION_VALUE: 30
+            },
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "USDT",
+                index_trading.index_distribution.DISTRIBUTION_VALUE: 20
+            },
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "PLOP", # not traded
+                index_trading.index_distribution.DISTRIBUTION_VALUE: 20
+            },
+        ]
+    }
+    with mock.patch.object(mode, "get_ideal_distribution", mock.Mock(wraps=mode.get_ideal_distribution)) as get_ideal_distribution_mock:
+        assert mode._get_supported_distribution(False, False) == [
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "BTC",
+                index_trading.index_distribution.DISTRIBUTION_VALUE: 50
+            },
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "ETH",
+                index_trading.index_distribution.DISTRIBUTION_VALUE: 30
+            },
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "USDT",
+                index_trading.index_distribution.DISTRIBUTION_VALUE: 20
+            },
+            # {
+            #     index_trading.index_distribution.DISTRIBUTION_NAME: "PLOP", # not traded
+            #     index_trading.index_distribution.DISTRIBUTION_VALUE: 20
+            # },
+        ]
+        get_ideal_distribution_mock.assert_called_once()
+
+    mode.trading_config = {
+        index_trading.IndexTradingModeProducer.INDEX_CONTENT:  [
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "BTC",
+                index_trading.index_distribution.DISTRIBUTION_VALUE: 50
+            },
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "ETH",
+                index_trading.index_distribution.DISTRIBUTION_VALUE: 30
+            },
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "USDT",
+                index_trading.index_distribution.DISTRIBUTION_VALUE: 20
+            },
+        ]
+    }
+
+    # synchronization policy is not SELL_REMOVED_INDEX_COINS_ON_RATIO_REBALANCE
+    mode.synchronization_policy = index_trading.SynchronizationPolicy.SELL_REMOVED_INDEX_COINS_AS_SOON_AS_POSSIBLE
+    with mock.patch.object(mode, "get_ideal_distribution", mock.Mock(wraps=mode.get_ideal_distribution)) as get_ideal_distribution_mock:
+        with mock.patch.object(mode, "_get_currently_applied_historical_config_according_to_holdings", mock.Mock()) as _get_currently_applied_historical_config_according_to_holdings_mock, \
+            mock.patch.object(mode, "get_historical_configs", mock.Mock()) as get_historical_configs_mock:
+            assert mode._get_supported_distribution(True, False) == mode.trading_config[
+                index_trading.IndexTradingModeProducer.INDEX_CONTENT
+            ]
+            get_ideal_distribution_mock.assert_called_once()
+            _get_currently_applied_historical_config_according_to_holdings_mock.assert_not_called()
+            get_historical_configs_mock.assert_not_called()
+            _get_currently_applied_historical_config_according_to_holdings_mock.reset_mock()
+            get_historical_configs_mock.reset_mock()
+            get_ideal_distribution_mock.reset_mock()
+            assert mode._get_supported_distribution(False, True) == mode.trading_config[
+                index_trading.IndexTradingModeProducer.INDEX_CONTENT
+            ]
+            get_ideal_distribution_mock.assert_called_once()
+            _get_currently_applied_historical_config_according_to_holdings_mock.assert_not_called()
+            get_historical_configs_mock.assert_not_called()
+    
+    # synchronization policy is SELL_REMOVED_INDEX_COINS_ON_RATIO_REBALANCE
+    mode.synchronization_policy = index_trading.SynchronizationPolicy.SELL_REMOVED_INDEX_COINS_ON_RATIO_REBALANCE
+    holding_adapted_config = {
+        index_trading.IndexTradingModeProducer.INDEX_CONTENT: [
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "BTC",
+                index_trading.index_distribution.DISTRIBUTION_VALUE: 50
+            },
+        ]
+    }
+    with mock.patch.object(mode, "get_ideal_distribution", mock.Mock(wraps=mode.get_ideal_distribution)) as get_ideal_distribution_mock:
+        with mock.patch.object(mode, "_get_currently_applied_historical_config_according_to_holdings", mock.Mock(return_value=holding_adapted_config)) as _get_currently_applied_historical_config_according_to_holdings_mock, \
+            mock.patch.object(mode, "get_historical_configs", mock.Mock()) as get_historical_configs_mock:
+            assert mode._get_supported_distribution(True, False) == holding_adapted_config[
+                index_trading.IndexTradingModeProducer.INDEX_CONTENT
+            ]
+            assert get_ideal_distribution_mock.call_count == 2
+            _get_currently_applied_historical_config_according_to_holdings_mock.assert_called_once_with(
+                mode.trading_config, {'ADA', 'BTC', 'SOL', 'USDT', 'ETH'}
+            )
+            get_historical_configs_mock.assert_not_called()
+            get_ideal_distribution_mock.reset_mock()
+        
+        # with historical configs
+        latest_config = {
+            index_trading.IndexTradingModeProducer.INDEX_CONTENT: [
+                {
+                    index_trading.index_distribution.DISTRIBUTION_NAME: "ETH",
+                    index_trading.index_distribution.DISTRIBUTION_VALUE: 50
+                },
+            ]
+        }
+        historical_configs = [
+            latest_config,
+            holding_adapted_config,
+
+        ]
+        with mock.patch.object(mode, "_get_currently_applied_historical_config_according_to_holdings", mock.Mock()) as _get_currently_applied_historical_config_according_to_holdings_mock, \
+            mock.patch.object(mode, "get_historical_configs", mock.Mock(return_value=historical_configs)) as get_historical_configs_mock:
+            assert mode._get_supported_distribution(False, True) == latest_config[
+                index_trading.IndexTradingModeProducer.INDEX_CONTENT
+            ]
+            assert get_ideal_distribution_mock.call_count == 3
+            _get_currently_applied_historical_config_according_to_holdings_mock.assert_not_called()
+            get_historical_configs_mock.assert_called_once_with(
+                0, mode.exchange_manager.exchange.get_exchange_current_time()
+            )
+            get_ideal_distribution_mock.reset_mock()
+
+        # without historical configs
+        with mock.patch.object(mode, "_get_currently_applied_historical_config_according_to_holdings", mock.Mock()) as _get_currently_applied_historical_config_according_to_holdings_mock, \
+            mock.patch.object(mode, "get_historical_configs", mock.Mock(return_value=[])) as get_historical_configs_mock:
+            # use current config
+            assert mode._get_supported_distribution(False, True) == mode.trading_config[
+                index_trading.IndexTradingModeProducer.INDEX_CONTENT
+            ]
+            assert get_ideal_distribution_mock.call_count == 2
+            _get_currently_applied_historical_config_according_to_holdings_mock.assert_not_called()
+            get_historical_configs_mock.assert_called_once_with(
+                0, mode.exchange_manager.exchange.get_exchange_current_time()
+            )
+            get_ideal_distribution_mock.reset_mock()
+
+
+async def test_get_currently_applied_historical_config_according_to_holdings(tools):
+    mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, {}))
+    trader.exchange_manager.exchange_config.traded_symbols = [
+        commons_symbols.parse_symbol(symbol)
+        for symbol in ["BTC/USDT", "ETH/USDT", "SOL/USDT", "ADA/USDT"]
+    ]
+    traded_bases = set(
+        symbol.base
+        for symbol in trader.exchange_manager.exchange_config.traded_symbols
+    )
+    # 1. using latest config
+    with mock.patch.object(mode, "_is_index_config_applied", mock.Mock(return_value=True)) as _is_index_config_applied_mock:
+        assert mode._get_currently_applied_historical_config_according_to_holdings(
+            mode.trading_config, traded_bases
+        ) == mode.trading_config
+        _is_index_config_applied_mock.assert_called_once_with(mode.trading_config, traded_bases)
+
+    # 2. using historical configs
+    with mock.patch.object(mode, "_is_index_config_applied", mock.Mock(return_value=False)) as _is_index_config_applied_mock, mock.patch.object(mode.exchange_manager.exchange, "get_exchange_current_time", mock.Mock(return_value=2)) as get_exchange_current_time_mock:
+        # 2.1. no historical configs
+        assert mode._get_currently_applied_historical_config_according_to_holdings(
+            mode.trading_config, traded_bases
+        ) == mode.trading_config
+        _is_index_config_applied_mock.assert_called_once_with(mode.trading_config, traded_bases)
+        _is_index_config_applied_mock.reset_mock()
+        get_exchange_current_time_mock.assert_called_once()
+        get_exchange_current_time_mock.reset_mock()
+
+        # 2.2. with historical configs but as _is_index_config_applied always return False, fallback to current config
+        hist_config_1 = {
+            index_trading.IndexTradingModeProducer.INDEX_CONTENT: [
+                {
+                    index_trading.index_distribution.DISTRIBUTION_NAME: "BTC",
+                    index_trading.index_distribution.DISTRIBUTION_VALUE: 50
+                },
+                {
+                    index_trading.index_distribution.DISTRIBUTION_NAME: "ETH",
+                    index_trading.index_distribution.DISTRIBUTION_VALUE: 30
+                },
+            ]
+        }
+        hist_config_2 = {
+            index_trading.IndexTradingModeProducer.INDEX_CONTENT: [
+                {
+                    index_trading.index_distribution.DISTRIBUTION_NAME: "BTC",
+                    index_trading.index_distribution.DISTRIBUTION_VALUE: 50
+                },
+            ]
+        }
+        commons_configuration.add_historical_tentacle_config(mode.trading_config, 1, hist_config_1)
+        commons_configuration.add_historical_tentacle_config(mode.trading_config, 2, hist_config_2)
+        mode.historical_master_config = mode.trading_config
+        assert mode._get_currently_applied_historical_config_according_to_holdings(
+            mode.trading_config, traded_bases
+        ) == mode.trading_config
+        assert _is_index_config_applied_mock.call_count == 3
+        assert _is_index_config_applied_mock.mock_calls[0].args[0] == mode.trading_config
+        assert _is_index_config_applied_mock.mock_calls[1].args[0] == hist_config_2
+        assert _is_index_config_applied_mock.mock_calls[2].args[0] == hist_config_1
+        _is_index_config_applied_mock.reset_mock()
+        get_exchange_current_time_mock.assert_called_once()
+        get_exchange_current_time_mock.reset_mock()
+
+        __is_index_config_applied_calls = []
+        accepted_config_index = 1
+        def __is_index_config_applied(*args):
+            __is_index_config_applied_calls.append(1)
+            if len(__is_index_config_applied_calls) - 1 >= accepted_config_index:
+                return True
+            return False
+
+        # 2.3. with historical configs using historical config
+        with mock.patch.object(mode, "_is_index_config_applied", mock.Mock(side_effect=__is_index_config_applied)) as _is_index_config_applied_mock:
+            # 1. use most up to date config
+            assert mode._get_currently_applied_historical_config_according_to_holdings(
+                mode.trading_config, traded_bases
+            ) == hist_config_2
+            assert _is_index_config_applied_mock.call_count == 2
+            assert _is_index_config_applied_mock.mock_calls[0].args[0] == mode.trading_config
+            assert _is_index_config_applied_mock.mock_calls[1].args[0] == hist_config_2
+            _is_index_config_applied_mock.reset_mock()
+            get_exchange_current_time_mock.assert_called_once()
+            get_exchange_current_time_mock.reset_mock()
+
+        __is_index_config_applied_calls.clear()
+        accepted_config_index = 2
+        with mock.patch.object(mode, "_is_index_config_applied", mock.Mock(side_effect=__is_index_config_applied)) as _is_index_config_applied_mock:
+            # 2. use oldest config
+            assert mode._get_currently_applied_historical_config_according_to_holdings(
+                mode.trading_config, traded_bases
+            ) == hist_config_1
+            assert _is_index_config_applied_mock.call_count == 3
+            assert _is_index_config_applied_mock.mock_calls[0].args[0] == mode.trading_config
+            assert _is_index_config_applied_mock.mock_calls[1].args[0] == hist_config_2
+            assert _is_index_config_applied_mock.mock_calls[2].args[0] == hist_config_1
+            _is_index_config_applied_mock.reset_mock()
+
+
+async def test_is_index_config_applied(tools):
+    mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, {}))
+    trader.exchange_manager.exchange_config.traded_symbols = [
+        commons_symbols.parse_symbol(symbol)
+        for symbol in ["BTC/USDT", "ETH/USDT", "SOL/USDT", "ADA/USDT"]
+    ]
+    traded_bases = set(
+        symbol.base
+        for symbol in trader.exchange_manager.exchange_config.traded_symbols
+    )
+    
+    # Test 1: No ideal distribution - should return False
+    config_without_distribution = {}
+    assert mode._is_index_config_applied(config_without_distribution, traded_bases) is False
+    
+    # Test 2: Empty ideal distribution - should return False
+    config_with_empty_distribution = {
+        index_trading.IndexTradingModeProducer.INDEX_CONTENT: []
+    }
+    assert mode._is_index_config_applied(config_with_empty_distribution, traded_bases) is False
+    
+    # Test 3: Distribution with only non-traded assets - should return False
+    config_with_non_traded_assets = {
+        index_trading.IndexTradingModeProducer.INDEX_CONTENT: [
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "NON_TRADED_COIN",
+                index_trading.index_distribution.DISTRIBUTION_VALUE: 100
+            }
+        ]
+    }
+    assert mode._is_index_config_applied(config_with_non_traded_assets, traded_bases) is False
+    
+    # Test 4: Distribution with zero total ratio - should return False
+    config_with_zero_total = {
+        index_trading.IndexTradingModeProducer.INDEX_CONTENT: [
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "BTC",
+                index_trading.index_distribution.DISTRIBUTION_VALUE: 0
+            }
+        ]
+    }
+    assert mode._is_index_config_applied(config_with_zero_total, traded_bases) is False
+    
+    # Test 5: Valid distribution with holdings matching target ratios
+    config_with_valid_distribution = {
+        index_trading.IndexTradingModeProducer.INDEX_CONTENT: [
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "BTC",
+                index_trading.index_distribution.DISTRIBUTION_VALUE: 60
+            },
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "ETH",
+                index_trading.index_distribution.DISTRIBUTION_VALUE: 40
+            }
+        ]
+    }
+    
+    # Mock holdings ratios to match target ratios exactly
+    with mock.patch.object(
+        trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder,
+        "get_holdings_ratio", mock.Mock(side_effect=lambda coin, **kwargs: {
+            "BTC": decimal.Decimal("0.6"),  # 60% target
+            "ETH": decimal.Decimal("0.4"),  # 40% target
+        }.get(coin, decimal.Decimal("0")))
+    ) as get_holdings_ratio_mock:
+        assert mode._is_index_config_applied(config_with_valid_distribution, traded_bases) is True
+        assert get_holdings_ratio_mock.call_count == 2
+        assert get_holdings_ratio_mock.mock_calls[0].args[0] == "BTC"
+        assert get_holdings_ratio_mock.mock_calls[1].args[0] == "ETH"
+        get_holdings_ratio_mock.reset_mock()
+    
+    # Test 6: Valid distribution with holdings within tolerance range
+    with mock.patch.object(
+        trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder,
+        "get_holdings_ratio", mock.Mock(side_effect=lambda coin, **kwargs: {
+            "BTC": decimal.Decimal("0.62"),  # 60% target + 2% (within 5% tolerance)
+            "ETH": decimal.Decimal("0.38"),  # 40% target - 2% (within 5% tolerance)
+        }.get(coin, decimal.Decimal("0")))
+    ) as get_holdings_ratio_mock:
+        assert mode._is_index_config_applied(config_with_valid_distribution, traded_bases) is True
+        assert get_holdings_ratio_mock.call_count == 2
+        get_holdings_ratio_mock.reset_mock()
+    
+    # Test 7: Holdings outside tolerance range - should return False
+    with mock.patch.object(
+        trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder,
+        "get_holdings_ratio", mock.Mock(side_effect=lambda coin, **kwargs: {
+            "BTC": decimal.Decimal("0.68"),  # 60% target + 8% (outside 5% tolerance)
+            "ETH": decimal.Decimal("0.32"),  # 40% target - 8% (outside 5% tolerance)
+        }.get(coin, decimal.Decimal("0")))
+    ) as get_holdings_ratio_mock:
+        assert mode._is_index_config_applied(config_with_valid_distribution, traded_bases) is False
+        assert get_holdings_ratio_mock.call_count == 1  # only BTC is considered
+        get_holdings_ratio_mock.assert_called_once_with("BTC", traded_symbols_only=True)
+        get_holdings_ratio_mock.reset_mock()
+    
+    # Test 8: Missing coin in portfolio - should return False
+    with mock.patch.object(
+        trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder,
+        "get_holdings_ratio", mock.Mock(side_effect=lambda coin, **kwargs: {
+            "BTC": decimal.Decimal("0.6"),  # 60% target
+            "ETH": decimal.Decimal("0"),     # Missing ETH
+        }.get(coin, decimal.Decimal("0")))
+    ) as get_holdings_ratio_mock:
+        assert mode._is_index_config_applied(config_with_valid_distribution, traded_bases) is False
+        assert get_holdings_ratio_mock.call_count == 2
+        get_holdings_ratio_mock.reset_mock()
+    
+    # Test 9: Too much of a coin in portfolio - should return False
+    with mock.patch.object(
+        trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder,
+        "get_holdings_ratio", mock.Mock(side_effect=lambda coin, **kwargs: {
+            "BTC": decimal.Decimal("0.6"),  # 60% target: OK
+            "ETH": decimal.Decimal("0.3"),  # 40% target - 10% (too little)
+        }.get(coin, decimal.Decimal("0")))
+    ) as get_holdings_ratio_mock:
+        assert mode._is_index_config_applied(config_with_valid_distribution, traded_bases) is False
+        assert get_holdings_ratio_mock.call_count == 2  # BTC and ETH considered
+        assert get_holdings_ratio_mock.mock_calls[0].args[0] == "BTC"
+        assert get_holdings_ratio_mock.mock_calls[1].args[0] == "ETH"
+        get_holdings_ratio_mock.reset_mock()
+    
+    # Test 10a: Custom rebalance trigger ratio in config from REBALANCE_TRIGGER_MIN_PERCENT
+    config_with_custom_trigger = {
+        index_trading.IndexTradingModeProducer.INDEX_CONTENT: [
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "BTC",
+                index_trading.index_distribution.DISTRIBUTION_VALUE: 50
+            },
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "ETH",
+                index_trading.index_distribution.DISTRIBUTION_VALUE: 50
+            }
+        ],
+        index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_MIN_PERCENT: 10.0  # 10% tolerance
+    }
+    
+    # Holdings within 10% tolerance
+    with mock.patch.object(
+        trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder,
+        "get_holdings_ratio", mock.Mock(side_effect=lambda coin, **kwargs: {
+            "BTC": decimal.Decimal("0.57"),  # 50% target + 7% (within 10% tolerance)
+            "ETH": decimal.Decimal("0.43"),  # 50% target - 7% (within 10% tolerance)
+        }.get(coin, decimal.Decimal("0")))
+    ) as get_holdings_ratio_mock:
+        assert mode._is_index_config_applied(config_with_custom_trigger, traded_bases) is True
+        assert get_holdings_ratio_mock.call_count == 2
+        get_holdings_ratio_mock.reset_mock()
+    
+    # Holdings outside 10% tolerance
+    with mock.patch.object(
+        trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder,
+        "get_holdings_ratio", mock.Mock(side_effect=lambda coin, **kwargs: {
+            "BTC": decimal.Decimal("0.65"),  # 50% target + 15% (outside 10% tolerance)
+            "ETH": decimal.Decimal("0.35"),  # 50% target - 15% (outside 10% tolerance)
+        }.get(coin, decimal.Decimal("0")))
+    ) as get_holdings_ratio_mock:
+        assert mode._is_index_config_applied(config_with_custom_trigger, traded_bases) is False
+        assert get_holdings_ratio_mock.call_count == 1  # only BTC is considered
+        get_holdings_ratio_mock.assert_called_once_with("BTC", traded_symbols_only=True)
+        get_holdings_ratio_mock.reset_mock()
+    
+    # Test 10b: Custom rebalance trigger ratio in config from REBALANCE_TRIGGER_MIN_PERCENT
+    config_with_custom_trigger = {
+        index_trading.IndexTradingModeProducer.INDEX_CONTENT: [
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "BTC",
+                index_trading.index_distribution.DISTRIBUTION_VALUE: 50
+            },
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "ETH",
+                index_trading.index_distribution.DISTRIBUTION_VALUE: 50
+            }
+        ],
+        index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILES: [
+            {
+                index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_NAME: "profile-1",
+                index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_MIN_PERCENT: 10.0  # 10% tolerance
+            }
+        ],
+        index_trading.IndexTradingModeProducer.SELECTED_REBALANCE_TRIGGER_PROFILE: "profile-1",
+        index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_MIN_PERCENT: 99.0  # 99% tolerance
+    }
+    
+    # Holdings within 10% tolerance (profile 1)
+    with mock.patch.object(
+        trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder,
+        "get_holdings_ratio", mock.Mock(side_effect=lambda coin, **kwargs: {
+            "BTC": decimal.Decimal("0.57"),  # 50% target + 7% (within 10% tolerance)
+            "ETH": decimal.Decimal("0.43"),  # 50% target - 7% (within 10% tolerance)
+        }.get(coin, decimal.Decimal("0")))
+    ) as get_holdings_ratio_mock:
+        assert mode._is_index_config_applied(config_with_custom_trigger, traded_bases) is True
+        assert get_holdings_ratio_mock.call_count == 2
+        get_holdings_ratio_mock.reset_mock()
+    
+    # Holdings outside 10% tolerance (profile 1)
+    with mock.patch.object(
+        trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder,
+        "get_holdings_ratio", mock.Mock(side_effect=lambda coin, **kwargs: {
+            "BTC": decimal.Decimal("0.65"),  # 50% target + 15% (outside 10% tolerance)
+            "ETH": decimal.Decimal("0.35"),  # 50% target - 15% (outside 10% tolerance)
+        }.get(coin, decimal.Decimal("0")))
+    ) as get_holdings_ratio_mock:
+        assert mode._is_index_config_applied(config_with_custom_trigger, traded_bases) is False
+        assert get_holdings_ratio_mock.call_count == 1  # only BTC is considered
+        get_holdings_ratio_mock.assert_called_once_with("BTC", traded_symbols_only=True)
+        get_holdings_ratio_mock.reset_mock()
+    
+    # Test 11: Mixed traded and non-traded assets
+    config_with_mixed_assets = {
+        index_trading.IndexTradingModeProducer.INDEX_CONTENT: [
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "BTC",
+                index_trading.index_distribution.DISTRIBUTION_VALUE: 60
+            },
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "ETH",
+                index_trading.index_distribution.DISTRIBUTION_VALUE: 30
+            },
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "NON_TRADED_COIN",
+                index_trading.index_distribution.DISTRIBUTION_VALUE: 10
+            }
+        ]
+    }
+    
+    # Should only consider traded assets (BTC and ETH)
+    with mock.patch.object(
+        trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder,
+        "get_holdings_ratio", mock.Mock(side_effect=lambda coin, **kwargs: {
+            "BTC": decimal.Decimal("0.6666666666666666666666666667"),  # 60/90 = 66.67%
+            "ETH": decimal.Decimal("0.3333333333333333333333333333"),  # 30/90 = 33.33%
+        }.get(coin, decimal.Decimal("0")))
+    ) as get_holdings_ratio_mock:
+        assert mode._is_index_config_applied(config_with_mixed_assets, traded_bases) is False
+        get_holdings_ratio_mock.assert_not_called()
+    
+    # Test 12: All assets non-traded
+    config_all_non_traded = {
+        index_trading.IndexTradingModeProducer.INDEX_CONTENT: [
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "NON_TRADED_1",
+                index_trading.index_distribution.DISTRIBUTION_VALUE: 50
+            },
+            {
+                index_trading.index_distribution.DISTRIBUTION_NAME: "NON_TRADED_2",
+                index_trading.index_distribution.DISTRIBUTION_VALUE: 50
+            }
+        ]
+    }
+    assert mode._is_index_config_applied(config_all_non_traded, traded_bases) is False
+    
+    # Test 13: Zero holdings for all coins
+    with mock.patch.object(
+        trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder,
+        "get_holdings_ratio", mock.Mock(return_value=decimal.Decimal("0"))
+    ) as get_holdings_ratio_mock:
+        assert mode._is_index_config_applied(config_with_valid_distribution, traded_bases) is False
+        assert get_holdings_ratio_mock.call_count == 1  # only BTC considered
+        get_holdings_ratio_mock.assert_called_once_with("BTC", traded_symbols_only=True)
+        get_holdings_ratio_mock.reset_mock()
+
+
+async def test_get_config_min_ratio(tools):
+    mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, {}))
+    # 1. With selected profile
+    config_with_profiles = {
+        index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILES: [
+            {
+                index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_NAME: "profile-1",
+                index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_MIN_PERCENT: 7.5,
+            },
+            {
+                index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_NAME: "profile-2",
+                index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_MIN_PERCENT: 15.0,
+            },
+        ],
+        index_trading.IndexTradingModeProducer.SELECTED_REBALANCE_TRIGGER_PROFILE: "profile-2",
+    }
+    # Should pick 15.0% from profile-2
+    assert mode._get_config_min_ratio(config_with_profiles) == decimal.Decimal("0.15")
+
+    # 2. With direct config value only
+    config_with_direct = {
+        index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_MIN_PERCENT: 3.3
+    }
+    # Should pick 3.3% from direct config
+    assert mode._get_config_min_ratio(config_with_direct) == decimal.Decimal("0.033")
+
+    # 3. With neither, should fall back to mode.rebalance_trigger_min_ratio
+    mode.rebalance_trigger_min_ratio = decimal.Decimal("0.123")
+    config_empty = {}
+    assert mode._get_config_min_ratio(config_empty) == decimal.Decimal("0.123")
+
+    # 4. With profiles but no selected profile matches, should fall back to direct config
+    config_profiles_no_match = {
+        index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILES: [
+            {
+                index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_NAME: "profile-1",
+                index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILE_MIN_PERCENT: 7.5,
+            }
+        ],
+        index_trading.IndexTradingModeProducer.SELECTED_REBALANCE_TRIGGER_PROFILE: "profile-x",
+        index_trading.IndexTradingModeProducer.REBALANCE_TRIGGER_MIN_PERCENT: 2.2
+    }
+    assert mode._get_config_min_ratio(config_profiles_no_match) == decimal.Decimal("0.022")
