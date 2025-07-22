@@ -39,6 +39,7 @@ class SuperTrendEvaluator(evaluators.TAEvaluator):
         super().__init__(tentacles_setup_config)
         self.factor = 3
         self.length = 10
+        self.reversals_only = False
         self.eval_note = commons_constants.START_PENDING_EVAL_NOTE
         self.previous_value = {}
 
@@ -47,9 +48,13 @@ class SuperTrendEvaluator(evaluators.TAEvaluator):
         Called right before starting the evaluator, should define all the evaluator's user inputs
         """
         self.factor = self.UI.user_input("factor", enums.UserInputTypes.FLOAT, self.factor,
-                                         inputs, min_val=0, title="Factor")
+                                         inputs, min_val=0, title="Factor multiplier of the ATR")
         self.length = self.UI.user_input("length", enums.UserInputTypes.INT, self.length,
-                                         inputs, min_val=1, title="Length")
+                                         inputs, min_val=1, title="Length of the ATR")
+        self.reversals_only = self.UI.user_input(
+            "reversals_only", enums.UserInputTypes.BOOLEAN, self.reversals_only, inputs, 
+            title="Reversals only: evaluates -1 and 1 only on trend reversals, 0 otherwise"
+        )
 
     async def ohlcv_callback(self, exchange: str, exchange_id: str, cryptocurrency: str,
                              symbol: str, time_frame, candle, inc_in_construction_data):
@@ -78,23 +83,49 @@ class SuperTrendEvaluator(evaluators.TAEvaluator):
         prev_upper_band = previous_value.get(self.PREV_UPPER_BAND, 0)
         prev_lower_band = previous_value.get(self.PREV_LOWER_BAND, 0)
 
-        lower_band = lower_band if (lower_band > prev_lower_band or close[-2] < prev_lower_band) else prev_lower_band
-        upper_band = upper_band if (upper_band < prev_upper_band or close[-2] > prev_upper_band) else prev_upper_band
+        # compute latest lower and upper band values
+        latest_lower_band = lower_band if (lower_band > prev_lower_band or close[-2] < prev_lower_band) else prev_lower_band
+        latest_upper_band = upper_band if (upper_band < prev_upper_band or close[-2] > prev_upper_band) else prev_upper_band
 
         prev_super_trend = previous_value.get(self.PREV_SUPERTREND, 0)
 
+        signal = -1
+        is_reversal = False
         if previous_value.get(self.PREV_ATR, None) is None:
-            self.eval_note = -1
-        elif prev_super_trend == prev_upper_band:
-            self.eval_note = 1 if close[-1] > upper_band else -1
+            # not enough data to compute supertrend evaluation
+            signal = -1
         else:
-            self.eval_note = -1 if close[-1] < lower_band else 1
+            # there is a previous value: check if the latest close is above or below ATR
+            # and select the correct band to use
+            if prev_super_trend == prev_upper_band:
+                # previous bearish trend: previous super trend used the upper band 
+                # bullish if the latest close is above latest upper band
+                bullish_switch = close[-1] > latest_upper_band
+                if bullish_switch:
+                    # bullish switch of the trend
+                    signal = -1
+                    is_reversal = True
+                else:
+                    # bearish continuation of the trend
+                    signal = 1
+            else:
+                # previous bullish trend: previous super trend used the lower band
+                # bearsish if the latest close is bellow latest lower band
+                bearish_switch = close[-1] < latest_lower_band
+                if bearish_switch:
+                    # bearish switch of the trend
+                    signal = 1
+                    is_reversal = True
+                else:
+                    # bullish continuation of the trend
+                    signal = -1
 
         previous_value[self.PREV_ATR] = atr
-        previous_value[self.PREV_UPPER_BAND] = upper_band
-        previous_value[self.PREV_LOWER_BAND] = lower_band
-        previous_value[self.PREV_SUPERTREND] = lower_band if self.eval_note == 1 else upper_band
-        return
+        previous_value[self.PREV_UPPER_BAND] = latest_upper_band
+        previous_value[self.PREV_LOWER_BAND] = latest_lower_band
+        # store the latest used super trend band: bullish = lower band, bearish = upper band
+        previous_value[self.PREV_SUPERTREND] = latest_lower_band if signal == -1 else latest_upper_band
+        self.eval_note = signal if is_reversal or not self.reversals_only else commons_constants.START_PENDING_EVAL_NOTE
 
     def get_previous_value(self, symbol, time_frame):
         try:
