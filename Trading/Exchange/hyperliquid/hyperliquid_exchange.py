@@ -15,6 +15,7 @@
 #  License along with this library.
 import typing
 
+import octobot_commons.symbols
 import octobot_trading.exchanges as exchanges
 import octobot_trading.enums as trading_enums
 
@@ -43,6 +44,17 @@ class Hyperliquid(exchanges.RestExchange):
     FIX_MARKET_STATUS = True
     REQUIRE_ORDER_FEES_FROM_TRADES = True  # set True when get_order is not giving fees on closed orders and fees
     # should be fetched using recent trades.
+
+    async def initialize_impl(self):
+        await super().initialize_impl()
+        # log pairs as hyperliquid renames some of them (ex: ETH/USDC -> UETH/USDC)
+        if self.exchange_manager.is_trading and not self.exchange_manager.exchange_only:
+            spot_pairs = [
+                pair 
+                for pair in self.symbols 
+                if octobot_commons.symbols.parse_symbol(pair).is_spot()
+            ]
+            self.logger.info(f"Hyperliquid {len(spot_pairs)} spot trading pairs: {sorted(spot_pairs)}")
 
     @classmethod
     def get_name(cls):
