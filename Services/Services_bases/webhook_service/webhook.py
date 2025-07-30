@@ -243,7 +243,7 @@ class WebHookService(services.AbstractService):
             if self.service_feed_auth_callbacks[webhook_name](data):
                 return True
             else:
-                self.logger.debug(f"Ignored feed (wrong token): {data}")
+                self.logger.warning(f"Ignored message (wrong token): {data}")
                 return False
         self.logger.warning(f"Received unknown request from {webhook_name}")
         return False
