@@ -583,6 +583,9 @@ class KucoinCCXTAdapter(exchanges.CCXTAdapter):
 
     def _adapt_order_type(self, fixed):
         order_info = fixed[trading_enums.ExchangeConstantsOrderColumns.INFO.value]
+        if fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] == "liquid":
+            # liquidation trades: considered as market orders
+            fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = trading_enums.TradeOrderType.MARKET.value
         if trigger_direction := order_info.get("stop", None):
             updated_type = trading_enums.TradeOrderType.UNKNOWN.value
             """
