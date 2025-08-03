@@ -563,14 +563,8 @@ class KucoinCCXTAdapter(exchanges.CCXTAdapter):
     KUCOIN_MARGIN_MODE = "marginMode"
 
     def fix_order(self, raw, symbol=None, **kwargs):
-        raw_order_info = raw[ccxt_enums.ExchangePositionCCXTColumns.INFO.value]
         fixed = super().fix_order(raw, symbol=symbol, **kwargs)
         self._ensure_fees(fixed)
-        if self.connector.exchange_manager.is_future and \
-                fixed.get(trading_enums.ExchangeConstantsOrderColumns.COST.value) is not None:
-            fixed[trading_enums.ExchangeConstantsOrderColumns.COST.value] = \
-                fixed[trading_enums.ExchangeConstantsOrderColumns.COST.value] * \
-                float(raw_order_info.get(self.KUCOIN_LEVERAGE, 1))
         self._adapt_order_type(fixed)
         return fixed
 
