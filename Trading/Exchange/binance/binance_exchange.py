@@ -100,6 +100,8 @@ class Binance(exchanges.RestExchange):
     EXCHANGE_ORDER_UNCANCELLABLE_ERRORS: typing.List[typing.Iterable[str]] = [
         ('Unknown order sent', )
     ]
+    # set when the exchange can allow users to pay fees in a custom currency (ex: BNB on binance)
+    LOCAL_FEES_CURRENCIES: typing.List[str] = ["BNB"]
 
     # Name of the price param to give ccxt to edit a stop loss
     STOP_LOSS_EDIT_PRICE_PARAM = ccxt_enums.ExchangeOrderCCXTUnifiedParams.STOP_LOSS.value

@@ -56,6 +56,8 @@ class MEXC(exchanges.RestExchange):
         # "mexc {"code":700006,"msg":"IP [33.33.33.33] not in the ip white list"}"
         ("not in the ip white list",),
     ]
+    # set when the exchange can allow users to pay fees in a custom currency (ex: BNB on binance)
+    LOCAL_FEES_CURRENCIES: typing.List[str] = ["MX"]
 
     @classmethod
     def get_name(cls):

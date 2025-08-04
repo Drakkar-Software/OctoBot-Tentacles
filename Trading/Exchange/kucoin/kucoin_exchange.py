@@ -165,6 +165,8 @@ class Kucoin(exchanges.RestExchange):
         # "kucoinfutures Invalid request ip, the current clientIp is:e3b:e3b:e3b:e3b:e3b:e3b:e3b:e3b"
         ("invalid request ip",),
     ]
+    # set when the exchange can allow users to pay fees in a custom currency (ex: BNB on binance)
+    LOCAL_FEES_CURRENCIES: typing.List[str] = ["KCS"]
 
     DEFAULT_BALANCE_CURRENCIES_TO_FETCH = ["USDT"]
 
