@@ -264,20 +264,13 @@ async def _create_order(context, symbol, order_quantity, order_price, tag, order
     # todo handle offsets, reduce_only, post_only,
     orders = []
     error_message = ""
-    chained_orders_group = _get_group_or_default(context, group, stop_loss_price, take_profit_price)
     order_pf_percent = order_position_percent = None
     if basic_keywords.is_emitting_trading_signals(context):
         order_pf_percent, order_position_percent = await _get_order_percents(context, order_amount,
                                                                              order_target_position, input_side, symbol)
     try:
-        fees_currency_side = None
-        if context.exchange_manager.is_future:
-            fees_currency_side = context.exchange_manager.exchange.get_pair_future_contract(symbol).\
-                get_fees_currency_side()
-        _, _, _, current_price, symbol_market = \
-            await trading_personal_data.get_pre_order_data(context.exchange_manager,
-                                                           symbol=symbol,
-                                                           timeout=trading_constants.ORDER_DATA_FETCHING_TIMEOUT)
+        fees_currency_side, current_price, symbol_market = \
+            await get_pre_order_data(context.exchange_manager, symbol)
         group_adapted_quantity = _get_group_adapted_quantity(context, group, order_type, order_quantity)
         for final_order_quantity, final_order_price in \
                 trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
@@ -321,12 +314,17 @@ async def _create_order(context, symbol, order_quantity, order_price, tag, order
                     stop_loss_take_profit_quantity = trading_personal_data.decimal_adapt_quantity(
                         symbol_market, stop_loss_take_profit_quantity, truncate=True
                     )
-                params = await _bundle_stop_loss_and_take_profit(
-                    context, symbol_market, fees_currency_side, created_order, stop_loss_take_profit_quantity,
-                    chained_orders_group,
-                    stop_loss_tag, stop_loss_type, stop_loss_price, stop_loss_group,
-                    take_profit_tag, take_profit_type, take_profit_price, take_profit_group,
-                    order_pf_percent, order_position_percent)
+                params = await bundle_stop_loss_and_take_profit(
+                    context=context, symbol_market=symbol_market, 
+                    fees_currency_side=fees_currency_side, order=created_order, 
+                    quantity=stop_loss_take_profit_quantity, main_order_group=group,
+                    stop_loss_tag=stop_loss_tag, stop_loss_type=stop_loss_type,
+                    stop_loss_price=stop_loss_price, stop_loss_group=stop_loss_group,
+                    take_profit_tag=take_profit_tag, take_profit_type=take_profit_type,
+                    take_profit_price=take_profit_price, 
+                    take_profit_group=take_profit_group,
+                    order_pf_percent=order_pf_percent, 
+                    order_position_percent=order_position_percent)
                 chained_orders = created_order.chained_orders
                 created_order = await context.trader.create_order(created_order, params=params)
             if basic_keywords.is_emitting_trading_signals(context):
@@ -359,6 +357,16 @@ async def _create_order(context, symbol, order_quantity, order_price, tag, order
                                f"{error_message}.")
     return orders
 
+async def get_pre_order_data(exchange_manager, symbol):
+    fees_currency_side = None
+    if exchange_manager.is_future:
+        fees_currency_side = exchange_manager.exchange.get_pair_future_contract(symbol).\
+            get_fees_currency_side()
+    _, _, _, current_price, symbol_market = \
+        await trading_personal_data.get_pre_order_data(
+            exchange_manager, symbol=symbol,
+            timeout=trading_constants.ORDER_DATA_FETCHING_TIMEOUT)
+    return fees_currency_side, current_price, symbol_market
 
 def _get_group_adapted_quantity(context, group, order_type, order_quantity):
     if isinstance(group, trading_personal_data.BalancedTakeProfitAndStopOrderGroup) and context.just_created_orders:
@@ -392,12 +400,14 @@ def _get_group_or_default(context, group, stop_loss_price, take_profit_price):
     return group
 
 
-async def _bundle_stop_loss_and_take_profit(
-        context, symbol_market, fees_currency_side, order, quantity, default_group,
+async def bundle_stop_loss_and_take_profit(
+        context, symbol_market, fees_currency_side, order, quantity, main_order_group,
         stop_loss_tag, stop_loss_type, stop_loss_price, stop_loss_group,
         take_profit_tag, take_profit_type, take_profit_price, take_profit_group,
         order_pf_percent, order_position_percent) -> dict:
     params = {}
+    default_group = _get_group_or_default(context, main_order_group, stop_loss_price, take_profit_price)
+
     side = trading_enums.TradeOrderSide.SELL if order.side is trading_enums.TradeOrderSide.BUY \
         else trading_enums.TradeOrderSide.BUY
     order_kwargs = {
