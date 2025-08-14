@@ -1335,26 +1335,34 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                 created_order, self.MISSING_MIRROR_ORDERS_MARKET_REBALANCE_TIMEOUT, True
             )
 
-    def _find_missing_mirror_order_fills(self, sorted_trades, missing_orders):
-        trades_with_missing_mirror_order_fills = []
+    def _get_just_filled_unmirrored_missing_order_trade(self, sorted_trades, missing_order_price, missing_order_side):
         price_increment = self.flat_spread - self.flat_increment
         price_window = self.flat_increment / decimal.Decimal(4)
+        # each missing order should have is mirror side equivalent in recently_closed_trades
+        # when it is not the case, a fill is missing
+        now_selling = missing_order_side is trading_enums.TradeOrderSide.BUY
+        mirror_order_price = missing_order_price + price_increment if now_selling \
+            else missing_order_price - price_increment
+        for trade in sorted_trades:
+            lower_window = trade.executed_price - price_window
+            higher_window = trade.executed_price + price_window
+            if lower_window < mirror_order_price < higher_window and trade.side is not missing_order_side:
+                # found mirror order fill
+                break
+            if lower_window < missing_order_price < higher_window and trade.side is missing_order_side:
+                # found missing order in trades before mirror order: this missing order has been filled but not yet 
+                # replaced by a mirror order
+                return trade
+        return None
+
+    def _find_missing_mirror_order_fills(self, sorted_trades, missing_orders):
+        trades_with_missing_mirror_order_fills = []
+        
         for missing_order_price, missing_order_side in missing_orders:
-            # each missing order should have is mirror side equivalent in recently_closed_trades
-            # when it is not the case, a fill is missing
-            now_selling = missing_order_side is trading_enums.TradeOrderSide.BUY
-            mirror_order_price = missing_order_price + price_increment if now_selling \
-                else missing_order_price - price_increment
-            for trade in sorted_trades:
-                lower_window = trade.executed_price - price_window
-                higher_window = trade.executed_price + price_window
-                if lower_window < mirror_order_price < higher_window and trade.side is not missing_order_side:
-                    # found mirror order fill
-                    break
-                if lower_window < missing_order_price < higher_window and trade.side is missing_order_side:
-                    # found missing order in trades before mirror order: a mirror order is missing
-                    trades_with_missing_mirror_order_fills.append(trade)
-                    break
+            if trade := self._get_just_filled_unmirrored_missing_order_trade(
+                sorted_trades, missing_order_price, missing_order_side
+            ):
+                trades_with_missing_mirror_order_fills.append(trade)
 
         if trades_with_missing_mirror_order_fills:
 
@@ -1883,8 +1891,19 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                                         while next_missing_order_price < self.current_price and \
                                                 next_missing_order_price <= spread_lower_boundary:
                                             # missing buy order
-                                            if not self._is_just_closed_order(next_missing_order_price,
-                                                                              recently_closed_trades):
+                                            if next_missing_order_price + increment > spread_lower_boundary:
+                                                # This potential missing buy is the last before spread. Before considering it missing,
+                                                # make sure that the missing order is not on the selling side of the spread (and 
+                                                # therefore the missing order should be a sell)
+                                                if recently_closed_trades and self._get_just_filled_unmirrored_missing_order_trade(
+                                                    recently_closed_trades, next_missing_order_price, trading_enums.TradeOrderSide.BUY
+                                                ):
+                                                    # this order has just been filled on the buying side: the missing order is a sell, 
+                                                    # it will be identified as missing right after: exit buy orders loop now
+                                                    break
+                                            if not self._is_just_closed_order(
+                                                next_missing_order_price, recently_closed_trades
+                                            ):
                                                 missing_orders.append(
                                                     (next_missing_order_price, trading_enums.TradeOrderSide.BUY))
                                             next_missing_order_price += increment
@@ -1897,8 +1916,9 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                                         # re-create sell orders starting from the closest sell down to spread
                                         while next_missing_order_price >= spread_higher_boundary:
                                             # missing sell order
-                                            if not self._is_just_closed_order(next_missing_order_price,
-                                                                              recently_closed_trades):
+                                            if not self._is_just_closed_order(
+                                                next_missing_order_price, recently_closed_trades
+                                            ):
                                                 missing_orders.append(
                                                     (next_missing_order_price, trading_enums.TradeOrderSide.SELL))
                                             next_missing_order_price -= increment
