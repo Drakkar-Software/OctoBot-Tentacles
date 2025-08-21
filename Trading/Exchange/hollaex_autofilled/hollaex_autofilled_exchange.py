@@ -21,6 +21,7 @@ import requests.utils
 
 import octobot_commons.logging as commons_logging
 import octobot_commons.constants
+import octobot_commons.html_util as html_util
 import octobot_trading.exchanges as exchanges
 import octobot_trading.errors as errors
 import octobot_tentacles_manager.api
@@ -114,25 +115,30 @@ class HollaexAutofilled(hollaex):
 
     @classmethod
     async def _retry_fetch_when_rate_limit(cls, session, url):
-        for attempt in range(cls.MAX_RATE_LIMIT_ATTEMPTS):
-            async with session.get(url) as response:
-                if response.status < 300:
-                    return await response.json()
-                elif response.status in (403, 429) or "has banned your IP address" in (await response.text()):
-                    # rate limit: sleep and retry
-                    commons_logging.get_logger(cls.get_name()).warning(
-                        f"Error when fetching {url}: {response.status}. Retrying in {cls.RATE_LIMIT_SLEEP_TIME} seconds"
-                    )
-                    await asyncio.sleep(cls.RATE_LIMIT_SLEEP_TIME)
-                else:
-                    # unexpected error
-                    response.raise_for_status()
+        try:
+            for attempt in range(cls.MAX_RATE_LIMIT_ATTEMPTS):
+                async with session.get(url) as response:
+                    if response.status < 300:
+                        return await response.json()
+                    elif response.status in (403, 429) or "has banned your IP address" in (await response.text()):
+                        # rate limit: sleep and retry
+                        commons_logging.get_logger(cls.get_name()).warning(
+                            f"Error when fetching {url}: {response.status}. Retrying in {cls.RATE_LIMIT_SLEEP_TIME} seconds"
+                        )
+                        await asyncio.sleep(cls.RATE_LIMIT_SLEEP_TIME)
+                    else:
+                        # unexpected error
+                        response.raise_for_status()
 
-        commons_logging.get_logger(cls.get_name()).error(
-            f"Error when fetching {url}: {response.status}. Max attempts ({cls.MAX_RATE_LIMIT_ATTEMPTS}) reached. "
-            f"Error text: {await response.text()}"
-        )
-        response.raise_for_status()
+            commons_logging.get_logger(cls.get_name()).error(
+                f"Error when fetching {url}: {response.status}. Max attempts ({cls.MAX_RATE_LIMIT_ATTEMPTS}) reached. "
+                f"Error text: {await response.text()}"
+            )
+            response.raise_for_status()
+        except aiohttp.ClientConnectionError as err:
+            raise errors.NetworkError(
+                f"Failed to execute request: {err.__class__.__name__}: {html_util.get_html_summary_if_relevant(err)}"
+            ) from err
 
     def _supports_autofill(self, exchange_name):
         try:
