@@ -1,5 +1,4 @@
-
-$(document).ready(function() {
+function posthog_loaded(posthog) {
 
     const getUserEmail = () => {
         return getUserDetails().email || "";
@@ -83,4 +82,4 @@ $(document).ready(function() {
     }
 
     updateUserIfNecessary();
-});
+}
