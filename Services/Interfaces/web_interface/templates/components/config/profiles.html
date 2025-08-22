@@ -250,7 +250,7 @@ get_filtered_list, read_only=False) %}
             <h2 class="card-title" id="#profileModalLabel">
                 <span class="d-none d-md-inline">Profile: </span><span data-role="profile-name" data-profile-id="{{profile.profile_id}}"
                                class="text-bold">{{profile.name}}</span>
-                <button class="btn btn-sm rounded-circle btn-primary waves-effect activate-profile-button"
+                <button class="btn btn-sm rounded-circle btn-primary waves-effect activate-profile-button align-middle"
                         data-url="{{url_for('profile', select=profile.profile_id)}}"
                         {{ 'disabled' if current_profile.profile_id == profile.profile_id else '' }}
                         data-toggle="tooltip" title="Use this profile">
