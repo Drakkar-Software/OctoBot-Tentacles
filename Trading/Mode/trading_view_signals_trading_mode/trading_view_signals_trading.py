@@ -175,6 +175,34 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
             return parsed_trading_type == trading_type.value
         return True
 
+    def _log_error_message_if_relevant(self, parsed_data: dict, signal_data: str):
+        # only log error messages on one TradingViewSignalsTradingMode instance to avoid logging errors multiple times
+        all_trading_modes = trading_modes.get_trading_modes_of_this_type_on_this_matrix(self)
+        if all_trading_modes and all_trading_modes[0] is self:
+            # Can log error message: this is the first trading mode on this matrix. 
+            # Each is notified by signals and only this one will log errors to avoid duplicating logs
+            if not any(
+                trading_mode.is_relevant_signal(parsed_data)
+                for trading_mode in all_trading_modes
+            ):
+                # only log error if the signal is not relevant to any other trading mode on this matrix
+                enabled_exchanges = set()
+                enabled_symbols = set()
+                for trading_mode in all_trading_modes:
+                    enabled_exchanges.add(trading_mode.exchange_manager.exchange_name)
+                    enabled_symbols.add(f"{trading_mode.str_symbol} (or {self.merged_simple_symbol})")
+                self.logger.error(
+                    f"Ignored TradingView alert - unrelated to profile exchanges: {', '.join(enabled_exchanges)} and symbols: {', '.join(enabled_symbols)} (alert: {signal_data})"
+                )
+
+    def is_relevant_signal(self, parsed_data: dict) -> bool:
+        if not self.is_compatible_trading_type(parsed_data, trading_exchanges.get_exchange_type(self.exchange_manager)):
+            return False
+        elif parsed_data[self.EXCHANGE_KEY].lower() not in self.exchange_manager.exchange_name:
+            return False
+        elif parsed_data[self.SYMBOL_KEY] not in (self.merged_simple_symbol, self.str_symbol):
+            return False
+        return True
 
     async def _trading_view_signal_callback(self, data):
         signal_data = data.get("metadata", "")
@@ -183,22 +211,20 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
         for error in errors:
             self.logger.error(error)
         try:
-            if (
-                self.is_compatible_trading_type(parsed_data, trading_exchanges.get_exchange_type(self.exchange_manager))
-                and parsed_data[self.EXCHANGE_KEY].lower() in self.exchange_manager.exchange_name and
-                (
-                    parsed_data[self.SYMBOL_KEY] == self.merged_simple_symbol or
-                    parsed_data[self.SYMBOL_KEY] == self.str_symbol
-                )
-            ):
+            if self.is_relevant_signal(parsed_data):
                 await self.producers[0].signal_callback(parsed_data, script_keywords.get_base_context(self))
+            else:
+                self._log_error_message_if_relevant(parsed_data, signal_data)
         except trading_errors.InvalidArgumentError as e:
-            self.logger.error(f"Error when handling trading view signal: {e}")
+            self.logger.error(f"Error when processing trading view signal: {e} (signal: {signal_data})")
         except trading_errors.MissingFunds as e:
-            self.logger.error(f"Error when handling trading view signal: not enough funds: {e}")
+            self.logger.error(f"Error when processing trading view signal: not enough funds: {e} (signal: {signal_data})")
         except KeyError as e:
-            self.logger.error(f"Error when handling trading view signal: missing {e} required value. "
-                              f"Signal: \"{signal_data}\"")
+            self.logger.error(f"Error when processing trading view signal: missing {e} required value (signal: {signal_data})")
+        except Exception as e:
+            self.logger.error(
+                f"Unexpected error when processing trading view signal: {e} {e.__class__.__name__} (signal: {signal_data})"
+            )
 
     @classmethod
     def get_is_symbol_wildcard(cls) -> bool:
