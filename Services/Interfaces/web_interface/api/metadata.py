@@ -15,14 +15,20 @@
 #  License along with this library.
 import json
 import flask_cors
+import cachetools
 
 import octobot.api as octobot_api
 import octobot.constants as constants
 import octobot_services.interfaces as interfaces
+import octobot_commons.constants
 import octobot_commons.timestamp_util as timestamp_util
 
 
 def register(blueprint):
+    _LATEST_VERSION_CACHE = cachetools.TTLCache(
+        maxsize=1, ttl=octobot_commons.constants.DAYS_TO_SECONDS
+    )
+
     @blueprint.route("/ping")
     @flask_cors.cross_origin()
     def ping():
@@ -44,7 +50,14 @@ def register(blueprint):
             updater = octobot_api.get_updater()
             return await updater.get_latest_version() if updater and await updater.should_be_updated() else None
 
-        return json.dumps(interfaces.run_in_bot_main_loop(fetch_upgrade_version(), timeout=5))
+        # avoid fetching upgrade version if already fetched in the last day
+        try:
+            version = _LATEST_VERSION_CACHE["version"]
+        except KeyError:
+            version = interfaces.run_in_bot_main_loop(fetch_upgrade_version(), timeout=5)
+            _LATEST_VERSION_CACHE["version"] = version
+
+        return json.dumps(version)
 
 
     @blueprint.route("/user_feedback")
