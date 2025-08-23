@@ -14,7 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import decimal
-
+import mock
 import pytest
 import os
 import os.path
@@ -33,6 +33,7 @@ import octobot_trading.exchange_channel as exchanges_channel
 import octobot_trading.enums as trading_enums
 import octobot_trading.constants as trading_constants
 import octobot_trading.exchanges as exchanges
+import octobot_trading.signals as trading_signals
 import tentacles.Trading.Mode as Mode
 import tests.test_utils.config as test_utils_config
 import tests.test_utils.test_exchanges as test_exchanges
@@ -106,65 +107,110 @@ async def test_set_state(tools):
     time_frame = "1h"
     producer, consumer, trader = tools
 
-    producer.final_eval = trading_constants.ZERO
-    await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.NEUTRAL)
-    assert producer.state == trading_enums.EvaluatorStates.NEUTRAL
-    # create as task to allow creator's queue to get processed
-    await asyncio.create_task(_check_open_orders_count(trader, 0))
+    with mock.patch.object(
+        consumer.trading_mode, "create_order",
+        mock.AsyncMock(wraps=consumer.trading_mode.create_order)
+    ) as create_order_mock:
+        producer.final_eval = trading_constants.ZERO
+        await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.NEUTRAL)
+        assert producer.state == trading_enums.EvaluatorStates.NEUTRAL
+        # create as task to allow creator's queue to get processed
+        await asyncio.create_task(_check_open_orders_count(trader, 0))
+        create_order_mock.assert_not_called()
 
-    producer.final_eval = decimal.Decimal(-1)
-    await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.VERY_LONG)
-    assert producer.state == trading_enums.EvaluatorStates.VERY_LONG
-    _check_trades_count(trader, 0)
-    # market order got filled
-    await asyncio.create_task(_check_open_orders_count(trader, 0))
-    _check_trades_count(trader, 1)
+        producer.final_eval = decimal.Decimal(-1)
+        await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.VERY_LONG)
+        assert producer.state == trading_enums.EvaluatorStates.VERY_LONG
+        _check_trades_count(trader, 0)
+        # market order got filled
+        await asyncio.create_task(_check_open_orders_count(trader, 0))
+        _check_trades_count(trader, 1)
+        create_order_mock.assert_called_once()
+        assert create_order_mock.mock_calls[0].kwargs["dependencies"] == None
+        create_order_mock.reset_mock()
 
-    producer.final_eval = trading_constants.ZERO
-    await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.NEUTRAL)
-    # create as task to allow creator's queue to get processed
-    await asyncio.create_task(_check_open_orders_count(trader, 0))
+        producer.final_eval = trading_constants.ZERO
+        await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.NEUTRAL)
+        # create as task to allow creator's queue to get processed
+        await asyncio.create_task(_check_open_orders_count(trader, 0))
+        create_order_mock.assert_not_called()
 
-    producer.final_eval = trading_constants.ONE
-    await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.VERY_SHORT)
-    assert producer.state == trading_enums.EvaluatorStates.VERY_SHORT
-    # create as task to allow creator's queue to get processed
-    await asyncio.create_task(_check_open_orders_count(trader, 0))
-    # market order got filled
-    _check_trades_count(trader, 2)
+        producer.final_eval = trading_constants.ONE
+        await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.VERY_SHORT)
+        assert producer.state == trading_enums.EvaluatorStates.VERY_SHORT
+        # create as task to allow creator's queue to get processed
+        await asyncio.create_task(_check_open_orders_count(trader, 0))
+        # market order was created
+        create_order_mock.assert_called_once()
+        assert create_order_mock.mock_calls[0].kwargs["dependencies"] == None
+        create_order_mock.reset_mock()
+        # market order got filled
+        _check_trades_count(trader, 2)
 
-    producer.final_eval = trading_constants.ZERO
-    await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.NEUTRAL)
-    assert producer.state == trading_enums.EvaluatorStates.NEUTRAL
-    # create as task to allow creator's queue to get processed
-    await asyncio.create_task(_check_open_orders_count(trader, 0))
+        producer.final_eval = trading_constants.ZERO
+        await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.NEUTRAL)
+        assert producer.state == trading_enums.EvaluatorStates.NEUTRAL
+        # create as task to allow creator's queue to get processed
+        await asyncio.create_task(_check_open_orders_count(trader, 0))
+        create_order_mock.assert_not_called()
 
-    producer.final_eval = decimal.Decimal(str(-0.5))
-    await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.LONG)
-    assert producer.state == trading_enums.EvaluatorStates.LONG
-    # create as task to allow creator's queue to get processed
-    await asyncio.create_task(_check_open_orders_count(trader, 1))
+        async def _cancel_symbol_open_orders(*args, **kwargs):
+            await origin_cancel_symbol_open_orders(*args, **kwargs)
+            return (
+                True, 
+                trading_signals.get_orders_dependencies([mock.Mock(order_id="123"), mock.Mock(order_id="456")])
+            )
 
-    producer.final_eval = trading_constants.ZERO
-    await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.NEUTRAL)
-    assert producer.state == trading_enums.EvaluatorStates.NEUTRAL
-    # create as task to allow creator's queue to get processed
-    await asyncio.create_task(_check_open_orders_count(trader, 1))
+        origin_cancel_symbol_open_orders = producer.cancel_symbol_open_orders
+        producer.final_eval = decimal.Decimal(str(-0.5))
+        with mock.patch.object(
+            producer, "cancel_symbol_open_orders",
+            mock.AsyncMock(side_effect=_cancel_symbol_open_orders)
+        ) as cancel_symbol_open_orders_mock:
+            await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.LONG)
+            cancel_symbol_open_orders_mock.assert_called_once_with(symbol)
+            cancel_symbol_open_orders_mock.reset_mock()
+            assert producer.state == trading_enums.EvaluatorStates.LONG
+            # create as task to allow creator's queue to get processed
+            await asyncio.create_task(_check_open_orders_count(trader, 1))
+            create_order_mock.assert_called_once()
+            # cancelled orders dependencies are forwarded to create_order
+            expected_dependencies = trading_signals.get_orders_dependencies(
+                [mock.Mock(order_id="123"), mock.Mock(order_id="456")]
+            )
+            assert create_order_mock.mock_calls[0].kwargs["dependencies"] == expected_dependencies
+            create_order_mock.reset_mock()
 
-    producer.final_eval = decimal.Decimal(str(0.5))
-    await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.SHORT)
-    assert producer.state == trading_enums.EvaluatorStates.SHORT
-    # let both other be created
-    await asyncio_tools.wait_asyncio_next_cycle()
-    # create as task to allow creator's queue to get processed
-    await asyncio.create_task(_check_open_orders_count(trader, 2))  # has stop loss
-    # await task
+            producer.final_eval = trading_constants.ZERO
+            await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.NEUTRAL)
+            cancel_symbol_open_orders_mock.assert_not_called()
+            assert producer.state == trading_enums.EvaluatorStates.NEUTRAL
+            # create as task to allow creator's queue to get processed
+            await asyncio.create_task(_check_open_orders_count(trader, 1))
+            create_order_mock.assert_not_called()
 
-    producer.final_eval = trading_constants.ZERO
-    await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.NEUTRAL)
-    assert producer.state == trading_enums.EvaluatorStates.NEUTRAL
-    # create as task to allow creator's queue to get processed
-    await asyncio.create_task(_check_open_orders_count(trader, 2))
+            producer.final_eval = decimal.Decimal(str(0.5))
+            await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.SHORT)
+            cancel_symbol_open_orders_mock.assert_called_once_with(symbol)
+            cancel_symbol_open_orders_mock.reset_mock()
+            assert producer.state == trading_enums.EvaluatorStates.SHORT
+            # let both other be created
+            await asyncio_tools.wait_asyncio_next_cycle()
+            # create as task to allow creator's queue to get processed
+            await asyncio.create_task(_check_open_orders_count(trader, 2))  # has stop loss
+            assert create_order_mock.call_count == 2
+            # cancelled orders dependencies are forwarded to all created orders
+            assert create_order_mock.mock_calls[0].kwargs["dependencies"] == expected_dependencies
+            assert create_order_mock.mock_calls[1].kwargs["dependencies"] == expected_dependencies
+            create_order_mock.reset_mock()
+
+            producer.final_eval = trading_constants.ZERO
+            await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.NEUTRAL)
+            cancel_symbol_open_orders_mock.assert_not_called()
+            assert producer.state == trading_enums.EvaluatorStates.NEUTRAL
+            # create as task to allow creator's queue to get processed
+            await asyncio.create_task(_check_open_orders_count(trader, 2))
+            create_order_mock.assert_not_called()
 
 
 async def test_get_delta_risk(tools):

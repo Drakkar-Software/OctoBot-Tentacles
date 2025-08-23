@@ -15,10 +15,12 @@
 #  License along with this library.
 import decimal
 import math
+import typing
 
 import async_channel.channels as channels
 import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_commons.enums as commons_enums
+import octobot_commons.signals as commons_signals
 import octobot_services.api as services_api
 import tentacles.Services.Services_feeds.trading_view_service_feed as trading_view_service_feed
 import tentacles.Trading.Mode.daily_trading_mode.daily_trading as daily_trading_mode
@@ -435,9 +437,9 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             else:
                 await self.cancel_orders_from_order_data(symbol, order_data)
 
-    async def cancel_orders_from_order_data(self, symbol: str, order_data) -> bool:
+    async def cancel_orders_from_order_data(self, symbol: str, order_data) -> tuple[bool, typing.Optional[commons_signals.SignalDependencies]]:
         if not self.trading_mode.consumers:
-            return False
+            return False, None
 
         exchange_ids = order_data.get(TradingViewSignalsModeConsumer.EXCHANGE_ORDER_IDS, None)
         cancel_order_raw_side = order_data.get(

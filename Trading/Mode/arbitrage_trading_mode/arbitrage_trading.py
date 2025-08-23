@@ -158,7 +158,7 @@ class ArbitrageModeConsumer(trading_modes.AbstractTradingModeConsumer):
 
     async def create_new_orders(self, symbol, final_note, state, **kwargs):
         # no possible default values in kwargs: interrupt if missing element
-        data = kwargs["data"]
+        data = kwargs[self.CREATE_ORDER_DATA_PARAM]
         phase = data[ArbitrageModeConsumer.ARBITRAGE_PHASE_KEY]
         arbitrage_container = data[ArbitrageModeConsumer.ARBITRAGE_CONTAINER_KEY]
         if phase == ArbitrageModeConsumer.INITIAL_PHASE:
