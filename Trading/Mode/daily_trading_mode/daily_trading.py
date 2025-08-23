@@ -24,6 +24,7 @@ import octobot_commons.enums as commons_enums
 import octobot_commons.evaluators_util as evaluators_util
 import octobot_commons.pretty_printer as pretty_printer
 import octobot_commons.symbols.symbol_util as symbol_util
+import octobot_commons.signals as signals
 import octobot_evaluators.api as evaluators_api
 import octobot_evaluators.constants as evaluators_constants
 import octobot_evaluators.enums as evaluators_enums
@@ -202,7 +203,6 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     EXCHANGE_ORDER_IDS = "EXCHANGE_ORDER_IDS"
     LEVERAGE = "LEVERAGE"
     ORDER_EXCHANGE_CREATION_PARAMS = "ORDER_EXCHANGE_CREATION_PARAMS"
-    CREATE_ORDER_DATA_PARAM = "data"
     TARGET_PROFIT_MODE_ENTRY_QUANTITY_SIDE = trading_enums.TradeOrderSide.BUY
 
     def __init__(self, trading_mode):
@@ -463,6 +463,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         symbol_market, tag,
         trailing_profile_type: typing.Optional[trading_personal_data.TrailingProfileTypes],
         active_order_swap_strategy: trading_personal_data.ActiveOrderSwapStrategy,
+        dependencies: typing.Optional[signals.SignalDependencies],
     ):
         params = {}
         chained_orders = []
@@ -538,7 +539,9 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             # in futures, inactive orders are not necessary
             if self.exchange_manager.trader.enable_inactive_orders and not self.exchange_manager.is_future:
                 await oco_group.active_order_swap_strategy.apply_inactive_orders(chained_orders)
-        return await self.trading_mode.create_order(current_order, params=params or None)
+        return await self.trading_mode.create_order(
+            current_order, params=params or None, dependencies=dependencies
+        )
 
     async def create_new_orders(self, symbol, final_note, state, **kwargs):
         try:
@@ -549,6 +552,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             if final_note.is_nan():
                 return []
         data = kwargs.get(self.CREATE_ORDER_DATA_PARAM, {})
+        dependencies = kwargs.get(self.CREATE_ORDER_DEPENDENCIES_PARAM, None)
         user_price = data.get(self.PRICE_KEY, trading_constants.ZERO)
         user_volume = data.get(self.VOLUME_KEY, trading_constants.ZERO)
         user_reduce_only = data.get(self.REDUCE_ONLY_KEY, False) if self.exchange_manager.is_future else None
@@ -718,7 +722,8 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         use_chained_stop_loss_orders, stop_loss_order_details,
                         symbol_market, tag,
                         trailing_profile_type,
-                        active_order_swap_strategy
+                        active_order_swap_strategy,
+                        dependencies
                     ):
                         created_orders.append(current_order)
 
@@ -791,13 +796,16 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                             use_chained_stop_loss_orders, stop_loss_order_details,
                             symbol_market, tag,
                             trailing_profile_type,
-                            active_order_swap_strategy
+                            active_order_swap_strategy,
+                            dependencies
                         )
                         created_orders.append(created_limit)
                     if current_stop_order is not None and (create_stop_only or (
                         created_limit is not None and created_limit.is_open()
                     )):
-                        created_stop = await self.trading_mode.create_order(current_stop_order)
+                        created_stop = await self.trading_mode.create_order(
+                            current_stop_order, dependencies=dependencies
+                        )
                         if create_stop_only:
                             created_orders.append(created_stop)
 
@@ -874,13 +882,16 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                             use_chained_stop_loss_orders, stop_loss_order_details,
                             symbol_market, tag,
                             trailing_profile_type,
-                            active_order_swap_strategy
+                            active_order_swap_strategy,
+                            dependencies
                         )
                         created_orders.append(created_limit)
                     if current_stop_order is not None and (create_stop_only or (
                         created_limit is not None and created_limit.is_open()
                     )):
-                        created_stop = await self.trading_mode.create_order(current_stop_order)
+                        created_stop = await self.trading_mode.create_order(
+                            current_stop_order, dependencies=dependencies
+                        )
                         if create_stop_only:
                             created_orders.append(created_stop)
 
@@ -916,7 +927,8 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         use_chained_stop_loss_orders, stop_loss_order_details,
                         symbol_market, tag,
                         trailing_profile_type,
-                        active_order_swap_strategy
+                        active_order_swap_strategy,
+                        dependencies
                     ):
                         created_orders.append(current_order)
             if created_orders:
@@ -1028,25 +1040,28 @@ class DailyTradingModeProducer(trading_modes.AbstractTradingModeProducer):
 
             # if new state is not neutral --> cancel orders and create new else keep orders
             if new_state is not trading_enums.EvaluatorStates.NEUTRAL:
+                dependencies = None
                 if self.trading_mode.consumers:
                     if self.trading_mode.consumers[0].USE_TARGET_PROFIT_MODE:
-                        await self._cancel_position_opening_orders(symbol)
+                        dependencies = await self._cancel_position_opening_orders(symbol)
                     else:
                         # cancel open orders when not on target profit mode
-                        await self.cancel_symbol_open_orders(symbol)
+                        _, dependencies = await self.cancel_symbol_open_orders(symbol)
 
                 # call orders creation from consumers
                 await self.submit_trading_evaluation(cryptocurrency=cryptocurrency,
                                                      symbol=symbol,
                                                      time_frame=None,
                                                      final_note=self.final_eval,
-                                                     state=self.state)
+                                                     state=self.state,
+                                                     dependencies=dependencies)
 
                 # send_notification
                 if not self.exchange_manager.is_backtesting:
                     await self._send_alert_notification(symbol, new_state)
 
-    async def _cancel_position_opening_orders(self, symbol):
+    async def _cancel_position_opening_orders(self, symbol) -> signals.SignalDependencies:
+        dependencies = signals.SignalDependencies()
         if self.exchange_manager.trader.is_enabled:
             for order in self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders(symbol=symbol):
                 if (
@@ -1055,9 +1070,12 @@ class DailyTradingModeProducer(trading_modes.AbstractTradingModeProducer):
                     and order.chained_orders and order.triggered_by is None
                 ):
                     try:
-                        await self.trading_mode.cancel_order(order)
+                        is_cancelled, dependency = await self.trading_mode.cancel_order(order)
+                        if is_cancelled:
+                            dependencies.extend(dependency)
                     except trading_errors.UnexpectedExchangeSideOrderStateError as err:
                         self.logger.warning(f"Skipped order cancel: {err}, order: {order}")
+        return dependencies
 
     async def _send_alert_notification(self, symbol, new_state):
         try:

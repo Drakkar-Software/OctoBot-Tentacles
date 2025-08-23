@@ -41,8 +41,9 @@ async def test_internal_callback(local_trader, mocked_sell_limit_signal, mocked_
     consumer.logger = mock.Mock(info=mock.Mock(), error=mock.Mock(), exception=mock.Mock())
     with mock.patch.object(consumer, "_handle_signal_orders", new=mock.AsyncMock()) \
          as _handle_signal_orders_mock:
-        await consumer.internal_callback("trading_mode_name", "cryptocurrency", "symbol", "time_frame", "final_note",
-                                         "state", mocked_sell_limit_signal)
+        await consumer.internal_callback(
+            "trading_mode_name", "cryptocurrency", "symbol", "time_frame", "final_note", "state", mocked_sell_limit_signal
+        )
         _handle_signal_orders_mock.assert_called_once_with("symbol", mocked_sell_limit_signal)
         consumer.logger.info.assert_not_called()
         consumer.logger.error.assert_not_called()

@@ -22,12 +22,14 @@ import octobot_commons.constants as commons_constants
 import octobot_commons.enums as commons_enums
 import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_commons.authentication as authentication
+import octobot_commons.signals as commons_signals
 import octobot_trading.constants as trading_constants
 import octobot_trading.enums as trading_enums
 import octobot_trading.errors as trading_errors
 import octobot_trading.modes as trading_modes
 import octobot_trading.util as trading_util
 import octobot_trading.personal_data as trading_personal_data
+import octobot_trading.signals as signals
 
 import tentacles.Trading.Mode.index_trading_mode.index_distribution as index_distribution
 
@@ -73,13 +75,14 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         self._already_logged_aborted_rebalance_error = False
 
     async def create_new_orders(self, symbol, _, state, **kwargs):
-        details = kwargs["data"]
+        details = kwargs[self.CREATE_ORDER_DATA_PARAM]
+        dependencies = kwargs.get(self.CREATE_ORDER_DEPENDENCIES_PARAM, None)
         if state == trading_enums.EvaluatorStates.NEUTRAL.value:
-            return await self._rebalance_portfolio(details)
+            return await self._rebalance_portfolio(details, dependencies)
         self.logger.error(f"Unknown index state: {state}")
         return []
 
-    async def _rebalance_portfolio(self, details: dict):
+    async def _rebalance_portfolio(self, details: dict, initial_dependencies: typing.Optional[commons_signals.SignalDependencies]):
         self.logger.info(f"Executing rebalance on [{self.exchange_manager.exchange_name}]")
         orders = []
         try:
@@ -88,6 +91,7 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             await self._ensure_enough_funds_to_buy_after_selling()
             # 2. sell indexed coins for reference market
             is_simple_buy_without_selling = self._can_simply_buy_coins_without_selling(details)
+            sell_orders_dependencies = initial_dependencies
             if is_simple_buy_without_selling:
                 self.logger.info(
                     f"Step 2/3: skipped: no coin to sell for "
@@ -98,13 +102,16 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     f"Step 2/3: selling coins to free "
                     f"{self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market}"
                 )
-                orders += await self._sell_indexed_coins_for_reference_market(details)
+                orders += await self._sell_indexed_coins_for_reference_market(details, initial_dependencies)
+                sell_orders_dependencies = signals.get_orders_dependencies(orders)
             # 3. split reference market into indexed coins
             self.logger.info(
                 f"Step 3/3: buying coins using "
                 f"{self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market}"
             )
-            orders += await self._split_reference_market_into_indexed_coins(details, is_simple_buy_without_selling)
+            orders += await self._split_reference_market_into_indexed_coins(
+                details, is_simple_buy_without_selling, sell_orders_dependencies
+            )
             # reset flag to relog if a next rebalance is aborted
             self._already_logged_aborted_rebalance_error = False
         except (trading_errors.MissingMinimalExchangeTradeVolume, RebalanceAborted) as err:
@@ -123,12 +130,15 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             self.logger.info("Portoflio rebalance process complete")
         return orders
 
-    async def _sell_indexed_coins_for_reference_market(self, details: dict) -> list:
+    async def _sell_indexed_coins_for_reference_market(
+        self, details: dict, dependencies: typing.Optional[commons_signals.SignalDependencies]
+    ) -> list:
         removed_coins_to_sell_orders = []
         if removed_coins_to_sell := list(details[RebalanceDetails.REMOVE.value]):
             removed_coins_to_sell_orders = await trading_modes.convert_assets_to_target_asset(
                 self.trading_mode, removed_coins_to_sell,
-                self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market, {}
+                self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market, {},
+                dependencies=dependencies
             )
             if (
                 details[RebalanceDetails.REMOVE.value] and
@@ -159,7 +169,8 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         order_coins_to_sell = self._get_coins_to_sell(details)
         orders = await trading_modes.convert_assets_to_target_asset(
             self.trading_mode, order_coins_to_sell,
-            self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market, {}
+            self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market, {},
+            dependencies=dependencies
         ) + removed_coins_to_sell_orders
         if orders:
             # ensure orders are filled
@@ -229,7 +240,9 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         # will raise if funds are missing
         await self._get_symbols_and_amounts(self.trading_mode.indexed_coins, reference_market_to_split)
 
-    async def _split_reference_market_into_indexed_coins(self, details: dict, is_simple_buy_without_selling: bool):
+    async def _split_reference_market_into_indexed_coins(
+        self, details: dict, is_simple_buy_without_selling: bool, dependencies: typing.Optional[commons_signals.SignalDependencies]
+    ):
         orders = []
         ref_market = self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market
         if details[RebalanceDetails.SWAP.value] or is_simple_buy_without_selling:
@@ -250,7 +263,7 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         self.logger.info(f"Splitting {reference_market_to_split} {ref_market} to buy {coins_to_buy}")
         amount_by_symbol = await self._get_symbols_and_amounts(coins_to_buy, reference_market_to_split)
         for symbol, ideal_amount in amount_by_symbol.items():
-            orders.extend(await self._buy_coin(symbol, ideal_amount))
+            orders.extend(await self._buy_coin(symbol, ideal_amount, dependencies))
         if not orders:
             raise trading_errors.MissingMinimalExchangeTradeVolume()
         return orders
@@ -300,7 +313,7 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             amount_by_symbol[symbol] = ideal_amount
         return amount_by_symbol
 
-    async def _buy_coin(self, symbol, ideal_amount) -> list:
+    async def _buy_coin(self, symbol, ideal_amount, dependencies: typing.Optional[commons_signals.SignalDependencies]) -> list:
         current_symbol_holding, current_market_holding, market_quantity, price, symbol_market = \
             await trading_personal_data.get_pre_order_data(
                 self.exchange_manager, symbol=symbol, timeout=trading_constants.ORDER_DATA_FETCHING_TIMEOUT
@@ -345,7 +358,7 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 quantity=order_quantity,
                 price=order_price,
             )
-            created_order = await self.trading_mode.create_order(current_order)
+            created_order = await self.trading_mode.create_order(current_order, dependencies=dependencies)
             created_orders.append(created_order)
         if created_orders:
             return created_orders
@@ -417,14 +430,15 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
             f"{len(self.trading_mode.indexed_coins)} coins: {self.trading_mode.indexed_coins} with reference market: "
             f"{self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market}"
         )
+        dependencies = None
         if self.trading_mode.cancel_open_orders:
-            await self.cancel_traded_pairs_open_orders_if_any()
+            dependencies = await self.cancel_traded_pairs_open_orders_if_any()
         if self.trading_mode.requires_initializing_appropriate_coins_distribution:
             self.trading_mode.ensure_updated_coins_distribution(adapt_to_holdings=True)
             self.trading_mode.requires_initializing_appropriate_coins_distribution = False
         is_rebalance_required, rebalance_details = self._get_rebalance_details()
         if is_rebalance_required:
-            await self._trigger_rebalance(rebalance_details)
+            await self._trigger_rebalance(rebalance_details, dependencies)
             self.last_activity = trading_modes.TradingModeActivity(
                 IndexActivity.REBALANCING_DONE,
                 rebalance_details,
@@ -436,7 +450,7 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
             )
             self.last_activity = trading_modes.TradingModeActivity(IndexActivity.REBALANCING_SKIPPED)
 
-    async def _trigger_rebalance(self, rebalance_details: dict):
+    async def _trigger_rebalance(self, rebalance_details: dict, dependencies: typing.Optional[commons_signals.SignalDependencies]):
         self.logger.info(
             f"Triggering rebalance on [{self.exchange_manager.exchange_name}] "
             f"with rebalance details: {rebalance_details}."
@@ -447,7 +461,8 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
             time_frame=None,
             final_note=None,
             state=trading_enums.EvaluatorStates.NEUTRAL,
-            data=rebalance_details
+            data=rebalance_details,
+            dependencies=dependencies
         )
         # send_notification
         await self._send_alert_notification()
@@ -696,7 +711,8 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
             )
         return topics
 
-    async def cancel_traded_pairs_open_orders_if_any(self):
+    async def cancel_traded_pairs_open_orders_if_any(self) -> typing.Optional[commons_signals.SignalDependencies]:
+        dependencies = commons_signals.SignalDependencies()
         if symbol_open_orders := [
             order
             for order in self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders()
@@ -707,9 +723,12 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
             )
             for order in symbol_open_orders:
                 try:
-                    await self.trading_mode.cancel_order(order)
+                    is_cancelled, dependency = await self.trading_mode.cancel_order(order)
+                    if is_cancelled:
+                        dependencies.extend(dependency)
                 except trading_errors.UnexpectedExchangeSideOrderStateError as err:
                     self.logger.warning(f"Skipped order cancel: {err}, order: {order}")
+        return dependencies or None
 
 
 class IndexTradingMode(trading_modes.AbstractTradingMode):

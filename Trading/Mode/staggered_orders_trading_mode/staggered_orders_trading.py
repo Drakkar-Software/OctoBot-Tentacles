@@ -26,6 +26,7 @@ import octobot_commons.constants as commons_constants
 import octobot_commons.enums as commons_enums
 import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_commons.data_util as data_util
+import octobot_commons.signals as commons_signals
 import octobot_trading.api as trading_api
 import octobot_trading.modes as trading_modes
 import octobot_trading.exchange_channel as exchanges_channel
@@ -34,6 +35,7 @@ import octobot_trading.enums as trading_enums
 import octobot_trading.personal_data as trading_personal_data
 import octobot_trading.errors as trading_errors
 import octobot_trading.exchanges.util as exchange_util
+import octobot_trading.signals as signals
 
 
 class StrategyModes(enum.Enum):
@@ -286,7 +288,7 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
         pair_bases = set()
         # 1. cancel open orders
         try:
-            cancelled_orders = await self._cancel_associated_orders(producer, pair_bases)
+            cancelled_orders, part_1_dependencies = await self._cancel_associated_orders(producer, pair_bases)
         except Exception as err:
             self.logger.exception(err, True, f"Error during portfolio optimization cancel orders step: {err}")
             cancelled_orders = []
@@ -294,7 +296,7 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
         # 2. convert assets to sell funds into target assets
         try:
             part_1_orders = await self._convert_assets_into_target(
-                producer, pair_bases, target_asset, set(sellable_assets), tickers
+                producer, pair_bases, target_asset, set(sellable_assets), tickers, part_1_dependencies
             )
         except Exception as err:
             self.logger.exception(
@@ -312,14 +314,18 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
             self.logger.warning(f"No {target_asset} in portfolio after optimization.")
             part_2_orders = []
         else:
+            part_2_dependencies = signals.get_orders_dependencies(part_1_orders)
             part_2_orders = await self._buy_assets(
-                producer, pair_bases, target_asset, converted_quote_amount_per_symbol, tickers
+                producer, pair_bases, target_asset, converted_quote_amount_per_symbol, tickers, part_2_dependencies
             )
 
         return [cancelled_orders, part_1_orders, part_2_orders]
 
-    async def _cancel_associated_orders(self, producer, pair_bases) -> list:
+    async def _cancel_associated_orders(
+        self, producer, pair_bases
+    ) -> tuple[list, typing.Optional[commons_signals.SignalDependencies]]:
         cancelled_orders = []
+        dependencies = commons_signals.SignalDependencies()
         self.logger.info(f"Optimizing portfolio: cancelling existing open orders on "
                          f"{self.exchange_manager.exchange_config.traded_symbol_pairs}")
         for symbol in self.exchange_manager.exchange_config.traded_symbol_pairs:
@@ -329,16 +335,21 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
                     symbol=symbol
                 ):
                     if not (order.is_cancelled() or order.is_closed()):
-                        await self.cancel_order(order)
+                        cancelled, dependency = await self.cancel_order(order)
+                        if cancelled:
+                            dependencies.extend(dependency)
                         cancelled_orders.append(order)
-        return cancelled_orders
+        return cancelled_orders, (dependencies or None)
 
-    async def _convert_assets_into_target(self, producer, pair_bases, common_quote, to_sell_assets, tickers) -> list:
+    async def _convert_assets_into_target(
+        self, producer, pair_bases, common_quote, to_sell_assets, tickers, 
+        dependencies: typing.Optional[commons_signals.SignalDependencies]
+    ) -> list:
         to_sell_assets = to_sell_assets.union(pair_bases)
         self.logger.info(f"Optimizing portfolio: selling {to_sell_assets} to buy {common_quote}")
         # need portfolio available to be up-to-date with cancelled orders
         orders = await trading_modes.convert_assets_to_target_asset(
-            self, list(to_sell_assets), common_quote, tickers
+            self, list(to_sell_assets), common_quote, tickers, dependencies=dependencies
         )
         if orders:
             await asyncio.gather(
@@ -350,7 +361,10 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
             )
         return orders
 
-    async def _buy_assets(self, producer, pair_bases, common_quote, converted_quote_amount_per_symbol, tickers) -> list:
+    async def _buy_assets(
+        self, producer, pair_bases, common_quote, converted_quote_amount_per_symbol, tickers, 
+        dependencies: typing.Optional[commons_signals.SignalDependencies]
+    ) -> list:
         created_orders = []
         for base in pair_bases:
             self.logger.info(
@@ -359,7 +373,9 @@ class StaggeredOrdersTradingMode(trading_modes.AbstractTradingMode):
             )
             try:
                 created_orders += await trading_modes.convert_asset_to_target_asset(
-                    self, common_quote, base, tickers, asset_amount=converted_quote_amount_per_symbol
+                    self, common_quote, base, tickers,
+                    asset_amount=converted_quote_amount_per_symbol,
+                    dependencies=dependencies
                 )
             except Exception as err:
                 self.logger.exception(err, True, f"Error when creating order to buy {base}: {err}")
@@ -412,13 +428,16 @@ class StaggeredOrdersTradingModeConsumer(trading_modes.AbstractTradingModeConsum
 
     async def create_new_orders(self, symbol, final_note, state, **kwargs):
         # use dict default getter: can't afford missing data
-        data = kwargs["data"]
+        data = kwargs[self.CREATE_ORDER_DATA_PARAM]
+        dependencies = kwargs[self.CREATE_ORDER_DEPENDENCIES_PARAM]
         try:
             if not self.skip_orders_creation:
                 order_data = data[self.ORDER_DATA_KEY]
                 current_price = data[self.CURRENT_PRICE_KEY]
                 symbol_market = data[self.SYMBOL_MARKET_KEY]
-                return await self.create_order(order_data, current_price, symbol_market)
+                return await self.create_order(
+                    order_data, current_price, symbol_market, dependencies
+                )
             else:
                 self.logger.info(f"Skipped {data.get(self.ORDER_DATA_KEY, '')}")
         finally:
@@ -428,7 +447,10 @@ class StaggeredOrdersTradingModeConsumer(trading_modes.AbstractTradingModeConsum
                     self.logger.info(f"Completed {symbol}trailing process.")
                     producer.is_currently_trailing = False
 
-    async def create_order(self, order_data, current_price, symbol_market):
+    async def create_order(
+        self, order_data, current_price, symbol_market, 
+        dependencies: typing.Optional[commons_signals.SignalDependencies]
+    ):
         created_order = None
         currency, market = symbol_util.parse_symbol(order_data.symbol).base_and_quote()
         try:
@@ -474,7 +496,9 @@ class StaggeredOrdersTradingModeConsumer(trading_modes.AbstractTradingModeConsum
                 )
                 # disable instant fill to avoid looping order fill in simulator
                 current_order.allow_instant_fill = False
-                created_order = await self.trading_mode.create_order(current_order)
+                created_order = await self.trading_mode.create_order(
+                    current_order, dependencies=dependencies
+                )
             if not created_order:
                 self.logger.warning(
                     f"No order created for {order_data} (cost: {quantity * order_data.price}): "
@@ -887,7 +911,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
     async def _lock_portfolio_and_create_order_when_possible(self, new_order, current_price):
         await asyncio.wait_for(self.allowed_mirror_orders.wait(), timeout=None)
         async with self.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.lock:
-            await self._create_order(new_order, current_price, False)
+            await self._create_order(new_order, current_price, False, [])
 
     def _should_trigger_trailing(
         self,
@@ -983,11 +1007,13 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                     )
                     return
                 # use exchange level lock to prevent funds double spend
-                buy_orders, sell_orders, triggering_trailing = await self._generate_staggered_orders(
+                buy_orders, sell_orders, triggering_trailing, create_order_dependencies = await self._generate_staggered_orders(
                     current_price, ignore_available_funds, trigger_trailing
                 )
                 staggered_orders = self._merged_and_sort_not_virtual_orders(buy_orders, sell_orders)
-                await self._create_not_virtual_orders(staggered_orders, current_price, triggering_trailing)
+                await self._create_not_virtual_orders(
+                    staggered_orders, current_price, triggering_trailing, create_order_dependencies
+                )
 
     def _ensure_current_price_in_limit_parameters(self, current_price):
         message = None
@@ -1012,7 +1038,9 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         log_func = self.logger.error if using_error else self.logger.warning
         log_func(message)
 
-    async def _generate_staggered_orders(self, current_price, ignore_available_funds, trigger_trailing):
+    async def _generate_staggered_orders(
+        self, current_price, ignore_available_funds, trigger_trailing
+    ):
         order_manager = self.exchange_manager.exchange_personal_data.orders_manager
         interfering_orders_pairs = self._get_interfering_orders_pairs(order_manager.get_open_orders())
         if interfering_orders_pairs:
@@ -1022,7 +1050,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                 f"other orders in both base and quote. Please use the Grid Trading Mode with configured Total funds"
                 f" trade with interfering orders."
             )
-            return [], [], False
+            return [], [], False, None
         existing_orders = order_manager.get_open_orders(self.symbol)
 
         sorted_orders = sorted(existing_orders, key=lambda order: order.origin_price)
@@ -1036,8 +1064,10 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         trigger_trailing = trigger_trailing or bool(
             sorted_orders and self._should_trigger_trailing(sorted_orders, current_price, False)
         )
+        next_step_dependencies = None
         if trigger_trailing:
-            await self._prepare_trailing(sorted_orders, current_price)
+            # trailing has no initial dependencies here
+            _, __, next_step_dependencies = await self._prepare_trailing(sorted_orders, current_price, None)
             self.is_currently_trailing = True
             self.last_trailing_process_started_at = self.exchange_manager.exchange.get_exchange_current_time()
             # trailing will cancel all orders: set state to NEW with no existing order
@@ -1059,22 +1089,29 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                                               recently_closed_trades)
             if state is self.FILL:
                 self._ensure_used_funds(buy_orders, sell_orders, sorted_orders, recently_closed_trades)
+            create_order_dependencies = next_step_dependencies
         except ForceResetOrdersException:
-            buy_orders, sell_orders, state = await self._reset_orders(
+            buy_orders, sell_orders, state, create_order_dependencies = await self._reset_orders(
                 sorted_orders, self.lowest_buy, highest_buy, lowest_sell, self.highest_sell,
-                current_price, ignore_available_funds
+                current_price, ignore_available_funds, next_step_dependencies
             )
 
         if state == self.NEW:
             self._set_virtual_orders(buy_orders, sell_orders, self.operational_depth)
 
-        return buy_orders, sell_orders, trigger_trailing
+        return buy_orders, sell_orders, trigger_trailing, create_order_dependencies
 
     async def _reset_orders(
-        self, sorted_orders, lowest_buy, highest_buy, lowest_sell, highest_sell, current_price, ignore_available_funds
-    ):
+        self, sorted_orders, lowest_buy, highest_buy, lowest_sell, highest_sell, 
+        current_price, ignore_available_funds, 
+        dependencies: typing.Optional[commons_signals.SignalDependencies]
+    ) -> tuple[list, list, int, typing.Optional[commons_signals.SignalDependencies]]:
         self.logger.info("Resetting orders")
-        await asyncio.gather(*(self._cancel_open_order(order) for order in sorted_orders))
+        cancelled_and_dependency_results = await asyncio.gather(*(self._cancel_open_order(order, dependencies) for order in sorted_orders))
+        orders_dependencies = commons_signals.SignalDependencies()
+        for result in cancelled_and_dependency_results:
+            if result[0] and result[1] is not None:
+                orders_dependencies.extend(result[1])
         self._reset_available_funds()
         state = self.NEW
         buy_orders = self._create_orders(
@@ -1085,7 +1122,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             lowest_sell, highest_sell, trading_enums.TradeOrderSide.SELL, sorted_orders,
             current_price, [], state, self.sell_funds, ignore_available_funds, []
         )
-        return buy_orders, sell_orders, state
+        return buy_orders, sell_orders, state, (orders_dependencies or None)
 
     def _reset_available_funds(self):
         base, quote = symbol_util.parse_symbol(self.symbol).base_and_quote()
@@ -1378,28 +1415,37 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             )
         return trades_with_missing_mirror_order_fills
 
-    async def _cancel_open_order(self, order):
+    async def _cancel_open_order(
+        self, order, dependencies: typing.Optional[commons_signals.SignalDependencies]
+    ) -> tuple[bool, typing.Optional[commons_signals.SignalDependencies]]:
         if not (order.is_cancelled() or order.is_closed()):
             try:
-                await self.trading_mode.cancel_order(order)
-                return True
+                cancelled, cancel_order_dependency = await self.trading_mode.cancel_order(order, dependencies=dependencies)
+                return cancelled, (cancel_order_dependency if cancelled else None)
             except trading_errors.UnexpectedExchangeSideOrderStateError as err:
                 self.logger.warning(f"Skipped order cancel: {err}, order: {order}")
-        return False
+        return False, None
 
-    async def _prepare_trailing(self, open_orders: list, current_price: decimal.Decimal):
+    async def _prepare_trailing(
+        self, open_orders: list, current_price: decimal.Decimal, 
+        dependencies: typing.Optional[commons_signals.SignalDependencies]
+    ) -> tuple[list, list, typing.Optional[commons_signals.SignalDependencies]]:
         log_header = f"[{self.exchange_manager.exchange_name}] {self.symbol} @ {current_price} trailing process: "
         if current_price <= trading_constants.ZERO:
             self.logger.error(
                 f"Aborting {log_header}current price is {current_price}")
-            return
+            return [], [], None
         # 1. cancel all open orders
+        convert_dependencies = commons_signals.SignalDependencies()
         try:
             cancelled_orders = []
             self.logger.info(f"{log_header}cancelling {len(open_orders)} open orders on {self.symbol}")
             for order in open_orders:
-                if await self._cancel_open_order(order):
+                cancelled, cancel_order_dependency = await self._cancel_open_order(order, dependencies)
+                if cancelled:
                     cancelled_orders.append(order)
+                    if cancel_order_dependency:
+                        convert_dependencies.extend(cancel_order_dependency)
         except Exception as err:
             self.logger.exception(err, True, f"Error in {log_header} cancel orders step: {err}")
             cancelled_orders = []
@@ -1445,7 +1491,8 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                         self.symbol: {
                             trading_enums.ExchangeConstantsTickersColumns.CLOSE.value: current_price,
                         }
-                    }, asset_amount=amount
+                    }, asset_amount=amount,
+                    dependencies=convert_dependencies
                 )
                 if orders:
                     await asyncio.gather(*[
@@ -1467,7 +1514,8 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             f"Completed {log_header} {len(cancelled_orders)} cancelled orders, {len(orders)} "
             f"created conversion orders"
         )
-        return cancelled_orders, orders
+        orders_dependencies = signals.get_orders_dependencies(orders)
+        return cancelled_orders, orders, (orders_dependencies or convert_dependencies or None)
 
     def _analyse_current_orders_situation(self, sorted_orders, recently_closed_trades, lower_bound, higher_bound, current_price):
         if not sorted_orders:
@@ -2243,7 +2291,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         max_quantity = average_order_quantity * (1 + mode_multiplier / 2)
         return min_quantity, max_quantity
 
-    async def _create_order(self, order, current_price, completing_trailing):
+    async def _create_order(self, order, current_price, completing_trailing, dependencies: list[str]):
         data = {
             StaggeredOrdersTradingModeConsumer.ORDER_DATA_KEY: order,
             StaggeredOrdersTradingModeConsumer.CURRENT_PRICE_KEY: current_price,
@@ -2255,14 +2303,16 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                                              symbol=self.trading_mode.symbol,
                                              time_frame=None,
                                              state=state,
-                                             data=data)
+                                             data=data,
+                                             dependencies=dependencies)
 
     async def _create_not_virtual_orders(
-        self, orders_to_create: list, current_price: decimal.Decimal, triggering_trailing: bool
+        self, orders_to_create: list, current_price: decimal.Decimal, 
+        triggering_trailing: bool, dependencies: typing.Optional[commons_signals.SignalDependencies]
     ):
         for index, order in enumerate(orders_to_create):
             is_completing_trailing = triggering_trailing and (index == len(orders_to_create) - 1)
-            await self._create_order(order, current_price, is_completing_trailing)
+            await self._create_order(order, current_price, is_completing_trailing, dependencies)
             base, quote = symbol_util.parse_symbol(order.symbol).base_and_quote()
             # keep track of the required funds
             volume = order.quantity if order.side is trading_enums.TradeOrderSide.SELL \

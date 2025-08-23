@@ -151,7 +151,8 @@ def mocked_sell_limit_signal():
             trading_enums.TradingSignalOrdersAttrs.ADDITIONAL_ORDERS.value: [],
             trading_enums.TradingSignalOrdersAttrs.ASSOCIATED_ORDER_IDS.value: None,
             trading_enums.TradingSignalOrdersAttrs.UPDATE_WITH_TRIGGERING_ORDER_FEES.value: True,
-        }
+        },
+        dependencies=trading_signals.get_orders_dependencies([mock.Mock(order_id="123"), mock.Mock(order_id="456")])
     )
 
 
@@ -190,7 +191,8 @@ def mocked_sell_limit_signal_with_trailing_group():
             trading_enums.TradingSignalOrdersAttrs.ADDITIONAL_ORDERS.value: [],
             trading_enums.TradingSignalOrdersAttrs.ASSOCIATED_ORDER_IDS.value: None,
             trading_enums.TradingSignalOrdersAttrs.UPDATE_WITH_TRIGGERING_ORDER_FEES.value: True,
-        }
+        },
+        dependencies=trading_signals.get_orders_dependencies([])
     )
 
 
@@ -242,7 +244,8 @@ def mocked_buy_limit_signal():
             trading_enums.TradingSignalOrdersAttrs.CHAINED_TO.value: None,
             trading_enums.TradingSignalOrdersAttrs.ADDITIONAL_ORDERS.value: [],
             trading_enums.TradingSignalOrdersAttrs.ASSOCIATED_ORDER_IDS.value: None,
-        }
+        },
+        dependencies=trading_signals.get_orders_dependencies([mock.Mock(order_id="123"), mock.Mock(order_id="456")])
     )
 
 

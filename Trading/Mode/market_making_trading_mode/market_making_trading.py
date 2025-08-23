@@ -272,7 +272,7 @@ class MarketMakingTradingModeConsumer(trading_modes.AbstractTradingModeConsumer)
 
     async def create_new_orders(self, symbol, final_note, state, **kwargs):
         # use dict default getter: can't afford missing data
-        data = kwargs["data"]
+        data = kwargs[self.CREATE_ORDER_DATA_PARAM]
         order_actions_plan: OrdersUpdatePlan = data[self.ORDER_ACTIONS_PLAN_KEY]
         current_price = data[self.CURRENT_PRICE_KEY]
         symbol_market = data[self.SYMBOL_MARKET_KEY]

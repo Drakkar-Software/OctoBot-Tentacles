@@ -34,6 +34,8 @@ import octobot_trading.exchanges as exchanges
 import octobot_trading.enums as trading_enums
 import octobot_trading.personal_data as trading_personal_data
 import octobot_trading.constants as trading_constants
+import octobot_trading.signals as trading_signals
+import octobot_trading.modes as trading_modes
 import tentacles.Trading.Mode.grid_trading_mode.grid_trading as grid_trading
 import tentacles.Trading.Mode.grid_trading_mode.tests.open_orders_data as open_orders_data
 import tentacles.Trading.Mode.staggered_orders_trading_mode.staggered_orders_trading as staggered_orders_trading
@@ -1653,7 +1655,7 @@ async def test_start_after_offline_1_filled_should_create_sell():
 
 async def test_start_after_offline_with_added_funds_increasing_orders_count():
     symbol = "BTC/USDT"
-    async with _get_tools(symbol) as (producer, _, exchange_manager):
+    async with _get_tools(symbol) as (producer, consumer, exchange_manager):
         producer.sell_funds = decimal.Decimal("0.00005")  # 4 sell orders
         producer.buy_funds = decimal.Decimal("0.005")  # 4 buy orders
 
@@ -1683,10 +1685,29 @@ async def test_start_after_offline_with_added_funds_increasing_orders_count():
         # 2. offline simulation: funds are added (here config changed)
         producer.sell_funds = decimal.Decimal("0.0001")  # 9 sell orders
         # triggering orders will cancel all open orders and recreate grid orders with new funds
-        await producer._ensure_staggered_orders()
-        # one more buy order
-        new_orders_count = orders_count + 5
-        await asyncio.create_task(_check_open_orders_count(exchange_manager, new_orders_count))
+        with mock.patch.object(
+            consumer, "create_order", mock.AsyncMock(wraps=consumer.create_order)
+        ) as create_order_mock, mock.patch.object(
+            producer.trading_mode, "cancel_order", mock.AsyncMock(wraps=producer.trading_mode.cancel_order)
+        ) as cancel_order_mock:
+            await producer._ensure_staggered_orders()
+            # one more buy order
+            assert cancel_order_mock.call_count == orders_count # all orders are cancelled
+            assert all(
+                call.kwargs["dependencies"] is None
+                for call in cancel_order_mock.mock_calls
+            )
+            new_orders_count = orders_count + 5
+            await asyncio.create_task(_check_open_orders_count(exchange_manager, new_orders_count))
+            assert create_order_mock.call_count == new_orders_count
+            cancelled_orders_dependencies = trading_signals.get_orders_dependencies(
+                [call.args[0] for call in cancel_order_mock.mock_calls]
+            )
+            # cancel orders dependencies are forwarded as dependencies for newly created orders
+            assert all(
+                call.args[3] == cancelled_orders_dependencies
+                for call in create_order_mock.mock_calls
+            )
         new_orders = copy.copy(trading_api.get_open_orders(exchange_manager))
         assert len(new_orders) == new_orders_count
         # replaced orders
@@ -2038,7 +2059,7 @@ async def test_start_after_offline_no_missing_order():
 
 async def test_trailing_up():
     symbol = "BTC/USDT"
-    async with _get_tools(symbol) as (producer, _, exchange_manager):
+    async with _get_tools(symbol) as (producer, consumer, exchange_manager):
         # first start: setup orders
         producer.sell_funds = decimal.Decimal("1")  # 25 sell orders
         producer.buy_funds = decimal.Decimal("1")  # 19 buy orders
@@ -2071,9 +2092,31 @@ async def test_trailing_up():
         new_price = decimal.Decimal(250)
         trading_api.force_set_mark_price(exchange_manager, producer.symbol, new_price)
         # will trail up
-        await producer._ensure_staggered_orders()
-        await asyncio.create_task(_check_open_orders_count(exchange_manager, producer.operational_depth))
-        _check_created_orders(producer, trading_api.get_open_orders(exchange_manager), 250)
+        with mock.patch.object(
+            consumer, "create_order", mock.AsyncMock(wraps=consumer.create_order)
+        ) as create_order_mock, mock.patch.object(
+            producer.trading_mode, "cancel_order", mock.AsyncMock(wraps=producer.trading_mode.cancel_order)
+        ) as cancel_order_mock, mock.patch.object(
+            trading_modes, "convert_asset_to_target_asset", mock.AsyncMock(wraps=trading_modes.convert_asset_to_target_asset)
+        ) as convert_asset_to_target_asset_mock:
+            await producer._ensure_staggered_orders()
+            assert cancel_order_mock.call_count == 19 # all buy orders are cancelled
+            assert all(
+                call.kwargs["dependencies"] is None
+                for call in cancel_order_mock.mock_calls
+            )
+            cancelled_orders_dependencies = trading_signals.get_orders_dependencies(
+                [call.args[0] for call in cancel_order_mock.mock_calls]
+            )
+            convert_asset_to_target_asset_mock.assert_not_called()
+            await asyncio.create_task(_check_open_orders_count(exchange_manager, producer.operational_depth))
+            _check_created_orders(producer, trading_api.get_open_orders(exchange_manager), 250)
+            assert create_order_mock.call_count == producer.operational_depth
+            # no conversion, will use cancel order dependencies
+            assert all(
+                call.args[3] == cancelled_orders_dependencies
+                for call in create_order_mock.mock_calls
+            )
 
         # B. orders get filled but not enough to trigger a trailing reset
         # offline simulation: orders get filled but not replaced => price got up to more than the max price
