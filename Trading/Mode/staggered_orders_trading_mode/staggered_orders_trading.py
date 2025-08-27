@@ -1173,15 +1173,15 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         used_buy_funds = 0
         used_sell_funds = 0
         for order in orders:
-            locked_base, locked_quote = self._get_order_locked_funds(order)
+            order_locked_base, order_locked_quote = self._get_order_locked_funds(order)
             buying = order.side is trading_enums.TradeOrderSide.BUY
             if (
-                (used_buy_funds + locked_quote <= max_buy_funds)
-                and (buying or used_sell_funds + locked_base > max_sell_funds)
+                (used_buy_funds + order_locked_quote <= max_buy_funds)
+                and (buying or used_sell_funds + order_locked_base > max_sell_funds)
             ):
-                used_buy_funds += locked_quote
+                used_buy_funds += order_locked_quote
             else:
-                used_sell_funds += locked_base
+                used_sell_funds += order_locked_base
         if (
             # reset if buy or sell funds are underused and sell funds are not overused
             (
@@ -1228,7 +1228,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         return locked_base, locked_quote
 
     def _get_order_locked_funds(self, order):
-        quantity = order.quantity if isinstance(order, OrderData) else order.origin_quantity
+        quantity = order.quantity if isinstance(order, OrderData) else order.origin_quantity  # don't use remaining quantity
         price = order.price if isinstance(order, OrderData) else order.origin_price
         return quantity, quantity * price
 

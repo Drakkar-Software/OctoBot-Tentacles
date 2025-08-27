@@ -1840,6 +1840,7 @@ async def test_create_mirror_order_considering_exchange_fees():
         assert buy_1.origin_price == decimal.Decimal("97")
         assert buy_1.origin_quantity == decimal.Decimal("0.46")
         assert buy_1.side == trading_enums.TradeOrderSide.BUY
+        buy_1.filled_quantity = buy_1.origin_quantity   # create_mirror order uses filled quantity
         buy_1_mirror_order = producer._create_mirror_order(buy_1.to_dict())
         assert isinstance(buy_1_mirror_order, staggered_orders_trading.OrderData)
         assert buy_1_mirror_order.associated_entry_id == buy_1.order_id
@@ -1854,6 +1855,7 @@ async def test_create_mirror_order_considering_exchange_fees():
         assert sell_1.origin_price == decimal.Decimal("103")
         assert sell_1.origin_quantity == decimal.Decimal('0.00464646')
         assert sell_1.side == trading_enums.TradeOrderSide.SELL
+        sell_1.filled_quantity = sell_1.origin_quantity # create_mirror order uses filled quantity
         sell_1_mirror_order = producer._create_mirror_order(sell_1.to_dict())
         assert isinstance(sell_1_mirror_order, staggered_orders_trading.OrderData)
         assert sell_1_mirror_order.associated_entry_id is None
@@ -1918,6 +1920,7 @@ async def test_create_mirror_order_ignoring_exchange_fees():
         assert buy_1.origin_price == decimal.Decimal("97")
         assert buy_1.origin_quantity == decimal.Decimal("0.46")
         assert buy_1.side == trading_enums.TradeOrderSide.BUY
+        buy_1.filled_quantity = buy_1.origin_quantity   # create_mirror_order uses filled quantity
         buy_1_mirror_order = producer._create_mirror_order(buy_1.to_dict())
         assert isinstance(buy_1_mirror_order, staggered_orders_trading.OrderData)
         assert buy_1_mirror_order.associated_entry_id == buy_1.order_id
@@ -1933,6 +1936,7 @@ async def test_create_mirror_order_ignoring_exchange_fees():
         assert buy_1.origin_price == decimal.Decimal("97")
         assert buy_1.origin_quantity == decimal.Decimal("0.46")
         assert buy_1.side == trading_enums.TradeOrderSide.BUY
+        buy_1.filled_quantity = buy_1.origin_quantity   # create_mirror_order uses filled quantity
         exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio["BTC"].available = decimal.Decimal("0.3")
         buy_1_mirror_order = producer._create_mirror_order(buy_1.to_dict())
         assert isinstance(buy_1_mirror_order, staggered_orders_trading.OrderData)
@@ -1948,6 +1952,7 @@ async def test_create_mirror_order_ignoring_exchange_fees():
         assert sell_1.origin_price == decimal.Decimal("103")
         assert sell_1.origin_quantity == decimal.Decimal('0.00464646') # cost ~= 0.04
         assert sell_1.side == trading_enums.TradeOrderSide.SELL
+        sell_1.filled_quantity = sell_1.origin_quantity # create_mirror_order uses filled quantity
         exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio["USD"].available = decimal.Decimal("0.33")
         sell_1_mirror_order = producer._create_mirror_order(sell_1.to_dict())
         assert isinstance(sell_1_mirror_order, staggered_orders_trading.OrderData)
@@ -1957,6 +1962,36 @@ async def test_create_mirror_order_ignoring_exchange_fees():
         assert sell_1_mirror_order.price == decimal.Decimal("101") == sell_1.origin_price - buy_sell_increment
         assert sell_1_mirror_order.quantity < sell_1.origin_quantity
         assert sell_1_mirror_order.quantity == decimal.Decimal('0.003267326732673267326732673267')  # adapted to available USDT
+
+
+async def test_ensure_full_funds_usage():
+    symbol = "BTC/USD"
+    async with _get_tools(symbol) as tools:
+        producer, _, exchange_manager = tools
+        orders = []
+        # no order, does not raise error
+        assert not producer._ensure_full_funds_usage(orders, 0, 0)
+
+        # funds are from partially filled orders, don't raise
+        buy_order = trading_personal_data.BuyMarketOrder(exchange_manager.trader)
+        buy_order.origin_quantity = decimal.Decimal(10)
+        buy_order.origin_price = decimal.Decimal(100)
+        buy_order.filled_quantity = buy_order.origin_quantity * decimal.Decimal("0.99")
+        sell_order = trading_personal_data.SellMarketOrder(exchange_manager.trader)
+        sell_order.origin_quantity = decimal.Decimal(10)
+        sell_order.origin_price = decimal.Decimal(100)
+        sell_order.filled_quantity = sell_order.origin_quantity * decimal.Decimal("0.99")
+        orders = [buy_order, sell_order]
+        assert not producer._ensure_full_funds_usage(orders, 1, 1)
+
+        # raises
+        orders = []
+        with pytest.raises(staggered_orders_trading.ForceResetOrdersException):
+            await producer._ensure_full_funds_usage(orders, 1, 0)
+        with pytest.raises(staggered_orders_trading.ForceResetOrdersException):
+            await producer._ensure_full_funds_usage(orders, 0, 1)
+        with pytest.raises(staggered_orders_trading.ForceResetOrdersException):
+            await producer._ensure_full_funds_usage(orders, 1, 1)
 
 
 async def _wait_for_orders_creation(orders_count=1):

@@ -235,7 +235,7 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         if to_cancel_orders := [
             order
             for order in self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders(symbol=symbol)
-            if not (order.is_cancelled() or order.is_closed()) and side is order.side
+            if not (order.is_cancelled() or order.is_closed() or order.is_partially_filled()) and side is order.side
         ]:
             # Cancel existing DCA orders of the same side from previous iterations
             # Edge cases about cancelling existing orders when recreating entry orders
@@ -1134,6 +1134,11 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
             for order in self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders() + chained_orders
             if order.side is trading_enums.TradeOrderSide.SELL
         ]
+        partially_filled_buy_orders = [
+            order
+            for order in self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders()
+            if order.side is trading_enums.TradeOrderSide.BUY and order.is_partially_filled()
+        ]
         orphan_asset_values_by_asset = {}
         total_traded_assets_value = value_holder.value_converter.evaluate_value(
             common_quote,
@@ -1157,8 +1162,16 @@ class DCATradingMode(trading_modes.AbstractTradingMode):
                 for order in sell_orders
                 if symbol_util.parse_symbol(order.symbol).base == asset
             )
+            holdings_from_partially_filled_buy_orders = sum(
+                order.filled_quantity
+                for order in partially_filled_buy_orders
+                if symbol_util.parse_symbol(order.symbol).base == asset
+            )
             # do not consider more than the available amounts
-            orphan_amount = min(asset_holding.total - holdings_in_sell_orders, asset_holding.available)
+            orphan_amount = min(
+                asset_holding.total - holdings_in_sell_orders - holdings_from_partially_filled_buy_orders, 
+                asset_holding.available
+            )
             if orphan_amount and orphan_amount > 0:
                 orphan_asset_values_by_asset[asset] = (
                     holdings_value * orphan_amount / asset_holding.total, orphan_amount
