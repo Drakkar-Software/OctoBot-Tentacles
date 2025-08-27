@@ -914,7 +914,7 @@ async def test_create_new_orders(tools):
             assert call.args[0] is expected_type
         _create_entry_order_mock.reset_mock()
 
-        # with existing orders locking all funds: cancel them
+        # with existing orders locking all funds: cancel them all
         existing_orders = [
             _create_basic_order(trading_enums.TradeOrderSide.BUY, decimal.Decimal(1)),
             _create_basic_order(trading_enums.TradeOrderSide.BUY, decimal.Decimal(1)),
@@ -934,6 +934,28 @@ async def test_create_new_orders(tools):
                 order.origin_quantity * order.origin_price
             return True, trading_signals.get_orders_dependencies([mock.Mock(order_id="456")])
 
+        # with existing orders locking all funds: cancel non partially filled ones
+        dependencies = trading_signals.get_orders_dependencies([mock.Mock(order_id="123")])
+        with mock.patch.object(
+            mode, "cancel_order", mock.AsyncMock(side_effect=_cancel_order)
+        ) as cancel_order_mock_2:
+            with mock.patch.object(
+                trader.exchange_manager.exchange_personal_data.orders_manager.get_open_orders(symbol=symbol)[0], "is_partially_filled", mock.Mock(return_value=True)
+            ) as is_partially_filled_mock:
+                await consumer.create_new_orders(symbol, None, trading_enums.EvaluatorStates.LONG.value, dependencies=dependencies)
+                is_partially_filled_mock.assert_called_once()
+                assert cancel_order_mock_2.call_count == 1
+                assert cancel_order_mock_2.mock_calls[0].args[0] == existing_orders[1]
+                assert cancel_order_mock_2.mock_calls[0].kwargs["dependencies"] == dependencies
+                cancel_order_mock_2.reset_mock()
+                # called as many times as there are orders to create
+                assert _create_entry_order_mock.call_count == 1 + 4
+                assert _create_entry_order_mock.mock_calls[0].args[7] == trading_signals.get_orders_dependencies([mock.Mock(order_id="456")])
+                _create_entry_order_mock.reset_mock()
+                trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio["USDT"].available = \
+                    trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio["USDT"].total
+
+        # order 2 is now partially filled, it won't be cancelled
         dependencies = trading_signals.get_orders_dependencies([mock.Mock(order_id="123")])
         with mock.patch.object(
             mode, "cancel_order", mock.AsyncMock(side_effect=_cancel_order)
@@ -1350,7 +1372,23 @@ async def test_single_exchange_process_health_check(tools):
         assert await mode.single_exchange_process_health_check([], {}) == []
         assert producer.last_activity is None
 
-        # more ETH: sell
+        # more ETH: can sell but not all of it because of partially filled buy orders
+        eth_holdings = decimal.Decimal(200)
+        portfolio["ETH"] = trading_personal_data.SpotAsset("ETH", eth_holdings, eth_holdings)
+        producer.last_activity = None
+        buy_limit = trading_personal_data.BuyLimitOrder(trader)
+        buy_limit.symbol = "ETH/USDT"
+        buy_limit.origin_quantity = decimal.Decimal(200)
+        buy_limit.filled_quantity = decimal.Decimal(199)
+        with mock.patch.object(
+            exchange_manager.exchange_personal_data.orders_manager, "get_open_orders",
+            mock.Mock(return_value=[buy_limit])
+        ) as get_open_orders_mock:
+            assert await mode.single_exchange_process_health_check([], {}) == []
+            assert get_open_orders_mock.call_count == 2
+            assert producer.last_activity is None
+
+        # no partially filled buy orders: sell ETH
         eth_holdings = decimal.Decimal(200)
         portfolio["ETH"] = trading_personal_data.SpotAsset("ETH", eth_holdings, eth_holdings)
         producer.last_activity = None

@@ -230,7 +230,7 @@ async def test_valid_create_new_orders_no_ref_market_as_quote(tools):
         assert order.fee is None
         assert order.filled_price == trading_constants.ZERO
         assert order.origin_quantity == decimal.Decimal(str(7.6))
-        assert order.filled_quantity == order.origin_quantity
+        assert order.filled_quantity == trading_constants.ZERO
         assert order.simulated is True
         assert order.chained_orders == []
         assert isinstance(order.order_group, trading_personal_data.OneCancelsTheOtherOrderGroup)
@@ -269,7 +269,7 @@ async def test_valid_create_new_orders_no_ref_market_as_quote(tools):
         assert order.fee is None
         assert order.filled_price == trading_constants.ZERO
         assert order.origin_quantity == decimal.Decimal(str(0.12554936))
-        assert order.filled_quantity == order.origin_quantity
+        assert order.filled_quantity == trading_constants.ZERO
         assert order.simulated is True
         assert order.order_group is None
         assert order.chained_orders == []
@@ -381,7 +381,7 @@ async def test_valid_create_new_orders_ref_market_as_quote(tools):
     assert order.fee is None
     assert order.filled_price == trading_constants.ZERO
     assert order.origin_quantity == decimal.Decimal(str(4.4))
-    assert order.filled_quantity == order.origin_quantity
+    assert order.filled_quantity == trading_constants.ZERO
     assert order.simulated is True
     assert isinstance(order.order_group, trading_personal_data.OneCancelsTheOtherOrderGroup)
 
@@ -409,7 +409,7 @@ async def test_valid_create_new_orders_ref_market_as_quote(tools):
     assert order.fee is None
     assert order.filled_price == trading_constants.ZERO
     assert order.origin_quantity == decimal.Decimal(str(0.21685799))
-    assert order.filled_quantity == order.origin_quantity
+    assert order.filled_quantity == trading_constants.ZERO
     assert order.simulated is True
     assert order.order_group is None
     assert order.chained_orders == []
@@ -552,7 +552,7 @@ async def test_split_create_new_orders(tools):
     assert adapted_order.fee is None
     assert adapted_order.filled_price == trading_constants.ZERO
     assert adapted_order.origin_quantity == decimal.Decimal(str(64625635.97358073))
-    assert adapted_order.filled_quantity == adapted_order.origin_quantity
+    assert adapted_order.filled_quantity == trading_constants.ZERO
     assert adapted_order.simulated is True
     assert isinstance(adapted_order.order_group, trading_personal_data.OneCancelsTheOtherOrderGroup)
 
@@ -577,7 +577,7 @@ async def test_split_create_new_orders(tools):
         assert order.filled_price == adapted_order.filled_price
         assert order.origin_quantity == decimal.Decimal(str(141537436.47664192))
         assert order.origin_quantity > adapted_order.origin_quantity
-        assert order.filled_quantity > adapted_order.filled_quantity
+        assert order.filled_quantity == trading_constants.ZERO
         assert order.simulated == adapted_order.simulated
         assert isinstance(order.order_group, trading_personal_data.OneCancelsTheOtherOrderGroup)
 
@@ -610,7 +610,7 @@ async def test_split_create_new_orders(tools):
     assert adapted_order.fee is None
     assert adapted_order.filled_price == trading_constants.ZERO
     assert adapted_order.origin_quantity == decimal.Decimal("396851564266.65327383")
-    assert adapted_order.filled_quantity == adapted_order.origin_quantity
+    assert adapted_order.filled_quantity == trading_constants.ZERO
     assert adapted_order.simulated is True
 
     trading_mode_test_toolkit.check_order_limits(adapted_order, market_status)
@@ -630,7 +630,7 @@ async def test_split_create_new_orders(tools):
         assert order.filled_price == adapted_order.filled_price
         assert order.origin_quantity == decimal.Decimal(str(1000000000000.0))
         assert order.origin_quantity > adapted_order.origin_quantity
-        assert order.filled_quantity > adapted_order.filled_quantity
+        assert order.filled_quantity == trading_constants.ZERO
         assert order.simulated == adapted_order.simulated
 
         trading_mode_test_toolkit.check_order_limits(order, market_status)
@@ -668,7 +668,7 @@ async def test_valid_create_new_orders_without_stop_order(tools):
     assert order.fee is None
     assert order.filled_price == trading_constants.ZERO
     assert order.origin_quantity == decimal.Decimal(str(7.6))
-    assert order.filled_quantity == order.origin_quantity
+    assert order.filled_quantity == trading_constants.ZERO
     assert order.simulated is True
     assert order.order_group is None
     assert order.chained_orders == []
