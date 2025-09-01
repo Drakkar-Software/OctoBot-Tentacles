@@ -104,7 +104,7 @@ class Binance(exchanges.RestExchange):
     LOCAL_FEES_CURRENCIES: typing.List[str] = ["BNB"]
 
     # Name of the price param to give ccxt to edit a stop loss
-    STOP_LOSS_EDIT_PRICE_PARAM = ccxt_enums.ExchangeOrderCCXTUnifiedParams.STOP_LOSS.value
+    STOP_LOSS_EDIT_PRICE_PARAM = ccxt_enums.ExchangeOrderCCXTUnifiedParams.STOP_PRICE.value
 
     BUY_STR = "BUY"
     SELL_STR = "SELL"
@@ -133,8 +133,7 @@ class Binance(exchanges.RestExchange):
         if self.exchange_manager.is_future:
             # replace not supported in futures stop orders
             return not is_stop
-        # waiting for update to ccxt 4.4.87
-        return not is_stop
+        return True
 
     async def get_account_id(self, **kwargs: dict) -> str:
         try:

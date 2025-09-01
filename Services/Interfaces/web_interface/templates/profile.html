@@ -119,19 +119,22 @@
         {% endif %}
         <div class="tab-content" id="super-container">
             <div class="card card-header ">
-                <a class="d-inline-block" data-profile-id="{{current_profile.profile_id}}" data-role="current-profile-selector">
-                    <h2 class="">
-                        <span class="d-none d-md-inline-block">Current profile</span>
-                        <span class="font-weight-bold" data-role="profile-name" data-profile-id="{{current_profile.profile_id}}">{{current_profile.name}}</span>
-                    </h2>
-                </a>
-                <a class="btn btn-sm rounded-circle btn-primary waves-effect mx-1 mx-md-4 align-top"
-                   href="{{url_for('profiles_selector')}}" data-toggle="tooltip"
-                   title="Select another profile"
-                   id="profile-selector-link"
-                >
-                    <i class="fas fa-exchange-alt" aria-hidden="true"></i>
-                </a>
+                <h2>
+                    <span class="d-none d-md-inline-block">Current profile</span>
+                    <span class="font-weight-bold" data-role="profile-name" data-profile-id="{{current_profile.profile_id}}">{{current_profile.name}}</span>
+                    <a class="d-inline-block" data-profile-id="{{current_profile.profile_id}}" data-role="current-profile-selector">
+                        <button class="btn btn-sm btn-outline-primary align-middle">
+                            View profile
+                        </button>
+                    </a>
+                    <a class="btn btn-sm rounded-circle btn-primary waves-effect mx-1 mx-md-4 align-middle"
+                    href="{{url_for('profiles_selector')}}" data-toggle="tooltip"
+                    title="Select another profile"
+                    id="profile-selector-link"
+                    >
+                        <i class="fas fa-exchange-alt" aria-hidden="true"></i>
+                    </a>
+                </h2>
             </div>
             {% for profile_id, profile in profiles.items() %}
             {{m_config_profile_tab.profile_tab(current_profile, profile, profiles_tentacles_details[profile_id], strategy_config, evaluator_config,

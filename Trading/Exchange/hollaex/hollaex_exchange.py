@@ -46,30 +46,6 @@ class FeeTiers(enum.Enum):
 
 class hollaexConnector(exchanges.CCXTConnector):
 
-    def _create_client(self, force_unauth=False):
-        super()._create_client(force_unauth=force_unauth)
-        self._register_patched_sign()
-
-    def _register_patched_sign(self):
-        # hollaex sign() creates invalid signatures when floats are represented in scientific notation
-        # use strings instead
-        # Note: stop param should not be converted to string as it will then be ignored: leave it as float
-        origin_sign = self.client.sign
-
-        def _patched_sign(path, api='public', method='GET', params={}, headers=None, body=None):
-            if self.client.omit(params, self.client.extract_params(path)):
-                # only fix params when there is a query to generate a signature for
-                # => meaning when self.client.omit leaves something to put in request body
-                fixed_params = {
-                    k: format(decimal.Decimal(str(v)), "f") if (isinstance(v, float) and k != "stop") else v
-                    for k, v in params.items()
-                }
-            else:
-                fixed_params = params
-            return origin_sign(path, api=api, method=method, params=fixed_params, headers=headers, body=body)
-
-        self.client.sign = _patched_sign
-
     async def load_symbol_markets(
         self,
         reload=False,
@@ -335,7 +311,7 @@ class hollaex(exchanges.RestExchange):
         trading_enums.ExchangeTypes.SPOT.value: {
             # order that should be self-managed by OctoBot
             trading_enums.ExchangeSupportedElements.UNSUPPORTED_ORDERS.value: [
-                # trading_enums.TraderOrderType.STOP_LOSS,
+                trading_enums.TraderOrderType.STOP_LOSS,    # broken since ccxt 4.5.0: stop param is ignored by exchange because it's sent as a string instead of float. Converting it to flaat fails the signature
                 trading_enums.TraderOrderType.STOP_LOSS_LIMIT,
                 trading_enums.TraderOrderType.TAKE_PROFIT,
                 trading_enums.TraderOrderType.TAKE_PROFIT_LIMIT,
@@ -437,18 +413,6 @@ class hollaex(exchanges.RestExchange):
             user_info = await self.connector.client.private_get_user()
             return user_info["id"]
 
-    async def get_symbol_prices(self, symbol, time_frame, limit: int = None, **kwargs: dict):
-        # ohlcv without limit is not supported, replaced by a default max limit
-        if limit is None:
-            limit = self.DEFAULT_MAX_LIMIT
-        if "since" not in kwargs:
-            # temporary fix to prevent hollaex from fetching outdates candles
-            # remove once hollaex ccxt fetch_ohlcv stop hard coding defaultSpan = 2592000  # 30 days
-            tf_seconds = commons_enums.TimeFramesMinutes[time_frame] * commons_constants.MINUTE_TO_SECONDS
-            kwargs["since"] = (self.get_exchange_current_time() - tf_seconds * limit) \
-                * commons_constants.MSECONDS_TO_SECONDS
-        return await super().get_symbol_prices(symbol, time_frame, limit=limit, **kwargs)
-
     async def get_closed_orders(self, symbol: str = None, since: int = None,
                                 limit: int = None, **kwargs: dict) -> list:
         # get_closed_orders sometimes does not return orders use _get_closed_orders_from_my_recent_trades in this case
@@ -476,15 +440,8 @@ class HollaexCCXTAdapter(exchanges.CCXTAdapter):
             #     order_type = trading_enums.TradeOrderType.STOP_LOSS.value
             fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = order_type
 
+        # fees are usually not in order, but if they are, fix them as ccxt is not parsing them
         self._fix_fees(raw_order_info, fixed)
-        return fixed
-
-    def fix_trades(self, raw, **kwargs):
-        fixed = super().fix_trades(raw, **kwargs)
-        # CCXT standard trades fixing logic
-        for trade in fixed:
-            info = trade.get(ccxt_enums.ExchangeOrderCCXTColumns.INFO.value, {})
-            self._fix_fees(info, trade)
         return fixed
 
     def _fix_fees(self, info, fixed):

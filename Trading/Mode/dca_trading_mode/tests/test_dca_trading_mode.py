@@ -41,6 +41,7 @@ import octobot_trading.enums as trading_enums
 import octobot_trading.constants as trading_constants
 import octobot_trading.modes
 import octobot_trading.errors
+import octobot_trading.signals as trading_signals
 
 import tentacles.Evaluator.TA as TA
 import tentacles.Evaluator.Strategies as Strategies
@@ -434,8 +435,8 @@ async def test_create_entry_with_chained_exit_orders(tools):
         # no take profit
         mode.use_stop_loss = False
         mode.use_take_profit_exit_orders = False
-        await consumer._create_entry_with_chained_exit_orders(entry_order, entry_price, symbol_market)
-        create_order_mock.assert_called_once_with(entry_order, params=None)
+        await consumer._create_entry_with_chained_exit_orders(entry_order, entry_price, symbol_market, None)
+        create_order_mock.assert_called_once_with(entry_order, params=None, dependencies=None)
         assert entry_order.chained_orders == []
         # reset values
         create_order_mock.reset_mock()
@@ -443,10 +444,12 @@ async def test_create_entry_with_chained_exit_orders(tools):
 
         # chained stop loss
         # no take profit
+        # with dependencies
         mode.use_stop_loss = True
         mode.use_take_profit_exit_orders = False
-        await consumer._create_entry_with_chained_exit_orders(entry_order, entry_price, symbol_market)
-        create_order_mock.assert_called_once_with(entry_order, params=None)
+        dependencies = trading_signals.get_orders_dependencies([mock.Mock(order_id="123")])
+        await consumer._create_entry_with_chained_exit_orders(entry_order, entry_price, symbol_market, dependencies)
+        create_order_mock.assert_called_once_with(entry_order, params=None, dependencies=dependencies)
         assert len(entry_order.chained_orders) == 1
         stop_loss = entry_order.chained_orders[0]
         assert isinstance(stop_loss, trading_personal_data.StopLossOrder)
@@ -466,8 +469,8 @@ async def test_create_entry_with_chained_exit_orders(tools):
         # take profit
         mode.use_stop_loss = False
         mode.use_take_profit_exit_orders = True
-        await consumer._create_entry_with_chained_exit_orders(entry_order, entry_price, symbol_market)
-        create_order_mock.assert_called_once_with(entry_order, params=None)
+        await consumer._create_entry_with_chained_exit_orders(entry_order, entry_price, symbol_market, None)
+        create_order_mock.assert_called_once_with(entry_order, params=None, dependencies=None)
         create_order_mock.reset_mock()
         assert len(entry_order.chained_orders) == 1
         take_profit = entry_order.chained_orders[0]
@@ -488,8 +491,8 @@ async def test_create_entry_with_chained_exit_orders(tools):
         # take profit
         mode.use_stop_loss = True
         mode.use_take_profit_exit_orders = True
-        await consumer._create_entry_with_chained_exit_orders(entry_order, entry_price, symbol_market)
-        create_order_mock.assert_called_once_with(entry_order, params=None)
+        await consumer._create_entry_with_chained_exit_orders(entry_order, entry_price, symbol_market, None)
+        create_order_mock.assert_called_once_with(entry_order, params=None, dependencies=None)
         create_order_mock.reset_mock()
         assert len(entry_order.chained_orders) == 2
         stop_loss = entry_order.chained_orders[0]
@@ -517,8 +520,8 @@ async def test_create_entry_with_chained_exit_orders(tools):
         mode.use_take_profit_exit_orders = True
         mode.use_secondary_exit_orders = True
         mode.secondary_exit_orders_count = 2
-        await consumer._create_entry_with_chained_exit_orders(entry_order, entry_price, symbol_market)
-        create_order_mock.assert_called_once_with(entry_order, params=None)
+        await consumer._create_entry_with_chained_exit_orders(entry_order, entry_price, symbol_market, None)
+        create_order_mock.assert_called_once_with(entry_order, params=None, dependencies=None)
         create_order_mock.reset_mock()
         assert len(entry_order.chained_orders) == 2 * 3  # 3 stop loss & take profits couples
         stop_losses = [
@@ -573,8 +576,8 @@ async def test_create_entry_with_chained_exit_orders(tools):
         # disable use_secondary_exit_orders
         mode.use_secondary_exit_orders = False
         mode.secondary_exit_orders_count = 2  # disabled
-        await consumer._create_entry_with_chained_exit_orders(entry_order, entry_price, symbol_market)
-        create_order_mock.assert_called_once_with(entry_order, params=None)
+        await consumer._create_entry_with_chained_exit_orders(entry_order, entry_price, symbol_market, None)
+        create_order_mock.assert_called_once_with(entry_order, params=None, dependencies=None)
         create_order_mock.reset_mock()
         assert len(entry_order.chained_orders) == 2  # 1 take profit and one stop loss: no secondary exit is allowed
         stop_losses = [
@@ -627,7 +630,7 @@ async def test_skip_create_entry_order_when_too_many_live_exit_orders(tools):
         mode.use_stop_loss = False
         mode.use_take_profit_exit_orders = False
         with pytest.raises(octobot_trading.errors.MaxOpenOrderReachedForSymbolError):
-            await consumer._create_entry_with_chained_exit_orders(entry_order, entry_price, symbol_market)
+            await consumer._create_entry_with_chained_exit_orders(entry_order, entry_price, symbol_market, None)
         assert get_max_orders_count_mock.call_count == 1 * 2   # entry: 1, stop: 0, tp: 0, 2 calls for each
         get_max_orders_count_mock.reset_mock()
         create_order_mock.assert_not_called()
@@ -635,9 +638,9 @@ async def test_skip_create_entry_order_when_too_many_live_exit_orders(tools):
 
         # 1.B can create entry market order
         entry_order.order_type=trading_enums.TraderOrderType.BUY_MARKET
-        assert await consumer._create_entry_with_chained_exit_orders(entry_order, entry_price, symbol_market)
+        assert await consumer._create_entry_with_chained_exit_orders(entry_order, entry_price, symbol_market, None)
         get_max_orders_count_mock.assert_not_called()   # not called for entry marker orders
-        create_order_mock.assert_called_once_with(entry_order, params=None)
+        create_order_mock.assert_called_once_with(entry_order, params=None, dependencies=None)
         create_order_mock.reset_mock()
         assert len(entry_order.chained_orders) == 0
         get_max_orders_count_mock.reset_mock()
@@ -654,10 +657,10 @@ async def test_skip_create_entry_order_when_too_many_live_exit_orders(tools):
         mode.use_stop_loss = True
         mode.use_take_profit_exit_orders = True
         # 2. chained stop loss & take profit
-        assert await consumer._create_entry_with_chained_exit_orders(entry_order, entry_price, symbol_market)
+        assert await consumer._create_entry_with_chained_exit_orders(entry_order, entry_price, symbol_market, None)
         assert get_max_orders_count_mock.call_count == 3 * 2   # entry: 1, stop: 1, tp: 1, 2 calls for each
         get_max_orders_count_mock.reset_mock()
-        create_order_mock.assert_called_once_with(entry_order, params=None)
+        create_order_mock.assert_called_once_with(entry_order, params=None, dependencies=None)
         create_order_mock.reset_mock()
         assert len(entry_order.chained_orders) == 2
         stop_loss = entry_order.chained_orders[0]
@@ -669,7 +672,7 @@ async def test_skip_create_entry_order_when_too_many_live_exit_orders(tools):
         mode.use_secondary_exit_orders = True
         mode.secondary_exit_orders_count = 1
         with pytest.raises(octobot_trading.errors.MaxOpenOrderReachedForSymbolError):
-            await consumer._create_entry_with_chained_exit_orders(entry_order, entry_price, symbol_market)
+            await consumer._create_entry_with_chained_exit_orders(entry_order, entry_price, symbol_market, None)
         assert get_max_orders_count_mock.call_count == 4 * 2   # entry: 1, stop: 1, tp: 2, 2 calls for each
         get_max_orders_count_mock.reset_mock()
         create_order_mock.assert_not_called()
@@ -689,9 +692,10 @@ async def test_create_entry_order(tools):
     ) as _create_entry_with_chained_exit_orders_mock:
         created_orders = []
         assert await consumer._create_entry_order(
-            order_type, quantity, price, symbol_market, symbol, created_orders, current_price
+            order_type, quantity, price, symbol_market, symbol, created_orders, current_price, dependencies=None
         ) is False
         _create_entry_with_chained_exit_orders_mock.assert_called_once()
+        assert _create_entry_with_chained_exit_orders_mock.mock_calls[0].args[3] == None
         assert created_orders == []
     with mock.patch.object(
         consumer, "_create_entry_with_chained_exit_orders", mock.AsyncMock(
@@ -700,16 +704,17 @@ async def test_create_entry_order(tools):
     ) as _create_entry_with_chained_exit_orders_mock:
         created_orders = []
         assert await consumer._create_entry_order(
-            order_type, quantity, price, symbol_market, symbol, created_orders, current_price
+            order_type, quantity, price, symbol_market, symbol, created_orders, current_price, dependencies=None
         ) is False
         _create_entry_with_chained_exit_orders_mock.assert_called_once()
+        assert _create_entry_with_chained_exit_orders_mock.mock_calls[0].args[3] == None
         assert created_orders == []
     with mock.patch.object(
             consumer, "_create_entry_with_chained_exit_orders", mock.AsyncMock(return_value="created_order")
     ) as _create_entry_with_chained_exit_orders_mock:
         created_orders = []
         assert await consumer._create_entry_order(
-            order_type, quantity, price, symbol_market, symbol, created_orders, current_price
+            order_type, quantity, price, symbol_market, symbol, created_orders, current_price, dependencies=None
         ) is True
         _create_entry_with_chained_exit_orders_mock.assert_called_once()
         created_order = _create_entry_with_chained_exit_orders_mock.mock_calls[0].args[0]
@@ -737,19 +742,22 @@ async def test_create_entry_order_with_max_ratio(tools):
         with mock.patch.object(
                 consumer, "_is_max_asset_ratio_reached", mock.Mock(return_value=True)
         ) as _is_max_asset_ratio_reached_mock:
+            dependencies = trading_signals.get_orders_dependencies([mock.Mock(order_id="123")])
             assert await consumer._create_entry_order(
-                order_type, quantity, price, symbol_market, symbol, created_orders, current_price
+                order_type, quantity, price, symbol_market, symbol, created_orders, current_price, dependencies=dependencies
             ) is False
             _is_max_asset_ratio_reached_mock.assert_called_with(symbol)
             _create_entry_with_chained_exit_orders_mock.assert_not_called()
         with mock.patch.object(
                 consumer, "_is_max_asset_ratio_reached", mock.Mock(return_value=False)
         ) as _is_max_asset_ratio_reached_mock:
+            dependencies = trading_signals.get_orders_dependencies([mock.Mock(order_id="123")])
             assert await consumer._create_entry_order(
-                order_type, quantity, price, symbol_market, symbol, created_orders, current_price
+                order_type, quantity, price, symbol_market, symbol, created_orders, current_price, dependencies=dependencies
             ) is True
             _is_max_asset_ratio_reached_mock.assert_called_with(symbol)
             _create_entry_with_chained_exit_orders_mock.assert_called_once()
+            assert _create_entry_with_chained_exit_orders_mock.mock_calls[0].args[3] == dependencies
 
 
 async def test_create_create_order_if_possible_with_funds_already_locked(tools):
@@ -836,7 +844,7 @@ async def test_create_new_orders(tools):
         created_order.origin_price = decimal.Decimal("1000")
         return created_order
 
-    async def _create_entry_order(_, __, ___, ____, _____, created_orders, ______):
+    async def _create_entry_order(_, __, ___, ____, _____, created_orders, ______, dependencies):
         created_order = _create_basic_order(trading_enums.TradeOrderSide.BUY)
         created_orders.append(created_order)
         return bool(created_order)
@@ -844,7 +852,7 @@ async def test_create_new_orders(tools):
     with mock.patch.object(
             consumer, "_create_entry_order", mock.AsyncMock(side_effect=_create_entry_order)
     ) as _create_entry_order_mock, mock.patch.object(
-        mode, "cancel_order", mock.AsyncMock()
+        mode, "cancel_order", mock.AsyncMock(return_value=(True, trading_signals.get_order_dependency(mock.Mock(order_id="456"))))
     ) as cancel_order_mock:
         # neutral state
         assert await consumer.create_new_orders(symbol, None, trading_enums.EvaluatorStates.NEUTRAL.value) == []
@@ -858,9 +866,11 @@ async def test_create_new_orders(tools):
         # no configured secondary amount
         mode.trading_config[trading_constants.CONFIG_BUY_ORDER_AMOUNT] = "12%"
         mode.secondary_entry_orders_amount = ""
-        await consumer.create_new_orders(symbol, None, trading_enums.EvaluatorStates.LONG.value)
+        dependencies = trading_signals.get_orders_dependencies([mock.Mock(order_id="123")])
+        await consumer.create_new_orders(symbol, None, trading_enums.EvaluatorStates.LONG.value, dependencies=dependencies)
         cancel_order_mock.assert_not_called()
         _create_entry_order_mock.assert_called_once()
+        assert _create_entry_order_mock.mock_calls[0].args[7] == dependencies
         _create_entry_order_mock.reset_mock()
 
         # with secondary orders but no configured secondary amount
@@ -904,7 +914,7 @@ async def test_create_new_orders(tools):
             assert call.args[0] is expected_type
         _create_entry_order_mock.reset_mock()
 
-        # with existing orders locking all funds: cancel them
+        # with existing orders locking all funds: cancel them all
         existing_orders = [
             _create_basic_order(trading_enums.TradeOrderSide.BUY, decimal.Decimal(1)),
             _create_basic_order(trading_enums.TradeOrderSide.BUY, decimal.Decimal(1)),
@@ -919,27 +929,56 @@ async def test_create_new_orders(tools):
         trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio["USDT"].available = \
             decimal.Decimal("0")
 
-        async def _cancel_order(order):
+        async def _cancel_order(order, dependencies=None):
             trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio["USDT"].available += \
                 order.origin_quantity * order.origin_price
+            return True, trading_signals.get_orders_dependencies([mock.Mock(order_id="456")])
 
+        # with existing orders locking all funds: cancel non partially filled ones
+        dependencies = trading_signals.get_orders_dependencies([mock.Mock(order_id="123")])
         with mock.patch.object(
             mode, "cancel_order", mock.AsyncMock(side_effect=_cancel_order)
         ) as cancel_order_mock_2:
-            await consumer.create_new_orders(symbol, None, trading_enums.EvaluatorStates.LONG.value)
+            with mock.patch.object(
+                trader.exchange_manager.exchange_personal_data.orders_manager.get_open_orders(symbol=symbol)[0], "is_partially_filled", mock.Mock(return_value=True)
+            ) as is_partially_filled_mock:
+                await consumer.create_new_orders(symbol, None, trading_enums.EvaluatorStates.LONG.value, dependencies=dependencies)
+                is_partially_filled_mock.assert_called_once()
+                assert cancel_order_mock_2.call_count == 1
+                assert cancel_order_mock_2.mock_calls[0].args[0] == existing_orders[1]
+                assert cancel_order_mock_2.mock_calls[0].kwargs["dependencies"] == dependencies
+                cancel_order_mock_2.reset_mock()
+                # called as many times as there are orders to create
+                assert _create_entry_order_mock.call_count == 1 + 4
+                assert _create_entry_order_mock.mock_calls[0].args[7] == trading_signals.get_orders_dependencies([mock.Mock(order_id="456")])
+                _create_entry_order_mock.reset_mock()
+                trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio["USDT"].available = \
+                    trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio["USDT"].total
+
+        # order 2 is now partially filled, it won't be cancelled
+        dependencies = trading_signals.get_orders_dependencies([mock.Mock(order_id="123")])
+        with mock.patch.object(
+            mode, "cancel_order", mock.AsyncMock(side_effect=_cancel_order)
+        ) as cancel_order_mock_2:
+            await consumer.create_new_orders(symbol, None, trading_enums.EvaluatorStates.LONG.value, dependencies=dependencies)
             assert cancel_order_mock_2.call_count == 2
             assert cancel_order_mock_2.mock_calls[0].args[0] == existing_orders[0]
             assert cancel_order_mock_2.mock_calls[1].args[0] == existing_orders[1]
+            assert cancel_order_mock_2.mock_calls[0].kwargs["dependencies"] == dependencies
+            assert cancel_order_mock_2.mock_calls[1].kwargs["dependencies"] == dependencies
             cancel_order_mock_2.reset_mock()
             # called as many times as there are orders to create
             assert _create_entry_order_mock.call_count == 1 + 4
+            assert _create_entry_order_mock.mock_calls[0].args[7] == trading_signals.get_orders_dependencies([
+                mock.Mock(order_id="456"), mock.Mock(order_id="456")]
+            )
             _create_entry_order_mock.reset_mock()
             trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio["USDT"].available = \
                 trader.exchange_manager.exchange_personal_data.portfolio_manager.portfolio.portfolio["USDT"].total
 
         # without enough funds to create every secondary order
         mode.secondary_entry_orders_count = 30  # can't create 30 orders, each using 100 USD of available funds
-        await consumer.create_new_orders(symbol, None, trading_enums.EvaluatorStates.LONG.value)
+        await consumer.create_new_orders(symbol, None, trading_enums.EvaluatorStates.LONG.value, dependencies=None)
         assert cancel_order_mock.call_count == 2  # still cancel open orders
         assert cancel_order_mock.mock_calls[0].args[0] == existing_orders[0]
         assert cancel_order_mock.mock_calls[1].args[0] == existing_orders[1]
@@ -957,7 +996,7 @@ async def test_create_new_orders(tools):
         with mock.patch.object(consumer, "_is_max_asset_ratio_reached", mock.Mock(return_value=True)) as \
             _is_max_asset_ratio_reached_mock:
 
-            async def _create_entry_order_2(_, __, ___, ____, _____, created_orders, ______):
+            async def _create_entry_order_2(_, __, ___, ____, _____, created_orders, ______, dependencies):
                 created_order = _create_basic_order(trading_enums.TradeOrderSide.BUY)
                 created_orders.append(created_order)
                 # simulate no order created
@@ -1333,7 +1372,23 @@ async def test_single_exchange_process_health_check(tools):
         assert await mode.single_exchange_process_health_check([], {}) == []
         assert producer.last_activity is None
 
-        # more ETH: sell
+        # more ETH: can sell but not all of it because of partially filled buy orders
+        eth_holdings = decimal.Decimal(200)
+        portfolio["ETH"] = trading_personal_data.SpotAsset("ETH", eth_holdings, eth_holdings)
+        producer.last_activity = None
+        buy_limit = trading_personal_data.BuyLimitOrder(trader)
+        buy_limit.symbol = "ETH/USDT"
+        buy_limit.origin_quantity = decimal.Decimal(200)
+        buy_limit.filled_quantity = decimal.Decimal(199)
+        with mock.patch.object(
+            exchange_manager.exchange_personal_data.orders_manager, "get_open_orders",
+            mock.Mock(return_value=[buy_limit])
+        ) as get_open_orders_mock:
+            assert await mode.single_exchange_process_health_check([], {}) == []
+            assert get_open_orders_mock.call_count == 2
+            assert producer.last_activity is None
+
+        # no partially filled buy orders: sell ETH
         eth_holdings = decimal.Decimal(200)
         portfolio["ETH"] = trading_personal_data.SpotAsset("ETH", eth_holdings, eth_holdings)
         producer.last_activity = None
