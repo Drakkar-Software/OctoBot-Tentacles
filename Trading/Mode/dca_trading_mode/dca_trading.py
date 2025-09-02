@@ -169,11 +169,17 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 secondary_order_type = trading_enums.TraderOrderType.BUY_LIMIT \
                     if side is trading_enums.TradeOrderSide.BUY else trading_enums.TraderOrderType.SELL_LIMIT
                 if not secondary_quantity:
-                    self.logger.error(
-                        f"Missing {side.value} secondary entry order quantity in {self.trading_mode.get_name()} "
-                        f"configuration, please set the \"Secondary entry orders amount\" value "
-                        f"when enabling secondary entry orders."
-                    )
+                    if self.trading_mode.secondary_entry_orders_amount:
+                        self.logger.warning(
+                            f"Impossible to create {side.value} secondary entry order: computed quantity is {secondary_quantity}, "
+                            f"configured quantity is: {self.trading_mode.secondary_entry_orders_amount}."
+                        )
+                    else:
+                        self.logger.error(
+                            f"Missing {side.value} secondary entry order quantity in {self.trading_mode.get_name()} "
+                            f"configuration, please set the \"Secondary entry orders count\" value "
+                            f"when enabling secondary entry orders."
+                        )
                 else:
                     for i in range(self.trading_mode.secondary_entry_orders_count):
                         remaining_funds = initial_available_quote_funds - sum(
