@@ -40,8 +40,11 @@ import octobot.community as community
 NO_SYSTEM_PROMPT_MODELS = [
     "o1-mini",
 ]
+MINIMAL_PARAMS_SERIES_MODELS = [
+    "o", # the whole o-series does not support temperature parameter
+]
 MINIMAL_PARAMS_MODELS = [
-    "o1-mini",
+    "gpt-5", # does not support temperature parameter
 ]
 SYSTEM = "system"
 USER = "user"
@@ -129,6 +132,25 @@ class GPTService(services.AbstractService):
             base_url=self._get_base_url(),
         )
 
+    def _is_of_series(self, model: str, series: str) -> bool:
+        if model.startswith(series) and len(model) > 1:
+            # avoid false positive: check if the next character is a number (ex: o3 model)
+            try:
+                int(model[len(series)])
+                return True
+            except ValueError:
+                return False
+        return False
+
+    def _is_minimal_params_model(self, model: str) -> bool:
+        for minimal_params_series in MINIMAL_PARAMS_SERIES_MODELS:
+            if self._is_of_series(model, minimal_params_series):
+                return True
+        for minimal_params_model in MINIMAL_PARAMS_MODELS:
+            if model.startswith(minimal_params_model):
+                return True
+        return False
+
     async def _get_signal_from_gpt(
         self,
         messages,
@@ -141,7 +163,7 @@ class GPTService(services.AbstractService):
         self._ensure_rate_limit()
         try:
             model = model or self.model
-            supports_params = model not in MINIMAL_PARAMS_MODELS
+            supports_params = not self._is_minimal_params_model(model)
             if not supports_params:
                 self.logger.info(
                     f"The {model} model does not support every required parameter, results might not be as accurate "
@@ -149,7 +171,7 @@ class GPTService(services.AbstractService):
                 )
             completions = await self._get_client().chat.completions.create(
                 model=model,
-                max_tokens=max_tokens if supports_params else openai.NOT_GIVEN,
+                max_completion_tokens=max_tokens,
                 n=n,
                 stop=stop,
                 temperature=temperature if supports_params else openai.NOT_GIVEN,
