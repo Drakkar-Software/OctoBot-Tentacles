@@ -29,6 +29,7 @@ import octobot_backtesting.api as backtesting_api
 
 import octobot_commons.asyncio_tools as asyncio_tools
 import octobot_commons.constants as commons_constants
+import octobot_commons.symbols as symbol_util
 import octobot_commons.tests.test_config as test_config
 import octobot_commons.signals as commons_signals
 
@@ -835,11 +836,16 @@ async def test_start_after_offline_filled_orders():
         trading_api.force_set_mark_price(exchange_manager, producer.symbol, price)
         # force not use recent trades
         producer.RECENT_TRADES_ALLOWED_TIME = -1
-        await producer._ensure_staggered_orders()
-        # restored orders
-        await asyncio.create_task(_check_open_orders_count(exchange_manager, producer.operational_depth))
-        assert 0 <= trading_api.get_portfolio_currency(exchange_manager, "USD").available <= post_portfolio
-        assert 0 <= trading_api.get_portfolio_currency(exchange_manager, "BTC").available
+        # force funds reset in this test
+        with mock.patch.object(
+            producer, "_ensure_full_funds_usage", side_effect=staggered_orders_trading.ForceResetOrdersException
+        ) as mock_ensure_full_funds_usage:
+            await producer._ensure_staggered_orders()
+            mock_ensure_full_funds_usage.assert_called_once()
+            # restored orders
+            await asyncio.create_task(_check_open_orders_count(exchange_manager, producer.operational_depth))
+            assert 0 <= trading_api.get_portfolio_currency(exchange_manager, "USD").available <= post_portfolio
+            assert 0 <= trading_api.get_portfolio_currency(exchange_manager, "BTC").available
 
 
 async def test_health_check_during_filled_orders():
@@ -1985,13 +1991,57 @@ async def test_ensure_full_funds_usage():
         assert not producer._ensure_full_funds_usage(orders, 1, 1)
 
         # raises
-        orders = []
+        buy_order.origin_quantity = decimal.Decimal(6)
+        buy_order.filled_quantity = decimal.Decimal(0)
+        sell_order.origin_quantity = decimal.Decimal(6)
+        sell_order.filled_quantity = decimal.Decimal(0)
         with pytest.raises(staggered_orders_trading.ForceResetOrdersException):
-            await producer._ensure_full_funds_usage(orders, 1, 0)
+            producer._ensure_full_funds_usage([buy_order], 1, 0)
         with pytest.raises(staggered_orders_trading.ForceResetOrdersException):
-            await producer._ensure_full_funds_usage(orders, 0, 1)
+            producer._ensure_full_funds_usage([sell_order], 0, 1)
         with pytest.raises(staggered_orders_trading.ForceResetOrdersException):
-            await producer._ensure_full_funds_usage(orders, 1, 1)
+            producer._ensure_full_funds_usage([buy_order, sell_order], 1, 1)
+
+        # funds are now imbalanced: most of it is in buy orders 
+        base, quote = symbol_util.parse_symbol(producer.trading_mode.symbol).base_and_quote()
+        quote_holdings = trading_api.get_portfolio_currency(exchange_manager, quote)
+        base_holdings = trading_api.get_portfolio_currency(exchange_manager, base)
+        quote_holdings.total = decimal.Decimal(1000)
+        quote_holdings.available = decimal.Decimal(100)
+        base_holdings.total = decimal.Decimal("0.2")
+        base_holdings.available = decimal.Decimal("0.05")
+
+        buy_order = trading_personal_data.BuyLimitOrder(exchange_manager.trader)
+        buy_order.origin_quantity = decimal.Decimal(8)
+        buy_order.origin_price = decimal.Decimal(100) # locks 800 USD
+        sell_order = trading_personal_data.SellMarketOrder(exchange_manager.trader)
+        sell_order.origin_quantity = decimal.Decimal("0.04") # locks 0.04 BTC, equivalent to 8 USD, < 0.05 available
+        sell_order.origin_price = decimal.Decimal(200)
+        # doesn't raise as buy orders are locking enough funds and sell order funds are too low to trigger a reset (avoid side effects when reaching the upper edge of the grid)
+        assert not producer._ensure_full_funds_usage([buy_order, sell_order], 1, 1)
+
+        # funds are now imbalanced: most of it is in sell orders 
+        quote_holdings.total = decimal.Decimal(80)
+        quote_holdings.available = decimal.Decimal(40)
+        base_holdings.total = decimal.Decimal("1")
+        base_holdings.available = decimal.Decimal("0.1")
+
+        buy_order.origin_quantity = decimal.Decimal(0.1)
+        buy_order.origin_price = decimal.Decimal(100) # locks 10 USD
+        buy_order_2 = trading_personal_data.BuyLimitOrder(exchange_manager.trader)
+        buy_order_2.origin_quantity = decimal.Decimal(0.1)
+        buy_order_2.origin_price = decimal.Decimal(100) # locks 10 USD
+        sell_order.origin_quantity = decimal.Decimal(0.7)
+        sell_order.origin_price = decimal.Decimal(100) # locks 70 USD
+        # doesn't raise as sell orders are locking enough funds and buy order funds are too low to trigger a reset (avoid side effects when reaching the lower edge of the grid)
+        assert not producer._ensure_full_funds_usage([buy_order, buy_order_2, sell_order], 2, 1)
+
+        # now raises when funds are balanced
+        buy_order_3 = trading_personal_data.BuyLimitOrder(exchange_manager.trader)
+        buy_order_3.origin_quantity = decimal.Decimal(0.15)
+        buy_order_3.origin_price = decimal.Decimal(100) # locks 15 USD
+        with pytest.raises(staggered_orders_trading.ForceResetOrdersException):
+            producer._ensure_full_funds_usage([buy_order, buy_order_2, buy_order_3, sell_order], 3, 1)
 
 
 async def _wait_for_orders_creation(orders_count=1):
