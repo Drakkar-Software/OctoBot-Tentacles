@@ -1310,6 +1310,18 @@ async def test_create_order():
             assert trading_api.get_portfolio_currency(exchange_manager, "BTC").available == decimal.Decimal(0)
             assert created_orders == []
 
+            # enough quantity in portfolio after a small adaptation
+            price = decimal.Decimal(100)
+            quantity = decimal.Decimal(2.01) # will be adapted
+            side = trading_enums.TradeOrderSide.SELL
+            trading_api.get_portfolio_currency(exchange_manager, "BTC").available = decimal.Decimal("1.98")
+            to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
+            created_orders = await consumer.create_order(to_create_order, price, symbol_market, dependencies=dependencies)
+            decimal_adapt_order_quantity_because_fees_mock.assert_called_once()
+            decimal_adapt_order_quantity_because_fees_mock.reset_mock()
+            assert trading_api.get_portfolio_currency(exchange_manager, "BTC").available == decimal.Decimal("0.03030001")
+            assert created_orders[0].origin_quantity == decimal.Decimal("1.94969999")
+
             # BUY
 
             # enough quantity in portfolio
@@ -1374,6 +1386,18 @@ async def test_create_order():
             decimal_adapt_order_quantity_because_fees_mock.reset_mock()
             assert trading_api.get_portfolio_currency(exchange_manager, "USD").available == 0
             assert created_orders == []
+
+            # enough quantity in portfolio after a small adaptation
+            price = decimal.Decimal(100)
+            quantity = decimal.Decimal(1.01) # will be adapted to 1
+            side = trading_enums.TradeOrderSide.BUY
+            trading_api.get_portfolio_currency(exchange_manager, "USD").available = decimal.Decimal("100")
+            to_create_order = staggered_orders_trading.OrderData(side, quantity, price, symbol, False)
+            created_orders = await consumer.create_order(to_create_order, price, symbol_market, dependencies=dependencies)
+            decimal_adapt_order_quantity_because_fees_mock.assert_called_once()
+            decimal_adapt_order_quantity_because_fees_mock.reset_mock()
+            assert trading_api.get_portfolio_currency(exchange_manager, "USD").available == decimal.Decimal("2.03")
+            assert created_orders[0].origin_quantity == decimal.Decimal("0.97970000")
 
 
 async def test_create_state():
@@ -1575,6 +1599,808 @@ async def test_prepare_trailing():
     symbol = "BTC/USD"
     async with _get_tools(symbol) as tools:
         producer, _, exchange_manager = tools
+        with mock.patch.object(
+            producer, "_prepare_order_by_order_trailing", mock.AsyncMock(
+                return_value=(["_prepare_order_by_order_trailing"], [], [], [], None)
+            )
+        ) as _prepare_order_by_order_trailing_mock, mock.patch.object(
+            producer, "_prepare_full_grid_trailing", mock.AsyncMock(
+                return_value=(["_prepare_full_grid_trailing"], [], [], [], None
+            ))
+        ) as _prepare_full_grid_trailing_mock:
+            sorted_orders = [mock.Mock(side=trading_enums.TradeOrderSide.BUY)]
+            recently_closed_trades = ["trades"]
+            lowest_buy = decimal.Decimal(1)
+            highest_buy = decimal.Decimal(2)
+            lowest_sell = decimal.Decimal(3)
+            highest_sell = decimal.Decimal(4)
+            dependencies = trading_signals.get_orders_dependencies([mock.Mock(order_id="123")])
+            log_header = "[binance] BTC/USD @ 1.5 full grid trailing up process: "
+
+            # current_price can't be <= 0
+            for _current_price in [-1.5, 0]:
+                current_price = decimal.Decimal(_current_price)
+                assert await producer._prepare_trailing(sorted_orders, recently_closed_trades, lowest_buy, highest_buy, lowest_sell, highest_sell, current_price, dependencies) == (
+                    [], [], [], [], None
+                )
+                _prepare_order_by_order_trailing_mock.assert_not_called()
+                _prepare_full_grid_trailing_mock.assert_not_called()
+
+
+            current_price = decimal.Decimal(1.5)
+            producer.use_order_by_order_trailing = False
+            assert await producer._prepare_trailing(
+                sorted_orders, recently_closed_trades, lowest_buy, highest_buy, lowest_sell, highest_sell, current_price, dependencies
+            ) == (
+                ["_prepare_full_grid_trailing"], [], [], [], None
+            )
+            _prepare_order_by_order_trailing_mock.assert_not_called()
+            _prepare_full_grid_trailing_mock.assert_awaited_once_with(
+                sorted_orders, current_price, dependencies, log_header
+            )
+            _prepare_full_grid_trailing_mock.reset_mock()
+
+
+            sorted_orders = [mock.Mock(side=trading_enums.TradeOrderSide.SELL)]
+            log_header = "[binance] BTC/USD @ 1.5 order by order trailing down process: "
+            producer.use_order_by_order_trailing = True
+            assert await producer._prepare_trailing(
+                sorted_orders, recently_closed_trades, lowest_buy, highest_buy, lowest_sell, highest_sell, current_price, dependencies
+            ) == (
+                ["_prepare_order_by_order_trailing"], [], [], [], None
+            )
+            _prepare_full_grid_trailing_mock.assert_not_called()
+            _prepare_order_by_order_trailing_mock.assert_awaited_once_with(
+                sorted_orders, recently_closed_trades, lowest_buy, highest_buy, lowest_sell, highest_sell, current_price, False, dependencies, log_header
+            )
+
+
+async def test_prepare_order_by_order_trailing():
+    symbol = "BTC/USD"
+    sorted_orders = [mock.Mock(order_id="123", origin_price=decimal.Decimal(str(50)))]
+    recently_closed_trades = ["trades"]
+    lowest_buy = decimal.Decimal(1)
+    highest_buy = decimal.Decimal(2)
+    lowest_sell = decimal.Decimal(3)
+    highest_sell = decimal.Decimal(4)
+    dependencies = trading_signals.get_orders_dependencies([mock.Mock(order_id="123")])
+    log_header = "[binance] BTC/USD @ 25 full grid trailing process: "
+    current_price = decimal.Decimal(25)
+    async with _get_tools(symbol) as tools:
+        producer, _, exchange_manager = tools
+        replaced_buy_orders = [
+            staggered_orders_trading.OrderData(
+                trading_enums.TradeOrderSide.BUY, decimal.Decimal(str(price)), decimal.Decimal(str(amount)), symbol, False
+            )
+            for price, amount in [
+                (10, 0.02),
+                (15, 0.017),
+                (20, 0.015),
+            ]
+        ]
+        replaced_sell_orders = [
+            staggered_orders_trading.OrderData(
+                trading_enums.TradeOrderSide.SELL, decimal.Decimal(str(price)), decimal.Decimal(str(amount)), symbol, False
+            )
+            for price, amount in [
+                (30, 0.013),
+                (40, 0.01),
+            ]
+        ]
+        to_cancel_orders_with_trailed_prices = [
+            (sorted_orders[0], decimal.Decimal(50)),
+        ]
+        to_execute_order_with_trailing_price = (replaced_buy_orders[0], decimal.Decimal(60))
+        convert_order = mock.Mock(order_id="123")
+        trailing_buy_orders = [123] 
+        trailing_sell_orders = [456]
+        cancelled_replaced_orders = [] 
+        cancelled_orders = [sorted_orders[0]]
+        is_trailing_up = True
+        with mock.patch.object(
+            producer, "_compute_trailing_replaced_orders", mock.AsyncMock(
+                return_value=(replaced_buy_orders, replaced_sell_orders)
+            )
+        ) as _compute_trailing_replaced_orders_mock, mock.patch.object(
+            producer, "_get_orders_to_replace_with_updated_price_for_trailing", mock.Mock(
+                return_value=(to_cancel_orders_with_trailed_prices, to_execute_order_with_trailing_price)
+            )
+        ) as _get_orders_to_replace_with_updated_price_for_trailing_mock, mock.patch.object(
+            producer, "_cancel_replaced_orders", mock.AsyncMock(
+                return_value=(cancelled_replaced_orders, cancelled_orders, trading_signals.get_orders_dependencies([mock.Mock(order_id="123")]))
+            )
+        ) as _cancel_replaced_orders_mock, mock.patch.object(
+            producer, "_convert_order_funds", mock.AsyncMock(
+                return_value=[convert_order]
+            )
+        ) as _convert_order_funds_mock, mock.patch.object(
+            producer, "_get_updated_trailing_orders", mock.Mock(
+                return_value=(trailing_buy_orders, trailing_sell_orders)
+            )
+        ) as _get_updated_trailing_orders, mock.patch.object(
+            producer, "_prepare_full_grid_trailing", mock.AsyncMock(
+                return_value=(["9"], ["123"], ["456"], ["789"], "plop")
+            )
+        ) as _prepare_full_grid_trailing_orders:
+            assert await producer._prepare_order_by_order_trailing(
+                sorted_orders, recently_closed_trades, lowest_buy, highest_buy, lowest_sell, highest_sell, current_price, is_trailing_up, dependencies, log_header
+            ) == (
+                [sorted_orders[0]], [convert_order], trailing_buy_orders, trailing_sell_orders,
+                trading_signals.get_orders_dependencies([convert_order])
+            )
+            _compute_trailing_replaced_orders_mock.assert_awaited_once_with(
+                sorted_orders, recently_closed_trades, lowest_buy, highest_buy, lowest_sell, highest_sell, current_price, True, log_header
+            )
+            _get_orders_to_replace_with_updated_price_for_trailing_mock.assert_called_once_with(
+                sorted_orders, replaced_buy_orders+replaced_sell_orders, current_price
+            )
+            _cancel_replaced_orders_mock.assert_awaited_once_with([o[0] for o in to_cancel_orders_with_trailed_prices + [to_execute_order_with_trailing_price]], dependencies)
+            _convert_order_funds_mock.assert_awaited_once_with(
+                to_execute_order_with_trailing_price[0], current_price, dependencies, log_header
+            )
+            _get_updated_trailing_orders.assert_called_once_with(
+                replaced_buy_orders, replaced_sell_orders, cancelled_replaced_orders, to_cancel_orders_with_trailed_prices, to_execute_order_with_trailing_price, current_price, is_trailing_up
+            )
+            _prepare_full_grid_trailing_orders.assert_not_called()
+            _compute_trailing_replaced_orders_mock.reset_mock()
+            _get_orders_to_replace_with_updated_price_for_trailing_mock.reset_mock()
+            _cancel_replaced_orders_mock.reset_mock()
+            _convert_order_funds_mock.reset_mock()
+            _get_updated_trailing_orders.reset_mock()
+
+            # with _get_orders_to_replace_with_updated_price_for_trailing raising an error
+            with mock.patch.object(
+                producer, "_get_orders_to_replace_with_updated_price_for_trailing", mock.Mock(
+                    side_effect=ValueError("test")
+                )
+            ) as _get_orders_to_replace_with_updated_price_for_trailing_mock:
+                assert await producer._prepare_order_by_order_trailing(
+                    sorted_orders, recently_closed_trades, lowest_buy, highest_buy, lowest_sell, highest_sell, current_price, is_trailing_up, dependencies, log_header
+                ) == (
+                    [], [], [], [], None
+                )
+                _compute_trailing_replaced_orders_mock.assert_awaited_once_with(
+                    sorted_orders, recently_closed_trades, lowest_buy, highest_buy, lowest_sell, highest_sell, current_price, True, log_header
+                )
+                _get_orders_to_replace_with_updated_price_for_trailing_mock.assert_called_once_with(
+                    sorted_orders, replaced_buy_orders+replaced_sell_orders, current_price
+                )
+                _prepare_full_grid_trailing_orders.assert_not_called()
+                _compute_trailing_replaced_orders_mock.reset_mock()
+                _get_orders_to_replace_with_updated_price_for_trailing_mock.reset_mock()
+                _cancel_replaced_orders_mock.assert_not_called()
+                _convert_order_funds_mock.assert_not_called()
+                _get_updated_trailing_orders.assert_not_called()
+            with mock.patch.object(
+                producer, "_get_orders_to_replace_with_updated_price_for_trailing", mock.Mock(
+                    side_effect=staggered_orders_trading.TrailingAborted("test")
+                )
+            ) as _get_orders_to_replace_with_updated_price_for_trailing_mock:
+                assert await producer._prepare_order_by_order_trailing(
+                    sorted_orders, recently_closed_trades, lowest_buy, highest_buy, lowest_sell, highest_sell, current_price, is_trailing_up, dependencies, log_header
+                ) == (
+                    [], [], replaced_buy_orders, replaced_sell_orders, None
+                )
+                _compute_trailing_replaced_orders_mock.assert_awaited_once_with(
+                    sorted_orders, recently_closed_trades, lowest_buy, highest_buy, lowest_sell, highest_sell, current_price, True, log_header
+                )
+                _get_orders_to_replace_with_updated_price_for_trailing_mock.assert_called_once_with(
+                    sorted_orders, replaced_buy_orders+replaced_sell_orders, current_price
+                )
+                _prepare_full_grid_trailing_orders.assert_not_called()
+                _compute_trailing_replaced_orders_mock.reset_mock()
+                _get_orders_to_replace_with_updated_price_for_trailing_mock.reset_mock()
+                _cancel_replaced_orders_mock.assert_not_called()
+                _convert_order_funds_mock.assert_not_called()
+                _get_updated_trailing_orders.assert_not_called()
+            with mock.patch.object(
+                producer, "_get_orders_to_replace_with_updated_price_for_trailing", mock.Mock(
+                    side_effect=staggered_orders_trading.NoOrdersToTrail("test")
+                )
+            ) as _get_orders_to_replace_with_updated_price_for_trailing_mock:
+                assert await producer._prepare_order_by_order_trailing(
+                    sorted_orders, recently_closed_trades, lowest_buy, highest_buy, lowest_sell, highest_sell, current_price, is_trailing_up, dependencies, log_header
+                ) == (
+                    ["9"], ["123"], ["456"], ["789"], "plop"
+                )
+                _compute_trailing_replaced_orders_mock.assert_awaited_once_with(
+                    sorted_orders, recently_closed_trades, lowest_buy, highest_buy, lowest_sell, highest_sell, current_price, True, log_header
+                )
+                _get_orders_to_replace_with_updated_price_for_trailing_mock.assert_called_once_with(
+                    sorted_orders, replaced_buy_orders+replaced_sell_orders, current_price
+                )
+                _prepare_full_grid_trailing_orders.assert_awaited_once_with(
+                    sorted_orders, current_price, dependencies, log_header
+                )
+                _prepare_full_grid_trailing_orders.reset_mock()
+                _compute_trailing_replaced_orders_mock.reset_mock()
+                _get_orders_to_replace_with_updated_price_for_trailing_mock.reset_mock()
+                _cancel_replaced_orders_mock.assert_not_called()
+                _convert_order_funds_mock.assert_not_called()
+                _get_updated_trailing_orders.assert_not_called()
+
+
+async def test_compute_trailing_replaced_orders():
+    symbol = "BTC/USD"
+    recently_closed_trades = ["trades"]
+    current_price = decimal.Decimal(400)
+    lowest_buy = decimal.Decimal(1)
+    highest_buy = current_price
+    lowest_sell = current_price
+    highest_sell = decimal.Decimal(10000)
+    ignore_available_funds = "ignore_available_funds"
+    log_header = "[binance] BTC/USD @ 25 order by order trailing process: "
+    async with _get_tools(symbol) as tools:
+        producer, _, exchange_manager = tools
+
+        with mock.patch.object(
+            producer, "_handle_missed_mirror_orders_fills", mock.AsyncMock()
+        ) as _handle_missed_mirror_orders_fills_mock:
+            # no orders, raises NoOrdersToTrail
+            with pytest.raises(staggered_orders_trading.NoOrdersToTrail):
+                await producer._compute_trailing_replaced_orders(
+                    [], recently_closed_trades, lowest_buy, highest_buy, lowest_sell, highest_sell, current_price, ignore_available_funds, log_header
+                )
+            _handle_missed_mirror_orders_fills_mock.assert_not_called()
+            with mock.patch.object(
+                producer, "_analyse_current_orders_situation", mock.Mock(return_value=([], staggered_orders_trading.StaggeredOrdersTradingModeProducer.ERROR, None))
+            ) as _analyse_current_orders_situation_mock:
+                with pytest.raises(ValueError):
+                    await producer._compute_trailing_replaced_orders(
+                        [], recently_closed_trades, lowest_buy, highest_buy, lowest_sell, highest_sell, current_price, ignore_available_funds, log_header
+                    )
+                _analyse_current_orders_situation_mock.reset_mock()
+            _handle_missed_mirror_orders_fills_mock.assert_not_called()
+            trading_api.force_set_mark_price(exchange_manager, producer.symbol, current_price)
+
+            await producer._ensure_staggered_orders()
+            await asyncio.create_task(_wait_for_orders_creation(producer.operational_depth))
+            open_orders = trading_api.get_open_orders(exchange_manager)
+            assert len(open_orders) == producer.operational_depth
+            sorted_orders = sorted(open_orders, key=lambda order: order.origin_price)
+            highest_sell = sorted_orders[-1].origin_price
+            
+            # nothing to replace
+            replaced_buy_orders, replaced_sell_orders = await producer._compute_trailing_replaced_orders(
+                sorted_orders, [], lowest_buy, highest_buy, lowest_sell, highest_sell, current_price, ignore_available_funds, log_header
+            )
+            assert replaced_buy_orders == replaced_sell_orders == []
+            _handle_missed_mirror_orders_fills_mock.assert_not_called()
+
+            # with missing orders: returned as replaced orders
+            input_open_orders = sorted_orders[:23] + sorted_orders[26:]
+            # simulate a start without StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS
+            staggered_orders_trading.StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS.pop(exchange_manager.id, None)
+            replaced_buy_orders, replaced_sell_orders = await producer._compute_trailing_replaced_orders(
+                input_open_orders, [], lowest_buy, highest_buy, lowest_sell, highest_sell, current_price, ignore_available_funds, log_header
+            )
+            assert replaced_buy_orders == [
+                staggered_orders_trading.OrderData(
+                    trading_enums.TradeOrderSide.BUY, decimal.Decimal(str(amount)), decimal.Decimal(str(price)), symbol, False
+                )
+                for price, amount in [
+                    (372, "0.0583333333333333370"),
+                    (388, "0.0541666666666666630"),
+                ]
+            ] # 2 buy orders missing
+            assert replaced_sell_orders == [
+                staggered_orders_trading.OrderData(
+                    trading_enums.TradeOrderSide.SELL, decimal.Decimal(str(amount)), decimal.Decimal(str(price)), symbol, False
+                )
+                for price, amount in [
+                    (412, "0.2166666666666666520"),
+                ]
+            ] # 1 sell order missing
+            missing_orders = [(decimal.Decimal(str(price)), trading_enums.TradeOrderSide.BUY) for price in [372, 388]] + [(decimal.Decimal(str(price)), trading_enums.TradeOrderSide.SELL) for price in [412]]
+            _handle_missed_mirror_orders_fills_mock.assert_awaited_once_with(
+                [], missing_orders, current_price
+            )
+
+
+async def test_cancel_replaced_orders():
+    symbol = "BTC/USD"
+    async with _get_tools(symbol) as tools:
+        producer, _, exchange_manager = tools
+        with mock.patch.object(
+            producer, "_cancel_open_order", mock.AsyncMock(return_value=(True, trading_signals.get_orders_dependencies([mock.Mock(order_id="345")])))
+        ) as _cancel_open_order_mock:
+            # 1. no replaced orders
+            cancelled_replaced_orders, cancelled_orders, dependencies = await producer._cancel_replaced_orders(
+                [], trading_signals.get_orders_dependencies([mock.Mock(order_id="123")])
+            )
+            _cancel_open_order_mock.assert_not_called()
+            assert cancelled_replaced_orders == []
+            assert cancelled_orders == []
+            assert dependencies == commons_signals.SignalDependencies()
+
+            # 2. replaced "real" orders
+            replaced_orders = [mock.Mock(order_id="123"), mock.Mock(order_id="345")]
+            cancelled_replaced_orders, cancelled_orders, dependencies = await producer._cancel_replaced_orders(
+                replaced_orders, trading_signals.get_orders_dependencies([mock.Mock(order_id="123")])
+            )
+            _cancel_open_order_mock.assert_has_calls([
+                mock.call(replaced_orders[0], trading_signals.get_orders_dependencies([mock.Mock(order_id="123")])),
+                mock.call(replaced_orders[1], trading_signals.get_orders_dependencies([mock.Mock(order_id="123")])),
+            ])
+            assert cancelled_replaced_orders == []
+            assert cancelled_orders == replaced_orders
+            assert dependencies == trading_signals.get_orders_dependencies([mock.Mock(order_id="345"), mock.Mock(order_id="345")])
+
+            # 3. replaced "real" orders and "fake" orders
+            replaced_orders = [mock.Mock(order_id="123"), staggered_orders_trading.OrderData(trading_enums.TradeOrderSide.BUY, decimal.Decimal("0.01"), decimal.Decimal("100"), symbol, False)]
+            cancelled_replaced_orders, cancelled_orders, dependencies = await producer._cancel_replaced_orders(
+                replaced_orders, trading_signals.get_orders_dependencies([mock.Mock(order_id="123")])
+            )
+            _cancel_open_order_mock.assert_has_calls([
+                mock.call(replaced_orders[0], trading_signals.get_orders_dependencies([mock.Mock(order_id="123")])),
+            ])
+            assert cancelled_replaced_orders == [replaced_orders[1]]
+            assert cancelled_orders == [replaced_orders[0]]
+            assert dependencies == trading_signals.get_orders_dependencies([mock.Mock(order_id="345")])
+
+
+async def test_convert_order_funds():
+    symbol = "BTC/USD"
+    log_header = "[binance] BTC/USD @ 25 convert order funds process: "
+    convert_dependencies = trading_signals.get_orders_dependencies([mock.Mock(order_id="123")])
+    quantity = decimal.Decimal("0.01")
+    async with _get_tools(symbol) as tools:
+        producer, _, exchange_manager = tools
+        current_price = decimal.Decimal(25)
+        
+        # Test 1: BUY order with trading_personal_data.Order
+        buy_price = decimal.Decimal(10)
+        to_convert_buy_order = trading_personal_data.create_order_instance(
+            exchange_manager.trader, trading_enums.TraderOrderType.BUY_LIMIT, symbol, current_price, quantity, price=buy_price
+        )
+        convert_orders = await producer._convert_order_funds(
+            to_convert_buy_order, current_price, convert_dependencies, log_header
+        )
+        assert len(convert_orders) == 1
+        assert isinstance(convert_orders[0], trading_personal_data.BuyMarketOrder)
+        assert convert_orders[0].symbol == "BTC/USD"
+        assert convert_orders[0].origin_quantity == decimal.Decimal("0.004") # 0.01 * 10 / 25 (buy order quantity x price / current price)
+        assert convert_orders[0].origin_price == decimal.Decimal("25")
+        assert convert_orders[0].total_cost == decimal.Decimal("0.1") # 0.01 * 10 (buy order quantity x price)
+        assert convert_orders[0].status == trading_enums.OrderStatus.FILLED
+        
+        # Test 2: SELL order with trading_personal_data.Order
+        sell_price = decimal.Decimal(30)
+        to_convert_sell_order = trading_personal_data.create_order_instance(
+            exchange_manager.trader, trading_enums.TraderOrderType.SELL_LIMIT, symbol, current_price, quantity, price=sell_price
+        )
+        convert_orders = await producer._convert_order_funds(
+            to_convert_sell_order, current_price, convert_dependencies, log_header
+        )
+        assert len(convert_orders) == 1
+        assert isinstance(convert_orders[0], trading_personal_data.SellMarketOrder)
+        assert convert_orders[0].symbol == "BTC/USD"
+        assert convert_orders[0].origin_quantity == decimal.Decimal("0.01")
+        assert convert_orders[0].origin_price == decimal.Decimal("25")
+        assert convert_orders[0].total_cost == decimal.Decimal("0.25") # sell order quantity
+        assert convert_orders[0].status == trading_enums.OrderStatus.FILLED
+        
+        # Test 3: BUY order with OrderData
+        buy_price = decimal.Decimal(15)
+        to_convert_buy_order_data = staggered_orders_trading.OrderData(
+            trading_enums.TradeOrderSide.BUY, quantity, buy_price, symbol, False
+        )
+        convert_orders = await producer._convert_order_funds(
+            to_convert_buy_order_data, current_price, convert_dependencies, log_header
+        )
+        assert len(convert_orders) == 1
+        assert isinstance(convert_orders[0], trading_personal_data.BuyMarketOrder)
+        assert convert_orders[0].symbol == "BTC/USD"
+        assert convert_orders[0].origin_quantity == decimal.Decimal("0.006") # 0.01 * 10 / 15 (buy order quantity x price / current price)
+        assert convert_orders[0].origin_price == decimal.Decimal("25")
+        assert convert_orders[0].status == trading_enums.OrderStatus.FILLED
+        
+        # Test 4: SELL order with OrderData
+        sell_price = decimal.Decimal(35)
+        to_convert_sell_order_data = staggered_orders_trading.OrderData(
+            trading_enums.TradeOrderSide.SELL, quantity, sell_price, symbol, False
+        )
+        convert_orders = await producer._convert_order_funds(
+            to_convert_sell_order_data, current_price, convert_dependencies, log_header
+        )
+        assert len(convert_orders) == 1
+        # Verify the convert order properties
+        convert_order = convert_orders[0]
+        assert isinstance(convert_orders[0], trading_personal_data.SellMarketOrder)
+        assert convert_orders[0].symbol == "BTC/USD"
+        assert convert_orders[0].origin_quantity == decimal.Decimal("0.01")
+        assert convert_orders[0].origin_price == decimal.Decimal("25")
+        assert convert_orders[0].status == trading_enums.OrderStatus.FILLED
+
+
+async def test_get_updated_trailing_orders():
+    symbol = "BTC/USD"
+    async with _get_tools(symbol) as tools:
+        producer, _, exchange_manager = tools
+        current_price = decimal.Decimal("25")
+        
+        # Test 1: to_convert_order with sufficient funds, trailing up
+        to_convert_order = trading_personal_data.create_order_instance(
+            exchange_manager.trader, trading_enums.TraderOrderType.BUY_LIMIT, symbol, current_price, 
+            decimal.Decimal("0.01"), price=decimal.Decimal("20")
+        )
+        
+        replaced_buy_orders = [
+            staggered_orders_trading.OrderData(
+                trading_enums.TradeOrderSide.BUY, decimal.Decimal("0.02"), decimal.Decimal("15"), symbol, False
+            )
+        ]
+        replaced_sell_orders = [
+            staggered_orders_trading.OrderData(
+                trading_enums.TradeOrderSide.SELL, decimal.Decimal("0.03"), decimal.Decimal("30"), symbol, False
+            )
+        ]
+        cancelled_replaced_orders = []
+        to_cancel_orders_with_trailed_prices = [
+            (replaced_buy_orders[0], decimal.Decimal("18")),
+            (replaced_sell_orders[0], decimal.Decimal("28"))
+        ]
+        to_execute_order_with_trailing_price = (to_convert_order, decimal.Decimal("22"))
+        
+        trailing_buy_orders, trailing_sell_orders = producer._get_updated_trailing_orders(
+            replaced_buy_orders, replaced_sell_orders, cancelled_replaced_orders,
+            to_cancel_orders_with_trailed_prices, to_execute_order_with_trailing_price, current_price, True
+        )
+        
+        # Verify results
+        assert len(trailing_buy_orders) == 2  # 1 from replaced + 1 from to_cancel_orders_with_trailed_prices
+        assert len(trailing_sell_orders) == 3  # 1 from replaced + 1 from to_cancel_orders_with_trailed_prices + 1 from to_convert_order
+
+        assert trailing_buy_orders[0] is replaced_buy_orders[0]
+        assert trailing_buy_orders[1] == staggered_orders_trading.OrderData(
+            trading_enums.TradeOrderSide.BUY, decimal.Decimal("0.01666666666666666666666666667"), decimal.Decimal("18"), symbol, False
+        )
+        assert trailing_sell_orders[0] is replaced_sell_orders[0]
+        assert trailing_sell_orders[1] == staggered_orders_trading.OrderData(
+            trading_enums.TradeOrderSide.SELL, decimal.Decimal("0.03"), decimal.Decimal("28"), symbol, False
+        )
+        assert trailing_sell_orders[2] == staggered_orders_trading.OrderData(
+            trading_enums.TradeOrderSide.SELL, decimal.Decimal("0.009090909090909090909090909091"), decimal.Decimal("22"), symbol, False
+        )
+        assert trailing_sell_orders[2].quantity * trailing_sell_orders[2].price == to_convert_order.origin_price * to_convert_order.origin_quantity
+
+        # Test 2: to_convert_order with sufficient funds and cancelled orders, trailing down
+        to_convert_order = trading_personal_data.create_order_instance(
+            exchange_manager.trader, trading_enums.TraderOrderType.SELL_LIMIT, symbol, current_price, 
+            decimal.Decimal("0.033"), price=decimal.Decimal("35")
+        )
+        
+        replaced_buy_orders = [
+            staggered_orders_trading.OrderData(
+                trading_enums.TradeOrderSide.BUY, decimal.Decimal("0.02"), decimal.Decimal("15"), symbol, False
+            ),
+            staggered_orders_trading.OrderData( # cancelled
+                trading_enums.TradeOrderSide.BUY, decimal.Decimal("0.02"), decimal.Decimal("16"), symbol, False
+            ),
+        ]
+        replaced_sell_orders = [
+            staggered_orders_trading.OrderData(
+                trading_enums.TradeOrderSide.SELL, decimal.Decimal("0.03"), decimal.Decimal("30"), symbol, False
+            ),
+            staggered_orders_trading.OrderData( # cancelled
+                trading_enums.TradeOrderSide.SELL, decimal.Decimal("0.03"), decimal.Decimal("31"), symbol, False
+            ),
+        ]
+        cancelled_replaced_orders = [replaced_buy_orders[1], replaced_sell_orders[1]]
+        to_cancel_orders_with_trailed_prices = [
+            (replaced_buy_orders[0], decimal.Decimal("18")),
+            (replaced_sell_orders[0], decimal.Decimal("28"))
+        ]
+        current_price = decimal.Decimal("22") # also ensure current price == convert order price is supported
+        to_execute_order_with_trailing_price = (to_convert_order, decimal.Decimal("22"))
+        
+        trailing_buy_orders, trailing_sell_orders = producer._get_updated_trailing_orders(
+            replaced_buy_orders, replaced_sell_orders, cancelled_replaced_orders,
+            to_cancel_orders_with_trailed_prices, to_execute_order_with_trailing_price, current_price, False
+        )
+        
+        # Verify results
+        assert len(trailing_buy_orders) == 3  # 1 from replaced + 1 from to_cancel_orders_with_trailed_prices + 1 from to_convert_order
+        assert len(trailing_sell_orders) == 2  # 1 from replaced + 1 from to_cancel_orders_with_trailed_prices
+
+        assert trailing_buy_orders[0] is replaced_buy_orders[0]
+        assert trailing_buy_orders[1] == staggered_orders_trading.OrderData(
+            trading_enums.TradeOrderSide.BUY, decimal.Decimal("0.01666666666666666666666666667"), decimal.Decimal("18"), symbol, False
+        )
+        assert trailing_buy_orders[2] == staggered_orders_trading.OrderData(
+            trading_enums.TradeOrderSide.BUY, decimal.Decimal("0.0525"), decimal.Decimal("22"), symbol, False
+        )
+        assert trailing_buy_orders[2].quantity * trailing_buy_orders[2].price == to_convert_order.origin_price * to_convert_order.origin_quantity
+        assert trailing_sell_orders[0] is replaced_sell_orders[0]
+        assert trailing_sell_orders[1] == staggered_orders_trading.OrderData(
+            trading_enums.TradeOrderSide.SELL, decimal.Decimal("0.03"), decimal.Decimal("28"), symbol, False
+        )
+
+        # Test 3: to_convert_order with insufficient funds, trailing down
+        to_convert_order_2 = trading_personal_data.create_order_instance(
+            exchange_manager.trader, trading_enums.TraderOrderType.SELL_LIMIT, symbol, current_price, 
+            decimal.Decimal("0.1"), price=decimal.Decimal("30")
+        )
+        
+        # Mock insufficient funds scenario
+        with mock.patch.object(trading_api, 'get_portfolio_currency') as mock_portfolio:
+            mock_portfolio.return_value.available = decimal.Decimal("0.05")  # Less than required 0.1
+            
+            trailing_buy_orders_2, trailing_sell_orders_2 = producer._get_updated_trailing_orders(
+                [], [], [],
+                [], (to_convert_order_2, decimal.Decimal("28")), current_price, False
+            )
+            
+            # Should use available amount instead of ideal quantity
+            assert len(trailing_buy_orders_2) == 1
+            assert len(trailing_sell_orders_2) == 0
+            assert trailing_buy_orders_2[0] == staggered_orders_trading.OrderData(
+                trading_enums.TradeOrderSide.BUY, decimal.Decimal("0.001785714285714285714285714286"), decimal.Decimal("28"), symbol, False
+            )
+        
+        # Test 4: Regular cancelled order with trading_personal_data.Order
+        regular_trading_order = trading_personal_data.create_order_instance(
+            exchange_manager.trader, trading_enums.TraderOrderType.SELL_LIMIT, symbol, current_price, 
+            decimal.Decimal("0.08"), price=decimal.Decimal("32")
+        )
+        
+        trailing_buy_orders_4, trailing_sell_orders_4 = producer._get_updated_trailing_orders(
+            [], [], [],
+            [(regular_trading_order, decimal.Decimal("30"))], (to_convert_order, decimal.Decimal("22")), current_price, True
+        )
+        
+        assert trailing_buy_orders_4 == []
+        # Regular SELL order should keep same quantity
+        assert len(trailing_sell_orders_4) == 2
+        assert trailing_sell_orders_4 == [
+            staggered_orders_trading.OrderData(
+                # same as original
+                trading_enums.TradeOrderSide.SELL, decimal.Decimal("0.08"), decimal.Decimal("30"), symbol, False
+            ),
+            staggered_orders_trading.OrderData(
+                # converted order
+                trading_enums.TradeOrderSide.SELL, decimal.Decimal("0.0525"), decimal.Decimal("22"), symbol, False
+            ),
+        ]
+        assert trailing_sell_orders_4[1].quantity * trailing_sell_orders_4[1].price == to_convert_order.origin_price * to_convert_order.origin_quantity
+
+
+async def test_get_orders_to_replace_with_updated_price_for_trailing_up():
+    symbol = "BTC/USD"
+    async with _get_tools(symbol) as tools:
+        producer, _, exchange_manager = tools
+        producer.flat_increment = decimal.Decimal("5")
+        producer.flat_spread = decimal.Decimal("10")
+        current_price = decimal.Decimal("110.1") # will create buy orders at 100, 105 and a sell order at 115
+        side = trading_enums.TradeOrderSide.BUY
+        quantity = decimal.Decimal("0.01")
+        # 0. no input orders: should not happen, raises
+        with pytest.raises(ValueError):
+            producer._get_orders_to_replace_with_updated_price_for_trailing(
+                [], [], current_price
+            )
+
+        sorted_orders = [
+            trading_personal_data.create_order_instance(
+                exchange_manager.trader, trading_enums.TraderOrderType.BUY_LIMIT, symbol, current_price, quantity, price=decimal.Decimal(str(price))
+            )
+            for price in range (10, 100, 5) # 10 to 95
+        ]
+        # 1. no replaced orders, only existing orders, 4 orders to replace
+        orders_to_replace_with_trailed_price, (order_to_replace_by_other_side_order, other_side_order_price) = producer._get_orders_to_replace_with_updated_price_for_trailing(
+            sorted_orders, [], current_price
+        )
+        assert orders_to_replace_with_trailed_price == [
+            (sorted_orders[1], decimal.Decimal(str(100))),
+            (sorted_orders[2], decimal.Decimal(str(105))),
+        ]
+        assert order_to_replace_by_other_side_order == sorted_orders[0]
+        assert other_side_order_price == decimal.Decimal(str(115))
+
+        # 1. replaced orders and existing orders, same result: 4 orders to replace
+        sorted_orders = [
+            trading_personal_data.create_order_instance(
+                exchange_manager.trader, trading_enums.TraderOrderType.BUY_LIMIT, symbol, current_price, quantity, price=decimal.Decimal(str(price))
+            )
+            for price in range (10, 90, 5) # 10 to 85
+        ]
+        replaced_orders = [
+            staggered_orders_trading.OrderData(side, quantity, decimal.Decimal(str(price)), symbol, False)
+            for price in range(90, 100, 5) # 90 to 95
+        ]
+        orders_to_replace_with_trailed_price, (order_to_replace_by_other_side_order, other_side_order_price) = producer._get_orders_to_replace_with_updated_price_for_trailing(
+            sorted_orders, replaced_orders, current_price
+        )
+        assert orders_to_replace_with_trailed_price == [
+            (sorted_orders[1], decimal.Decimal(str(100))),
+            (sorted_orders[2], decimal.Decimal(str(105))),
+        ]
+        assert order_to_replace_by_other_side_order == sorted_orders[0]
+        assert other_side_order_price == decimal.Decimal(str(115))
+
+        # 2. replaced orders and existing orders, only 1 order to replace
+        for current_price in [decimal.Decimal("95.1"), decimal.Decimal("100"), decimal.Decimal("104.9"), decimal.Decimal("105")]:
+            orders_to_replace_with_trailed_price, (order_to_replace_by_other_side_order, other_side_order_price) = producer._get_orders_to_replace_with_updated_price_for_trailing(
+                sorted_orders, replaced_orders, current_price
+            )
+            assert orders_to_replace_with_trailed_price == []
+            # only the other side order is set
+            assert order_to_replace_by_other_side_order == sorted_orders[0]
+            assert other_side_order_price == decimal.Decimal(str(105))
+
+        # 3. replaced orders and existing orders, only 2 orders to replace
+        for current_price in [decimal.Decimal("105.1"), decimal.Decimal("109.9"), decimal.Decimal("110")]:
+            orders_to_replace_with_trailed_price, (order_to_replace_by_other_side_order, other_side_order_price) = producer._get_orders_to_replace_with_updated_price_for_trailing(
+                sorted_orders, replaced_orders, current_price
+            )
+            assert orders_to_replace_with_trailed_price == [
+                (sorted_orders[1], decimal.Decimal(str(100))),
+            ]
+            # only the other side order is set
+            assert order_to_replace_by_other_side_order == sorted_orders[0]
+            assert other_side_order_price == decimal.Decimal(str(110))
+
+        # all sorted_orders to replace, but not replaced_orders
+        current_price = decimal.Decimal("176")
+        orders_to_replace_with_trailed_price, (order_to_replace_by_other_side_order, other_side_order_price) = producer._get_orders_to_replace_with_updated_price_for_trailing(
+            sorted_orders, replaced_orders, current_price
+        )
+        assert orders_to_replace_with_trailed_price == [
+            (sorted_orders[i], decimal.Decimal(str(95 + i * 5)))
+            for i in range(1, len(sorted_orders))
+        ]
+        # only the other side order is set
+        assert order_to_replace_by_other_side_order == sorted_orders[0]
+        assert other_side_order_price == decimal.Decimal(str(180))
+
+        # exactly all sorted_orders to replace (price not going beyond)
+        current_price = decimal.Decimal("191")
+        orders_to_replace_with_trailed_price, (order_to_replace_by_other_side_order, other_side_order_price) = producer._get_orders_to_replace_with_updated_price_for_trailing(
+            sorted_orders, replaced_orders, current_price
+        )
+        assert orders_to_replace_with_trailed_price == [
+            ((sorted_orders + replaced_orders)[i], decimal.Decimal(str(100 + i * 5)))
+            for i in range(1, len(sorted_orders) + len(replaced_orders))
+        ]
+        # only the other side order is set
+        assert order_to_replace_by_other_side_order == sorted_orders[0]
+        assert other_side_order_price == decimal.Decimal(str(195))
+
+        # all sorted_orders to replace and price is going way beyond
+        current_price = decimal.Decimal("253.1")
+        orders_to_replace_with_trailed_price, (order_to_replace_by_other_side_order, other_side_order_price) = producer._get_orders_to_replace_with_updated_price_for_trailing(
+            sorted_orders, replaced_orders, current_price
+        )
+        assert orders_to_replace_with_trailed_price[-1][1] == decimal.Decimal(str(245))
+        assert orders_to_replace_with_trailed_price == [
+            ((sorted_orders + replaced_orders)[i], decimal.Decimal(str(160 + i * 5))) # 160 to 245
+            for i in range(1, len(sorted_orders) + len(replaced_orders))
+        ]
+        # only the other side order is set
+        assert order_to_replace_by_other_side_order == sorted_orders[0]
+        assert other_side_order_price == decimal.Decimal(str(255))
+
+
+async def test_get_orders_to_replace_with_updated_price_for_trailing_down():
+    symbol = "BTC/USD"
+    async with _get_tools(symbol) as tools:
+        producer, _, exchange_manager = tools
+        producer.flat_increment = decimal.Decimal("5")
+        producer.flat_spread = decimal.Decimal("10")
+        current_price = decimal.Decimal("184.1") # will create sell orders at 95, 90 and a buy order at 80
+        side = trading_enums.TradeOrderSide.SELL
+        quantity = decimal.Decimal("0.01")
+        # 0. no input orders: should not happen, raises
+        with pytest.raises(ValueError):
+            producer._get_orders_to_replace_with_updated_price_for_trailing(
+                [], [], current_price
+            )
+
+        sorted_orders = [
+            trading_personal_data.create_order_instance(
+                exchange_manager.trader, trading_enums.TraderOrderType.SELL_LIMIT, symbol, current_price, quantity, price=decimal.Decimal(str(price))
+            )
+            for price in range (200, 300, 5) # 200 to 295
+        ]
+        # 1. no replaced orders, only existing orders, 4 orders to replace
+        orders_to_replace_with_trailed_price, (order_to_replace_by_other_side_order, other_side_order_price) = producer._get_orders_to_replace_with_updated_price_for_trailing(
+            sorted_orders, [], current_price
+        )
+        assert orders_to_replace_with_trailed_price == [
+            (sorted_orders[-2], decimal.Decimal(str(195))),
+            (sorted_orders[-3], decimal.Decimal(str(190))),
+        ]
+        assert order_to_replace_by_other_side_order == sorted_orders[-1]
+        assert other_side_order_price == decimal.Decimal(str(180))
+
+        # 1. replaced orders and existing orders, same result: 4 orders to replace
+        sorted_orders = [
+            trading_personal_data.create_order_instance(
+                exchange_manager.trader, trading_enums.TraderOrderType.BUY_LIMIT, symbol, current_price, quantity, price=decimal.Decimal(str(price))
+            )
+            for price in range (210, 300, 5) # 210 to 295
+        ]
+        replaced_orders = [
+            staggered_orders_trading.OrderData(side, quantity, decimal.Decimal(str(price)), symbol, False)
+            for price in range(200, 210, 5) # 200 to 205
+        ]
+        orders_to_replace_with_trailed_price, (order_to_replace_by_other_side_order, other_side_order_price) = producer._get_orders_to_replace_with_updated_price_for_trailing(
+            sorted_orders, replaced_orders, current_price
+        )
+        assert orders_to_replace_with_trailed_price == [
+            (sorted_orders[-2], decimal.Decimal(str(195))),
+            (sorted_orders[-3], decimal.Decimal(str(190))),
+        ]
+        assert order_to_replace_by_other_side_order == sorted_orders[-1]
+        assert other_side_order_price == decimal.Decimal(str(180))
+
+        # 2. replaced orders and existing orders, only 1 order to replace
+        for current_price in [decimal.Decimal("199.9"), decimal.Decimal("194.9"), decimal.Decimal("195"), decimal.Decimal("190")]:
+            orders_to_replace_with_trailed_price, (order_to_replace_by_other_side_order, other_side_order_price) = producer._get_orders_to_replace_with_updated_price_for_trailing(
+                sorted_orders, replaced_orders, current_price
+            )
+            assert orders_to_replace_with_trailed_price == []
+            # only the other side order is set
+            assert order_to_replace_by_other_side_order == sorted_orders[-1]
+            assert other_side_order_price == decimal.Decimal(str(190))
+
+        # 3. replaced orders and existing orders, only 2 orders to replace
+        for current_price in [decimal.Decimal("188.9"), decimal.Decimal("185.1"), decimal.Decimal("185")]:
+            orders_to_replace_with_trailed_price, (order_to_replace_by_other_side_order, other_side_order_price) = producer._get_orders_to_replace_with_updated_price_for_trailing(
+                sorted_orders, replaced_orders, current_price
+            )
+            assert orders_to_replace_with_trailed_price == [
+                (sorted_orders[-2], decimal.Decimal(str(195))),
+            ]
+            # only the other side order is set
+            assert order_to_replace_by_other_side_order == sorted_orders[-1]
+            assert other_side_order_price == decimal.Decimal(str(185))
+
+        # all sorted_orders to replace, but not replaced_orders
+        current_price = decimal.Decimal("107")
+        orders_to_replace_with_trailed_price, (order_to_replace_by_other_side_order, other_side_order_price) = producer._get_orders_to_replace_with_updated_price_for_trailing(
+            sorted_orders, replaced_orders, current_price
+        )
+        assert orders_to_replace_with_trailed_price == [
+            (sorted_orders[-i], decimal.Decimal(str(195 - (i - 2) * 5)))
+            for i in range(2, len(sorted_orders) + 1)
+        ]
+        # only the other side order is set
+        assert order_to_replace_by_other_side_order == sorted_orders[-1]
+        assert other_side_order_price == decimal.Decimal(str(105))
+
+        # exactly all sorted_orders to replace (price not going beyond)
+        current_price = decimal.Decimal("96")
+        orders_to_replace_with_trailed_price, (order_to_replace_by_other_side_order, other_side_order_price) = producer._get_orders_to_replace_with_updated_price_for_trailing(
+            sorted_orders, replaced_orders, current_price
+        )
+        assert orders_to_replace_with_trailed_price == [
+            ((replaced_orders + sorted_orders[:-1])[-i], decimal.Decimal(str(195 - (i - 1) * 5)))
+            for i in range(1, len(sorted_orders) + len(replaced_orders))
+        ]
+        # only the other side order is set
+        assert order_to_replace_by_other_side_order == sorted_orders[-1]
+        assert other_side_order_price == decimal.Decimal(str(95))
+
+        # all sorted_orders to replace and price is going way beyond
+        current_price = decimal.Decimal("42.122222222222")
+        orders_to_replace_with_trailed_price, (order_to_replace_by_other_side_order, other_side_order_price) = producer._get_orders_to_replace_with_updated_price_for_trailing(
+            sorted_orders, replaced_orders, current_price
+        )
+        assert orders_to_replace_with_trailed_price[-1][1] == decimal.Decimal(str(50))
+        assert orders_to_replace_with_trailed_price == [
+            ((replaced_orders + sorted_orders[:-1])[-i], decimal.Decimal(str(140 - (i - 1) * 5))) # 140 to 50
+            for i in range(1, len(sorted_orders) + len(replaced_orders))
+        ]
+        # only the other side order is set
+        assert order_to_replace_by_other_side_order == sorted_orders[-1]
+        assert other_side_order_price == decimal.Decimal(str(40))
+
+
+async def test_prepare_full_grid_trailing():
+    symbol = "BTC/USD"
+    async with _get_tools(symbol) as tools:
+        producer, _, exchange_manager = tools
 
         trading_api.force_set_mark_price(exchange_manager, symbol, 4000)
         with mock.patch.object(producer, "_ensure_current_price_in_limit_parameters", mock.Mock()) \
@@ -1588,14 +2414,16 @@ async def test_prepare_trailing():
         open_orders = exchange_manager.exchange_personal_data.orders_manager.get_open_orders()
         # simulate price being stable
         dependencies = trading_signals.get_orders_dependencies([mock.Mock(order_id="123")])
+        log_header = f"[{producer.exchange_manager.exchange_name}] {producer.symbol} @ {123} full grid trailing process: "
         with mock.patch.object(
             producer.trading_mode, "cancel_order", mock.AsyncMock(wraps=producer.trading_mode.cancel_order)
         ) as cancel_order_mock, mock.patch.object(
             octobot_trading.modes, "convert_asset_to_target_asset", mock.AsyncMock(wraps=octobot_trading.modes.convert_asset_to_target_asset)
         ) as convert_asset_to_target_asset_mock:
-            cancelled_orders, created_orders, end_dependencies = await producer._prepare_trailing(
-                open_orders, current_price=4000, dependencies=dependencies
+            cancelled_orders, created_orders, trailing_buy_orders, trailing_sell_orders, end_dependencies = await producer._prepare_full_grid_trailing(
+                open_orders, 4000, dependencies, log_header
             )
+            assert trailing_buy_orders == trailing_sell_orders == []
             assert end_dependencies == trading_signals.get_order_dependency(created_orders[0])
             assert cancel_order_mock.call_count == len(open_orders)
             assert all(
@@ -1627,7 +2455,8 @@ async def test_prepare_trailing():
 
         # price change (going down), no order to cancel: just adapt pf
         trading_api.force_set_mark_price(exchange_manager, symbol, 3000)
-        cancelled_orders, created_orders, dependencies = await producer._prepare_trailing(open_orders, current_price=3000, dependencies=dependencies)
+        cancelled_orders, created_orders, trailing_buy_orders, trailing_sell_orders, dependencies = await producer._prepare_full_grid_trailing(open_orders, 3000, dependencies, log_header)
+        assert trailing_buy_orders == trailing_sell_orders == []
         assert dependencies == trading_signals.get_order_dependency(created_orders[0])
         # no order to cancel (orders are already cancelled)
         assert len(cancelled_orders) == 0
@@ -1644,7 +2473,8 @@ async def test_prepare_trailing():
 
         # price change (going up), no order to cancel: just adapt pf
         trading_api.force_set_mark_price(exchange_manager, symbol, 8000)
-        cancelled_orders, created_orders, dependencies = await producer._prepare_trailing([], current_price=8000, dependencies=dependencies)
+        cancelled_orders, created_orders, trailing_buy_orders, trailing_sell_orders, dependencies = await producer._prepare_full_grid_trailing([], 8000, dependencies, log_header)
+        assert trailing_buy_orders == trailing_sell_orders == []
         assert dependencies == trading_signals.get_order_dependency(created_orders[0])
         # no order to cancel
         assert len(cancelled_orders) == 0
@@ -1804,6 +2634,7 @@ async def test_order_notification_callback():
         # will trail
         filled_order = buy_orders[1]
         filled_order.filled_price = 6000
+        producer.use_order_by_order_trailing = False
         producer.enable_trailing_up = producer.enable_trailing_down = True
         with mock.patch.object(producer, "_lock_portfolio_and_create_order_when_possible", mock.AsyncMock()) as _lock_portfolio_and_create_order_when_possible:
             await _fill_order(filled_order, exchange_manager, trigger_update_callback=True)

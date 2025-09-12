@@ -773,8 +773,8 @@ async def test_start_after_offline_filled_orders_close_to_price_with_recent_trad
         fees = trade.fee[trading_enums.FeePropertyColumns.COST.value]
         assert fees > trading_constants.ZERO
         assert new_order.origin_quantity < offline_filled.origin_quantity  # adapted amount to available funds
-        assert new_order.origin_quantity == decimal.Decimal("0.02279092")
-        assert new_order.total_cost == decimal.Decimal("665.9999107872")    # < 666
+        assert new_order.origin_quantity == decimal.Decimal("0.02210719")
+        assert new_order.total_cost == decimal.Decimal("646.0198433304")    # < 666
 
 
 async def test_start_after_offline_full_sell_side_filled_orders_with_recent_trades():
@@ -2134,9 +2134,10 @@ async def test_start_after_offline_no_missing_order():
             # should not find any missing order and should not trail
 
 
-async def test_trailing_up():
+async def test_whole_grid_trailing_up_and_down():
     symbol = "BTC/USDT"
     async with _get_tools(symbol) as (producer, consumer, exchange_manager):
+        producer.use_order_by_order_trailing = False
         # first start: setup orders
         producer.sell_funds = decimal.Decimal("1")  # 25 sell orders
         producer.buy_funds = decimal.Decimal("1")  # 19 buy orders
@@ -2263,6 +2264,245 @@ async def test_trailing_up():
         assert len([order for order in open_orders if order.side == trading_enums.TradeOrderSide.BUY]) == producer.buy_orders_count - 1
 
 
+async def test_order_by_order_trailing_up_and_down():
+    symbol = "BTC/USDT"
+    async with _get_tools(symbol) as (producer, consumer, exchange_manager):
+        producer.use_order_by_order_trailing = True
+        # first start: setup orders
+        producer.sell_funds = decimal.Decimal("1")  # 25 sell orders
+        producer.buy_funds = decimal.Decimal("200")  # 25 buy orders
+        orders_count = 25 + 25
+
+        price = 200
+        trading_api.force_set_mark_price(exchange_manager, producer.symbol, price)
+        await producer._ensure_staggered_orders()
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, orders_count))
+        original_orders = copy.copy(trading_api.get_open_orders(exchange_manager))
+        assert len(original_orders) == orders_count
+        _check_created_orders(producer, trading_api.get_open_orders(exchange_manager), 200)
+        # A. price moves up
+        pre_portfolio = trading_api.get_portfolio_currency(exchange_manager, "USDT").available
+
+        # offline simulation: orders get filled but not replaced => price got up to more than the max price
+        open_orders = copy.copy(trading_api.get_open_orders(exchange_manager))
+        offline_filled = [o for o in open_orders if o.side == trading_enums.TradeOrderSide.SELL]
+        for order in offline_filled:
+            await _fill_order(order, exchange_manager, trigger_update_callback=False, producer=producer)
+        # simulate a start without StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS
+        staggered_orders_trading.StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS.pop(exchange_manager.id, None)
+        post_portfolio = trading_api.get_portfolio_currency(exchange_manager, "USDT").available
+        assert pre_portfolio < post_portfolio
+        assert len(trading_api.get_open_orders(exchange_manager)) == orders_count - len(offline_filled)
+        producer.enable_trailing_up = True
+
+        # top filled sell order price = 325
+        assert max(o.origin_price for o in offline_filled) == decimal.Decimal("325")
+        new_price = decimal.Decimal("350.1")
+        trading_api.force_set_mark_price(exchange_manager, producer.symbol, new_price)
+
+        _convert_asset_to_target_asset_returned_values = []
+        async def _convert_asset_to_target_asset(*args, **kwargs):
+            returned = await origin_convert_asset_to_target_asset(*args, **kwargs)
+            _convert_asset_to_target_asset_returned_values.append(returned)
+            return returned
+
+        origin_convert_asset_to_target_asset = trading_modes.convert_asset_to_target_asset
+        # will trail up
+        with mock.patch.object(
+            consumer, "create_order", mock.AsyncMock(wraps=consumer.create_order)
+        ) as create_order_mock, mock.patch.object(
+            producer.trading_mode, "cancel_order", mock.AsyncMock(wraps=producer.trading_mode.cancel_order)
+        ) as cancel_order_mock, mock.patch.object(
+            trading_modes, "convert_asset_to_target_asset", mock.AsyncMock(side_effect=_convert_asset_to_target_asset)
+        ) as convert_asset_to_target_asset_mock:
+            await producer._ensure_staggered_orders()
+            new_buy_order_prices_to_create = [
+                decimal.Decimal("325"),
+                decimal.Decimal("330"),
+                decimal.Decimal("335"),
+                decimal.Decimal("340"),
+                decimal.Decimal("345"),
+            ]
+            cancelled_orders_prices = [
+                # replaced by new buy orders
+                decimal.Decimal("75"),
+                decimal.Decimal("80"),
+                decimal.Decimal("85"),
+                decimal.Decimal("90"),
+                decimal.Decimal("95"),
+                # converted to BTC for the trailed sell order
+                decimal.Decimal("100"),
+            ]
+            assert cancel_order_mock.call_count == len(cancelled_orders_prices)
+            assert sorted(
+                call.args[0].origin_price for call in cancel_order_mock.mock_calls
+            ) == cancelled_orders_prices
+            assert all(
+                call.kwargs["dependencies"] is None
+                for call in cancel_order_mock.mock_calls
+            )
+            cancelled_orders_dependencies = trading_signals.get_orders_dependencies(
+                [call.args[0] for call in cancel_order_mock.mock_calls]
+            )
+            convert_asset_to_target_asset_mock.assert_awaited_once_with(
+                producer.trading_mode, "USDT", "BTC", {
+                    producer.symbol: {
+                        trading_enums.ExchangeConstantsTickersColumns.CLOSE.value: new_price,
+                    }
+                }, asset_amount=decimal.Decimal("7.7922"),
+                dependencies=cancelled_orders_dependencies
+            )
+            convert_dependencies = trading_signals.get_orders_dependencies(
+                _convert_asset_to_target_asset_returned_values[-1]
+            )
+            await asyncio.create_task(_check_open_orders_count(exchange_manager, orders_count))
+            _check_created_orders(producer, trading_api.get_open_orders(exchange_manager), 230)
+            assert create_order_mock.call_count == 25 + len(new_buy_order_prices_to_create) + 1 # replaced initial sell orders and created trailing buy orders + the "other side" order
+            assert sorted(
+                call.args[0].price 
+                for call in create_order_mock.mock_calls
+            ) == sorted(
+                [ 
+                    # replaced sell orders
+                    decimal.Decimal(str(i)) for i in range(200, 325, 5)
+                ]
+                # trailed orders
+                + new_buy_order_prices_to_create 
+                # "other side" order
+                + [decimal.Decimal("355")]
+            )
+            # no conversion, will use cancel order dependencies
+            assert all(
+                call.args[3] == convert_dependencies
+                for call in create_order_mock.mock_calls
+            )
+            open_orders = trading_api.get_open_orders(exchange_manager)
+            # ensure 1 sell order is open and the rest are buy orders
+            sell_orders = [o for o in open_orders if o.side == trading_enums.TradeOrderSide.SELL]
+            assert len(sell_orders) == 1
+            assert sell_orders[0].origin_price == decimal.Decimal("355")
+            buy_orders = [o for o in open_orders if o.side == trading_enums.TradeOrderSide.BUY]
+            assert len(buy_orders) == orders_count - 1
+            assert sorted(
+                o.origin_price for o in buy_orders
+            ) == [
+                decimal.Decimal(str(i)) for i in range(105, 350, 5) # 105 to 345
+            ]
+
+        # B. single sell orders get filled, trail again 
+        # offline simulation: buy orders get filled but not replaced
+        open_orders = trading_api.get_open_orders(exchange_manager)
+        # since 1 sell orders is filled
+        offline_filled = [
+            o 
+            for o in open_orders 
+            if o.side == trading_enums.TradeOrderSide.SELL
+        ]
+        for order in offline_filled:
+            await _fill_order(order, exchange_manager, trigger_update_callback=False, producer=producer)
+        # simulate a start without StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS
+        staggered_orders_trading.StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS.pop(exchange_manager.id, None)
+        assert len(trading_api.get_open_orders(exchange_manager)) == orders_count - len(offline_filled)
+        producer.enable_trailing_up = True
+        producer.enable_trailing_down = True
+        new_price = decimal.Decimal("360.1")
+        trading_api.force_set_mark_price(exchange_manager, producer.symbol, new_price)
+        await producer._ensure_staggered_orders()
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, orders_count))
+        _check_created_orders(producer, trading_api.get_open_orders(exchange_manager), 240)
+        open_orders = trading_api.get_open_orders(exchange_manager)
+        # ensure 1 sell order is open and the rest are buy orders
+        sell_orders = [o for o in open_orders if o.side == trading_enums.TradeOrderSide.SELL]
+        assert len(sell_orders) == 1
+        assert sell_orders[0].origin_price == decimal.Decimal("365")
+        assert sell_orders[0].origin_quantity == decimal.Decimal("0.02136986")
+        buy_orders = [o for o in open_orders if o.side == trading_enums.TradeOrderSide.BUY]
+        assert len(buy_orders) == orders_count - 1
+        assert sorted(
+            o.origin_price for o in buy_orders
+        ) == [
+            decimal.Decimal(str(i)) for i in range(115, 360, 5) # 115 to 355
+        ]
+
+        # C. price moves down, trailing down is disabled
+        pre_portfolio = trading_api.get_portfolio_currency(exchange_manager, "BTC").available
+
+        # offline simulation: orders get filled but not replaced => price got up to more than the max price
+        open_orders = copy.copy(trading_api.get_open_orders(exchange_manager))
+        offline_filled = [o for o in open_orders if o.side == trading_enums.TradeOrderSide.BUY]
+        for order in offline_filled:
+            await _fill_order(order, exchange_manager, trigger_update_callback=False, producer=producer)
+        # simulate a start without StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS
+        staggered_orders_trading.StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS.pop(exchange_manager.id, None)
+        post_portfolio = trading_api.get_portfolio_currency(exchange_manager, "BTC").available
+        assert pre_portfolio < post_portfolio
+        assert len(trading_api.get_open_orders(exchange_manager)) == orders_count - len(offline_filled)
+        producer.enable_trailing_down = False
+
+        # top filled sell order price = 125
+        assert min(o.origin_price for o in offline_filled) == decimal.Decimal("115")
+        new_price = decimal.Decimal("114.9")
+        trading_api.force_set_mark_price(exchange_manager, producer.symbol, new_price)
+        # will not trail down
+        await producer._ensure_staggered_orders()
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, orders_count))
+        _check_created_orders(producer, trading_api.get_open_orders(exchange_manager), 240)
+        # only contains sell orders
+        open_orders = copy.copy(trading_api.get_open_orders(exchange_manager))
+        assert all (order.side == trading_enums.TradeOrderSide.SELL for order in open_orders)
+
+        # D. price is still down, trailing down is enabled
+        producer.enable_trailing_down = True
+
+        # will trail down
+        await producer._ensure_staggered_orders()
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, orders_count))
+        # orders trailed
+        _check_created_orders(producer, trading_api.get_open_orders(exchange_manager), 235)
+        # now contains buy and sell orders
+        open_orders = trading_api.get_open_orders(exchange_manager)
+        # ensure 1 buy order is open and the rest are sell orders
+        sell_orders = [o for o in open_orders if o.side == trading_enums.TradeOrderSide.SELL]
+        assert len(sell_orders) == orders_count - 1
+        assert sorted(
+            o.origin_price for o in sell_orders
+        ) == [
+            decimal.Decimal(str(i)) for i in range(120, 365, 5) # 120 to 360 (previous buy orders got replaced by sell orders at price+spread-increment)
+        ]
+        buy_orders = [o for o in open_orders if o.side == trading_enums.TradeOrderSide.BUY]
+        assert len(buy_orders) == 1
+        assert buy_orders[0].origin_price == decimal.Decimal("110")
+        assert buy_orders[0].origin_quantity == decimal.Decimal("0.07090908")
+
+        # E. price is down much more, trail down on multiple orders
+        new_price = decimal.Decimal("82")
+        offline_filled = [o for o in open_orders if o.side == trading_enums.TradeOrderSide.BUY and o.origin_price > decimal.Decimal("82")]
+        for order in offline_filled:
+            await _fill_order(order, exchange_manager, trigger_update_callback=False, producer=producer)
+        # simulate a start without StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS
+        staggered_orders_trading.StaggeredOrdersTradingModeProducer.AVAILABLE_FUNDS.pop(exchange_manager.id, None)
+        assert len(trading_api.get_open_orders(exchange_manager)) == orders_count - len(offline_filled)
+        trading_api.force_set_mark_price(exchange_manager, producer.symbol, new_price)
+        await producer._ensure_staggered_orders()
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, orders_count))
+        # orders trailed
+        _check_created_orders(producer, trading_api.get_open_orders(exchange_manager), 205)
+        # now contains buy and sell orders
+        open_orders = trading_api.get_open_orders(exchange_manager)
+        # ensure 1 buy order is open and the rest are sell orders
+        sell_orders = [o for o in open_orders if o.side == trading_enums.TradeOrderSide.SELL]
+        assert len(sell_orders) == orders_count - 1
+        assert sorted(
+            o.origin_price for o in sell_orders
+        ) == [
+            decimal.Decimal(str(i)) for i in range(90, 335, 5) # 90 to 330
+        ]
+        buy_orders = [o for o in open_orders if o.side == trading_enums.TradeOrderSide.BUY]
+        assert len(buy_orders) == 1
+        assert buy_orders[0].origin_price == decimal.Decimal("80")
+        assert buy_orders[0].origin_quantity == decimal.Decimal("0.09887323")
+
+
 @contextlib.contextmanager
 def _assert_adapt_order_quantity_because_fees(get_fees_for_currency=False):
     _origin_decimal_adapt_order_quantity_because_fees = trading_personal_data.decimal_adapt_order_quantity_because_fees
@@ -2350,5 +2590,9 @@ def _check_created_orders(producer, orders, initial_price):
     )
     max_price = decimal.Decimal(str(initial_price)) + producer.flat_spread / 2 + \
                 (producer.flat_increment * (producer.sell_orders_count - 1))
-    assert min_price <= sorted_orders[0].origin_price <= max_price
-    assert min_price <= sorted_orders[-1].origin_price <= max_price
+    assert min_price <= sorted_orders[0].origin_price <= max_price, (
+        f"min_price: {min_price}, {sorted_orders[0].origin_price=}, max_price: {max_price}"
+    )
+    assert min_price <= sorted_orders[-1].origin_price <= max_price, (
+        f"min_price: {min_price}, {sorted_orders[-1].origin_price=}, max_price: {max_price}"
+    )
