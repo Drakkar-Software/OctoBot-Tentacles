@@ -1170,8 +1170,9 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         max_sell_funds = trading_api.get_portfolio_currency(self.exchange_manager, base).available + total_locked_base
         if self.sell_funds:
             max_sell_funds = min(max_sell_funds, self.sell_funds)
-        used_buy_funds = 0
-        used_sell_funds = 0
+        used_buy_funds = trading_constants.ZERO
+        used_sell_funds = trading_constants.ZERO
+        total_sell_orders_value = trading_constants.ZERO
         for order in orders:
             order_locked_base, order_locked_quote = self._get_order_locked_funds(order)
             buying = order.side is trading_enums.TradeOrderSide.BUY
@@ -1182,11 +1183,17 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                 used_buy_funds += order_locked_quote
             else:
                 used_sell_funds += order_locked_base
+                total_sell_orders_value += order_locked_quote
+
+        # consider sell orders funds only if they are NOT drastically lower than buy orders funds
+        can_consider_sell_order_funds = total_sell_orders_value > used_buy_funds / decimal.Decimal(2)
+        # consider buy orders funds only if they are NOT drastically lower than sell orders funds
+        can_consider_buy_order_funds = used_buy_funds > total_sell_orders_value / decimal.Decimal(2)
         if (
             # reset if buy or sell funds are underused and sell funds are not overused
             (
                 # has buy orders
-                existing_buy_orders_count > 0
+                existing_buy_orders_count > 0 and can_consider_buy_order_funds
                 # and buy orders are not using all funds they should
                 and used_buy_funds < max_buy_funds * self.FUNDS_INCREASE_RATIO_THRESHOLD
                 # funds locked in sell orders are lower than the theoretical max funds to sell
@@ -1195,7 +1202,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             )
             or (
                 # has sell orders
-                existing_sell_orders_count > 0
+                existing_sell_orders_count > 0 and can_consider_sell_order_funds
                 # and sell orders are not using all funds they should
                 and used_sell_funds < max_sell_funds * self.FUNDS_INCREASE_RATIO_THRESHOLD
             )
