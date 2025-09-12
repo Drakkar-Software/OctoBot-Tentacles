@@ -186,6 +186,20 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
                   "might generate a loss.",
         )
         self.UI.user_input(
+            self.CONFIG_ENABLE_TRAILING_UP, commons_enums.UserInputTypes.BOOLEAN,
+            default_config[self.CONFIG_ENABLE_TRAILING_UP], inputs,
+            parent_input_name=self.CONFIG_PAIR_SETTINGS,
+            title="Trailing up: when checked, the whole grid will be cancelled and recreated when price goes above the "
+                  "highest selling price. This might require the grid to perform a buy market order to be "
+                  "able to recreate the grid new sell orders at the updated price.",
+        )
+        self.UI.user_input(
+            self.CONFIG_ORDER_BY_ORDER_TRAILING, commons_enums.UserInputTypes.BOOLEAN,
+            default_config[self.CONFIG_ORDER_BY_ORDER_TRAILING], inputs,
+            parent_input_name=self.CONFIG_PAIR_SETTINGS,
+            title="Order by order trailing: when checked, the grid will trail order by order instead of the whole grid at once, which is adapted to less volatile markets.",
+        )
+        self.UI.user_input(
             self.CONFIG_ALLOW_FUNDS_REDISPATCH, commons_enums.UserInputTypes.BOOLEAN,
             default_config[self.CONFIG_ALLOW_FUNDS_REDISPATCH], inputs,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
@@ -228,6 +242,7 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
           cls.CONFIG_ALLOW_FUNDS_REDISPATCH: False,
           cls.CONFIG_ENABLE_TRAILING_UP: enable_trailing_up or False,
           cls.CONFIG_ENABLE_TRAILING_DOWN: enable_trailing_down or False,
+          cls.CONFIG_ORDER_BY_ORDER_TRAILING: True,
           cls.CONFIG_FUNDS_REDISPATCH_INTERVAL: 24,
         }
 
@@ -337,6 +352,9 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         )
         self.enable_trailing_down = self.symbol_trading_config.get(
             self.trading_mode.CONFIG_ENABLE_TRAILING_DOWN, self.enable_trailing_down
+        )
+        self.use_order_by_order_trailing = self.symbol_trading_config.get(
+            self.trading_mode.CONFIG_ORDER_BY_ORDER_TRAILING, self.use_order_by_order_trailing
         )
 
     async def _handle_staggered_orders(
@@ -478,7 +496,9 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         next_step_dependencies = None
         if trigger_trailing:
             # trailing has no initial dependencies here
-            _, __, next_step_dependencies = await self._prepare_trailing(sorted_orders, current_price, None)
+            _, __, next_step_dependencies = await self._prepare_trailing(
+                sorted_orders, recently_closed_trades, lowest_buy, highest_sell, current_price, None
+            )
             self.is_currently_trailing = True
             # trailing will cancel all orders: set state to NEW with no existing order
             missing_orders, state, sorted_orders = None, self.NEW, []
