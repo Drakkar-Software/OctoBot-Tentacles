@@ -592,7 +592,17 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
             try:
                 await self.trigger_dca(cryptocurrency=cryptocurrency, symbol=symbol, state=state)
             finally:
-                self.trading_mode.are_initialization_orders_pending = False
+                try:
+                    self.trading_mode.are_initialization_orders_pending = False
+                except AttributeError:
+                    if self.trading_mode is None:
+                        # can very rarely happen on early cancelled backtestings
+                        self.logger.warning(
+                            f"{self.__class__.__name__} has already been stopped, skipping are_initialization_orders_pending setting"
+                        )
+                    else:
+                        # unexpected error, raise
+                        raise
 
     def _should_trigger_init_entry(self):
         if self.trading_mode.enable_initialization_entry:
