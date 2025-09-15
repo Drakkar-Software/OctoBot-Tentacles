@@ -242,7 +242,7 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
           cls.CONFIG_ALLOW_FUNDS_REDISPATCH: False,
           cls.CONFIG_ENABLE_TRAILING_UP: enable_trailing_up or False,
           cls.CONFIG_ENABLE_TRAILING_DOWN: enable_trailing_down or False,
-          cls.CONFIG_ORDER_BY_ORDER_TRAILING: True,
+        #   cls.CONFIG_ORDER_BY_ORDER_TRAILING: True,
           cls.CONFIG_FUNDS_REDISPATCH_INTERVAL: 24,
         }
 
@@ -497,7 +497,8 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         if trigger_trailing:
             # trailing has no initial dependencies here
             _, __, next_step_dependencies = await self._prepare_trailing(
-                sorted_orders, recently_closed_trades, lowest_buy, highest_sell, current_price, None
+                sorted_orders, recently_closed_trades, lowest_buy, highest_buy, lowest_sell, highest_sell, 
+                current_price, None, ignore_available_funds
             )
             self.is_currently_trailing = True
             # trailing will cancel all orders: set state to NEW with no existing order
