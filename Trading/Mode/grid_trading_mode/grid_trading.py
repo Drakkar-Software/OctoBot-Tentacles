@@ -509,7 +509,8 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
                                               current_price, missing_orders, state, self.sell_funds, ignore_available_funds,
                                               recently_closed_trades)
 
-            if state is self.FILL:
+            if state is self.FILL and not trigger_trailing:
+                # don't check used funds if trailing is active to avoid cancelling trading
                 self._ensure_used_funds(buy_orders, sell_orders, sorted_orders, recently_closed_trades)
             create_order_dependencies = next_step_dependencies
         except staggered_orders_trading.ForceResetOrdersException:
