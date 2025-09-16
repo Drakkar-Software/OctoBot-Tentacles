@@ -242,7 +242,7 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
           cls.CONFIG_ALLOW_FUNDS_REDISPATCH: False,
           cls.CONFIG_ENABLE_TRAILING_UP: enable_trailing_up or False,
           cls.CONFIG_ENABLE_TRAILING_DOWN: enable_trailing_down or False,
-        #   cls.CONFIG_ORDER_BY_ORDER_TRAILING: True,
+          cls.CONFIG_ORDER_BY_ORDER_TRAILING: True,
           cls.CONFIG_FUNDS_REDISPATCH_INTERVAL: 24,
         }
 
