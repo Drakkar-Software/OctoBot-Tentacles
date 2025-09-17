@@ -33,6 +33,9 @@ import octobot_trading.errors as trading_errors
 import octobot.community
 
 
+_CACHED_CONFIRMED_FEES_BY_SYMBOL = {}
+
+
 def _kucoin_retrier(f):
     async def kucoin_retrier_wrapper(*args, **kwargs):
         last_error = None
@@ -71,12 +74,14 @@ class KucoinConnector(ccxt_connector.CCXTConnector):
         # override for retrier
         try:
             await client.load_markets(reload=reload)
+            # sometimes market fees are missing because they are fetched from all tickers 
+            # and all ticker can miss symbols on kucoin
+            ccxt_client_util.fix_client_missing_markets_fees(client, reload, _CACHED_CONFIRMED_FEES_BY_SYMBOL)
         except Exception as err:
             # ensure this is not a proxy error, raise dedicated error if it is
             if proxy_error := ccxt_client_util.get_proxy_error_if_any(self, err):
                 raise ccxt_client_util.get_proxy_error_class(proxy_error)(proxy_error) from err
             raise
-
 
 class Kucoin(exchanges.RestExchange):
     FIX_MARKET_STATUS = True
@@ -97,6 +102,9 @@ class Kucoin(exchanges.RestExchange):
     # set True when create_market_buy_order_with_cost should be used to create buy market orders
     # (useful to predict the exact spent amount)
     ENABLE_SPOT_BUY_MARKET_WITH_COST = True
+
+    # set True when fetch_tickers can sometimes miss symbols. In this case, the connector will try to fix it
+    CAN_MISS_TICKERS_IN_ALL_TICKERS = True
 
     # set True when get_positions() is not returning empty positions and should use get_position() instead
     REQUIRES_SYMBOL_FOR_EMPTY_POSITION = True
