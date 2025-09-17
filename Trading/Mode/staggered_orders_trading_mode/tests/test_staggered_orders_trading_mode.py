@@ -1711,6 +1711,32 @@ async def test_prepare_order_by_order_trailing():
             _get_updated_trailing_orders.assert_called_once_with(
                 replaced_buy_orders, replaced_sell_orders, [replaced_buy_orders[0]], to_cancel_orders_with_trailed_prices, to_execute_order_with_trailing_price, current_price
             )
+            _compute_trailing_replaced_orders_mock.reset_mock()
+            _get_orders_to_replace_with_updated_price_for_trailing_mock.reset_mock()
+            _cancel_open_order_mock.reset_mock()
+            _execute_convert_order_mock.reset_mock()
+            _get_updated_trailing_orders.reset_mock()
+
+            # with _get_orders_to_replace_with_updated_price_for_trailing raising an error
+            with mock.patch.object(
+                producer, "_get_orders_to_replace_with_updated_price_for_trailing", mock.Mock(
+                    side_effect=ValueError("test")
+                )
+            ) as _get_orders_to_replace_with_updated_price_for_trailing_mock:
+                assert await producer._prepare_order_by_order_trailing(
+                    sorted_orders, recently_closed_trades, lowest_buy, highest_buy, lowest_sell, highest_sell, current_price, dependencies, ignore_available_funds, log_header
+                ) == (
+                    [], [], [], [], None
+                )
+                _compute_trailing_replaced_orders_mock.assert_awaited_once_with(
+                    sorted_orders, recently_closed_trades, lowest_buy, highest_buy, lowest_sell, highest_sell, current_price, ignore_available_funds, log_header
+                )
+                _get_orders_to_replace_with_updated_price_for_trailing_mock.assert_called_once_with(
+                    sorted_orders, replaced_buy_orders+replaced_sell_orders, current_price
+                )
+                _cancel_open_order_mock.assert_not_called()
+                _execute_convert_order_mock.assert_not_called()
+                _get_updated_trailing_orders.assert_not_called()
 
 
 async def test_prepare_full_grid_trailing():
