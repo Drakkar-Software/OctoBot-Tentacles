@@ -1571,16 +1571,146 @@ async def test_single_exchange_process_optimize_initial_portfolio():
         assert final_portfolio["USD"].available == decimal.Decimal("5545")
 
 
-async def test_prepare_trailing(): #todo
+async def test_prepare_trailing():
     symbol = "BTC/USD"
     async with _get_tools(symbol) as tools:
         producer, _, exchange_manager = tools
+        with mock.patch.object(
+            producer, "_prepare_order_by_order_trailing", mock.AsyncMock(
+                return_value=(["_prepare_order_by_order_trailing"], [], [], [], None)
+            )
+        ) as _prepare_order_by_order_trailing_mock, mock.patch.object(
+            producer, "_prepare_full_grid_trailing", mock.AsyncMock(
+                return_value=(["_prepare_full_grid_trailing"], [], [], [], None
+            ))
+        ) as _prepare_full_grid_trailing_mock:
+            sorted_orders = ["123"]
+            recently_closed_trades = ["trades"]
+            lowest_buy = decimal.Decimal(1)
+            highest_buy = decimal.Decimal(2)
+            lowest_sell = decimal.Decimal(3)
+            highest_sell = decimal.Decimal(4)
+            dependencies = trading_signals.get_orders_dependencies([mock.Mock(order_id="123")])
+            ignore_available_funds = "ignore_available_funds"
+            log_header = "[binance] BTC/USD @ 1.5 full grid trailing process: "
+
+            # current_price can't be <= 0
+            for _current_price in [-1.5, 0]:
+                current_price = decimal.Decimal(_current_price)
+                assert await producer._prepare_trailing(sorted_orders, recently_closed_trades, lowest_buy, highest_buy, lowest_sell, highest_sell, current_price, dependencies, ignore_available_funds) == (
+                    [], [], [], [], None
+                )
+                _prepare_order_by_order_trailing_mock.assert_not_called()
+                _prepare_full_grid_trailing_mock.assert_not_called()
 
 
-async def test_prepare_order_by_order_trailing(): #todo
+            current_price = decimal.Decimal(1.5)
+            producer.use_order_by_order_trailing = False
+            assert await producer._prepare_trailing(
+                sorted_orders, recently_closed_trades, lowest_buy, highest_buy, lowest_sell, highest_sell, current_price, dependencies, ignore_available_funds
+            ) == (
+                ["_prepare_full_grid_trailing"], [], [], [], None
+            )
+            _prepare_order_by_order_trailing_mock.assert_not_called()
+            _prepare_full_grid_trailing_mock.assert_awaited_once_with(
+                sorted_orders, current_price, dependencies, log_header
+            )
+            _prepare_full_grid_trailing_mock.reset_mock()
+
+
+            log_header = "[binance] BTC/USD @ 1.5 order by order trailing process: "
+            producer.use_order_by_order_trailing = True
+            assert await producer._prepare_trailing(
+                sorted_orders, recently_closed_trades, lowest_buy, highest_buy, lowest_sell, highest_sell, current_price, dependencies, ignore_available_funds
+            ) == (
+                ["_prepare_order_by_order_trailing"], [], [], [], None
+            )
+            _prepare_full_grid_trailing_mock.assert_not_called()
+            _prepare_order_by_order_trailing_mock.assert_awaited_once_with(
+                sorted_orders, recently_closed_trades, lowest_buy, highest_buy, lowest_sell, highest_sell, current_price, dependencies, ignore_available_funds, log_header
+            )
+
+
+async def test_prepare_order_by_order_trailing():
     symbol = "BTC/USD"
+    sorted_orders = [mock.Mock(order_id="123")]
+    recently_closed_trades = ["trades"]
+    lowest_buy = decimal.Decimal(1)
+    highest_buy = decimal.Decimal(2)
+    lowest_sell = decimal.Decimal(3)
+    highest_sell = decimal.Decimal(4)
+    dependencies = trading_signals.get_orders_dependencies([mock.Mock(order_id="123")])
+    ignore_available_funds = "ignore_available_funds"
+    log_header = "[binance] BTC/USD @ 25 full grid trailing process: "
+    current_price = decimal.Decimal(25)
     async with _get_tools(symbol) as tools:
         producer, _, exchange_manager = tools
+        replaced_buy_orders = [
+            staggered_orders_trading.OrderData(
+                trading_enums.TradeOrderSide.BUY, decimal.Decimal(str(price)), decimal.Decimal(str(amount)), symbol, False
+            )
+            for price, amount in [
+                (10, 0.02),
+                (15, 0.017),
+                (20, 0.015),
+            ]
+        ]
+        replaced_sell_orders = [
+            staggered_orders_trading.OrderData(
+                trading_enums.TradeOrderSide.SELL, decimal.Decimal(str(price)), decimal.Decimal(str(amount)), symbol, False
+            )
+            for price, amount in [
+                (30, 0.013),
+                (40, 0.01),
+            ]
+        ]
+        to_cancel_orders_with_trailed_prices = [
+            (sorted_orders[0], decimal.Decimal(50)),
+        ]
+        to_execute_order_with_trailing_price = (replaced_buy_orders[0], decimal.Decimal(60))
+        convert_order = mock.Mock(order_id="123")
+        trailing_buy_orders = [123] 
+        trailing_sell_orders = [456]
+        with mock.patch.object(
+            producer, "_compute_trailing_replaced_orders", mock.AsyncMock(
+                return_value=(replaced_buy_orders, replaced_sell_orders)
+            )
+        ) as _compute_trailing_replaced_orders_mock, mock.patch.object(
+            producer, "_get_orders_to_replace_with_updated_price_for_trailing", mock.Mock(
+                return_value=(to_cancel_orders_with_trailed_prices, to_execute_order_with_trailing_price)
+            )
+        ) as _get_orders_to_replace_with_updated_price_for_trailing_mock, mock.patch.object(
+            producer, "_cancel_open_order", mock.AsyncMock(
+                return_value=(True, trading_signals.get_orders_dependencies([mock.Mock(order_id="123")]))
+            )
+        ) as _cancel_open_order_mock, mock.patch.object(
+            producer, "_execute_convert_order", mock.AsyncMock(
+                return_value=[convert_order]
+            )
+        ) as _execute_convert_order_mock, mock.patch.object(
+            producer, "_get_updated_trailing_orders", mock.Mock(
+                return_value=(trailing_buy_orders, trailing_sell_orders)
+            )
+        ) as _get_updated_trailing_orders:
+            assert await producer._prepare_order_by_order_trailing(
+                sorted_orders, recently_closed_trades, lowest_buy, highest_buy, lowest_sell, highest_sell, current_price, dependencies, ignore_available_funds, log_header
+            ) == (
+                [sorted_orders[0]], [convert_order], trailing_buy_orders, trailing_sell_orders,
+                trading_signals.get_orders_dependencies([convert_order])
+            )
+            _compute_trailing_replaced_orders_mock.assert_awaited_once_with(
+                sorted_orders, recently_closed_trades, lowest_buy, highest_buy, lowest_sell, highest_sell, current_price, ignore_available_funds, log_header
+            )
+            _get_orders_to_replace_with_updated_price_for_trailing_mock.assert_called_once_with(
+                sorted_orders, replaced_buy_orders+replaced_sell_orders, current_price
+            )
+            _cancel_open_order_mock.assert_awaited_once_with(sorted_orders[0], dependencies)
+            _execute_convert_order_mock.assert_awaited_once_with(
+                to_execute_order_with_trailing_price[0], current_price, dependencies, log_header
+            )
+            _get_updated_trailing_orders.assert_called_once_with(
+                replaced_buy_orders, replaced_sell_orders, [replaced_buy_orders[0]], to_cancel_orders_with_trailed_prices, to_execute_order_with_trailing_price, current_price
+            )
 
 
 async def test_prepare_full_grid_trailing():
