@@ -456,42 +456,44 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         if sorted_orders:
             if self._should_trigger_trailing(sorted_orders, current_price, False):
                 trigger_trailing = True
-            buy_orders = [order for order in sorted_orders if order.side == trading_enums.TradeOrderSide.BUY]
-            sell_orders = [order for order in sorted_orders if order.side == trading_enums.TradeOrderSide.SELL]
-            highest_buy = current_price
-            lowest_sell = current_price
-            origin_created_buy_orders_count, origin_created_sell_orders_count = self._get_origin_orders_count(
-                recently_closed_trades, sorted_orders
-            )
+            if self.use_order_by_order_trailing or not trigger_trailing:
+                # grid boundaries are required in order by order trailing
+                buy_orders = [order for order in sorted_orders if order.side == trading_enums.TradeOrderSide.BUY]
+                sell_orders = [order for order in sorted_orders if order.side == trading_enums.TradeOrderSide.SELL]
+                highest_buy = current_price
+                lowest_sell = current_price
+                origin_created_buy_orders_count, origin_created_sell_orders_count = self._get_origin_orders_count(
+                    recently_closed_trades, sorted_orders
+                )
 
-            min_max_total_order_price_delta = (
-                self.flat_increment * (origin_created_buy_orders_count - 1 + origin_created_sell_orders_count - 1)
-                + self.flat_increment
-            )
-            if buy_orders:
-                lowest_buy = buy_orders[0].origin_price
-                if not sell_orders:
-                    highest_buy = min(current_price, lowest_buy + min_max_total_order_price_delta)
-                    # buy orders only
-                    lowest_sell = highest_buy + self.flat_spread - self.flat_increment
-                    highest_sell = lowest_buy + min_max_total_order_price_delta + self.flat_spread - self.flat_increment
-                else:
-                    # use only open order prices when possible
-                    _highest_sell = sell_orders[-1].origin_price
-                    highest_buy = min(current_price, _highest_sell - self.flat_spread + self.flat_increment)
-            if sell_orders:
-                highest_sell = sell_orders[-1].origin_price
-                if not buy_orders:
-                    lowest_sell = max(current_price, highest_sell - min_max_total_order_price_delta)
-                    # sell orders only
-                    lowest_buy = max(
-                        0, highest_sell - min_max_total_order_price_delta - self.flat_spread + self.flat_increment
-                    )
-                    highest_buy = lowest_sell - self.flat_spread + self.flat_increment
-                else:
-                    # use only open order prices when possible
-                    _lowest_buy = buy_orders[0].origin_price
-                    lowest_sell = max(current_price, _lowest_buy - self.flat_spread + self.flat_increment)
+                min_max_total_order_price_delta = (
+                    self.flat_increment * (origin_created_buy_orders_count - 1 + origin_created_sell_orders_count - 1)
+                    + self.flat_increment
+                )
+                if buy_orders:
+                    lowest_buy = buy_orders[0].origin_price
+                    if not sell_orders:
+                        highest_buy = min(current_price, lowest_buy + min_max_total_order_price_delta)
+                        # buy orders only
+                        lowest_sell = highest_buy + self.flat_spread - self.flat_increment
+                        highest_sell = lowest_buy + min_max_total_order_price_delta + self.flat_spread - self.flat_increment
+                    else:
+                        # use only open order prices when possible
+                        _highest_sell = sell_orders[-1].origin_price
+                        highest_buy = min(current_price, _highest_sell - self.flat_spread + self.flat_increment)
+                if sell_orders:
+                    highest_sell = sell_orders[-1].origin_price
+                    if not buy_orders:
+                        lowest_sell = max(current_price, highest_sell - min_max_total_order_price_delta)
+                        # sell orders only
+                        lowest_buy = max(
+                            0, highest_sell - min_max_total_order_price_delta - self.flat_spread + self.flat_increment
+                        )
+                        highest_buy = lowest_sell - self.flat_spread + self.flat_increment
+                    else:
+                        # use only open order prices when possible
+                        _lowest_buy = buy_orders[0].origin_price
+                        lowest_sell = max(current_price, _lowest_buy - self.flat_spread + self.flat_increment)
         next_step_dependencies = None
         trailing_buy_orders = trailing_sell_orders = []
         if trigger_trailing:

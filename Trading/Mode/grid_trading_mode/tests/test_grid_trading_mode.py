@@ -2137,6 +2137,7 @@ async def test_start_after_offline_no_missing_order():
 async def test_whole_grid_trailing_up_and_down():
     symbol = "BTC/USDT"
     async with _get_tools(symbol) as (producer, consumer, exchange_manager):
+        producer.use_order_by_order_trailing = False
         # first start: setup orders
         producer.sell_funds = decimal.Decimal("1")  # 25 sell orders
         producer.buy_funds = decimal.Decimal("1")  # 19 buy orders
