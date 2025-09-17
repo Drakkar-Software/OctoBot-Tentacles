@@ -76,7 +76,8 @@ class KucoinConnector(ccxt_connector.CCXTConnector):
             await client.load_markets(reload=reload)
             # sometimes market fees are missing because they are fetched from all tickers 
             # and all ticker can miss symbols on kucoin
-            ccxt_client_util.fix_client_missing_markets_fees(client, reload, _CACHED_CONFIRMED_FEES_BY_SYMBOL)
+            if client.markets:
+                ccxt_client_util.fix_client_missing_markets_fees(client, reload, _CACHED_CONFIRMED_FEES_BY_SYMBOL)
         except Exception as err:
             # ensure this is not a proxy error, raise dedicated error if it is
             if proxy_error := ccxt_client_util.get_proxy_error_if_any(self, err):
