@@ -1571,7 +1571,19 @@ async def test_single_exchange_process_optimize_initial_portfolio():
         assert final_portfolio["USD"].available == decimal.Decimal("5545")
 
 
-async def test_prepare_trailing():
+async def test_prepare_trailing(): #todo
+    symbol = "BTC/USD"
+    async with _get_tools(symbol) as tools:
+        producer, _, exchange_manager = tools
+
+
+async def test_prepare_order_by_order_trailing(): #todo
+    symbol = "BTC/USD"
+    async with _get_tools(symbol) as tools:
+        producer, _, exchange_manager = tools
+
+
+async def test_prepare_full_grid_trailing():
     symbol = "BTC/USD"
     async with _get_tools(symbol) as tools:
         producer, _, exchange_manager = tools
@@ -1588,14 +1600,16 @@ async def test_prepare_trailing():
         open_orders = exchange_manager.exchange_personal_data.orders_manager.get_open_orders()
         # simulate price being stable
         dependencies = trading_signals.get_orders_dependencies([mock.Mock(order_id="123")])
+        log_header = f"[{producer.exchange_manager.exchange_name}] {producer.symbol} @ {123} full grid trailing process: "
         with mock.patch.object(
             producer.trading_mode, "cancel_order", mock.AsyncMock(wraps=producer.trading_mode.cancel_order)
         ) as cancel_order_mock, mock.patch.object(
             octobot_trading.modes, "convert_asset_to_target_asset", mock.AsyncMock(wraps=octobot_trading.modes.convert_asset_to_target_asset)
         ) as convert_asset_to_target_asset_mock:
-            cancelled_orders, created_orders, end_dependencies = await producer._prepare_trailing(
-                open_orders, current_price=4000, dependencies=dependencies
+            cancelled_orders, created_orders, trailing_buy_orders, trailing_sell_orders, end_dependencies = await producer._prepare_full_grid_trailing(
+                open_orders, 4000, dependencies, log_header
             )
+            assert trailing_buy_orders == trailing_sell_orders == []
             assert end_dependencies == trading_signals.get_order_dependency(created_orders[0])
             assert cancel_order_mock.call_count == len(open_orders)
             assert all(
@@ -1627,7 +1641,8 @@ async def test_prepare_trailing():
 
         # price change (going down), no order to cancel: just adapt pf
         trading_api.force_set_mark_price(exchange_manager, symbol, 3000)
-        cancelled_orders, created_orders, dependencies = await producer._prepare_trailing(open_orders, current_price=3000, dependencies=dependencies)
+        cancelled_orders, created_orders, trailing_buy_orders, trailing_sell_orders, dependencies = await producer._prepare_full_grid_trailing(open_orders, 3000, dependencies, log_header)
+        assert trailing_buy_orders == trailing_sell_orders == []
         assert dependencies == trading_signals.get_order_dependency(created_orders[0])
         # no order to cancel (orders are already cancelled)
         assert len(cancelled_orders) == 0
@@ -1644,7 +1659,8 @@ async def test_prepare_trailing():
 
         # price change (going up), no order to cancel: just adapt pf
         trading_api.force_set_mark_price(exchange_manager, symbol, 8000)
-        cancelled_orders, created_orders, dependencies = await producer._prepare_trailing([], current_price=8000, dependencies=dependencies)
+        cancelled_orders, created_orders, trailing_buy_orders, trailing_sell_orders, dependencies = await producer._prepare_full_grid_trailing([], 8000, dependencies, log_header)
+        assert trailing_buy_orders == trailing_sell_orders == []
         assert dependencies == trading_signals.get_order_dependency(created_orders[0])
         # no order to cancel
         assert len(cancelled_orders) == 0
@@ -1804,6 +1820,7 @@ async def test_order_notification_callback():
         # will trail
         filled_order = buy_orders[1]
         filled_order.filled_price = 6000
+        producer.use_order_by_order_trailing = False
         producer.enable_trailing_up = producer.enable_trailing_down = True
         with mock.patch.object(producer, "_lock_portfolio_and_create_order_when_possible", mock.AsyncMock()) as _lock_portfolio_and_create_order_when_possible:
             await _fill_order(filled_order, exchange_manager, trigger_update_callback=True)
