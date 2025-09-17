@@ -358,7 +358,10 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                     created_at_least_one_order = True
                     return True
             except trading_errors.MaxOpenOrderReachedForSymbolError as err:
-                self.logger.warning(f"Skipped entry order: too many orders are already in place: {err}")
+                self.logger.warning(
+                    f"Impossible to create {symbol} entry ({entry_order.side.value}) order: "
+                    f"creating more orders would exceed {self.exchange_manager.exchange_name}'s limits: {err}"
+                )
                 return created_at_least_one_order
         try:
             buying = order_type in (trading_enums.TraderOrderType.BUY_MARKET, trading_enums.TraderOrderType.BUY_LIMIT)
