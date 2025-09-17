@@ -453,50 +453,50 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         highest_buy = self.buy_price_range.higher_bound
         lowest_sell = self.sell_price_range.lower_bound
         highest_sell = self.sell_price_range.higher_bound
-        if sorted_orders and not trigger_trailing:
+        if sorted_orders:
             if self._should_trigger_trailing(sorted_orders, current_price, False):
                 trigger_trailing = True
-            else:
-                buy_orders = [order for order in sorted_orders if order.side == trading_enums.TradeOrderSide.BUY]
-                sell_orders = [order for order in sorted_orders if order.side == trading_enums.TradeOrderSide.SELL]
-                highest_buy = current_price
-                lowest_sell = current_price
-                origin_created_buy_orders_count, origin_created_sell_orders_count = self._get_origin_orders_count(
-                    recently_closed_trades, sorted_orders
-                )
+            buy_orders = [order for order in sorted_orders if order.side == trading_enums.TradeOrderSide.BUY]
+            sell_orders = [order for order in sorted_orders if order.side == trading_enums.TradeOrderSide.SELL]
+            highest_buy = current_price
+            lowest_sell = current_price
+            origin_created_buy_orders_count, origin_created_sell_orders_count = self._get_origin_orders_count(
+                recently_closed_trades, sorted_orders
+            )
 
-                min_max_total_order_price_delta = (
-                    self.flat_increment * (origin_created_buy_orders_count - 1 + origin_created_sell_orders_count - 1)
-                    + self.flat_increment
-                )
-                if buy_orders:
-                    lowest_buy = buy_orders[0].origin_price
-                    if not sell_orders:
-                        highest_buy = min(current_price, lowest_buy + min_max_total_order_price_delta)
-                        # buy orders only
-                        lowest_sell = highest_buy + self.flat_spread - self.flat_increment
-                        highest_sell = lowest_buy + min_max_total_order_price_delta + self.flat_spread - self.flat_increment
-                    else:
-                        # use only open order prices when possible
-                        _highest_sell = sell_orders[-1].origin_price
-                        highest_buy = min(current_price, _highest_sell - self.flat_spread + self.flat_increment)
-                if sell_orders:
-                    highest_sell = sell_orders[-1].origin_price
-                    if not buy_orders:
-                        lowest_sell = max(current_price, highest_sell - min_max_total_order_price_delta)
-                        # sell orders only
-                        lowest_buy = max(
-                            0, highest_sell - min_max_total_order_price_delta - self.flat_spread + self.flat_increment
-                        )
-                        highest_buy = lowest_sell - self.flat_spread + self.flat_increment
-                    else:
-                        # use only open order prices when possible
-                        _lowest_buy = buy_orders[0].origin_price
-                        lowest_sell = max(current_price, _lowest_buy - self.flat_spread + self.flat_increment)
+            min_max_total_order_price_delta = (
+                self.flat_increment * (origin_created_buy_orders_count - 1 + origin_created_sell_orders_count - 1)
+                + self.flat_increment
+            )
+            if buy_orders:
+                lowest_buy = buy_orders[0].origin_price
+                if not sell_orders:
+                    highest_buy = min(current_price, lowest_buy + min_max_total_order_price_delta)
+                    # buy orders only
+                    lowest_sell = highest_buy + self.flat_spread - self.flat_increment
+                    highest_sell = lowest_buy + min_max_total_order_price_delta + self.flat_spread - self.flat_increment
+                else:
+                    # use only open order prices when possible
+                    _highest_sell = sell_orders[-1].origin_price
+                    highest_buy = min(current_price, _highest_sell - self.flat_spread + self.flat_increment)
+            if sell_orders:
+                highest_sell = sell_orders[-1].origin_price
+                if not buy_orders:
+                    lowest_sell = max(current_price, highest_sell - min_max_total_order_price_delta)
+                    # sell orders only
+                    lowest_buy = max(
+                        0, highest_sell - min_max_total_order_price_delta - self.flat_spread + self.flat_increment
+                    )
+                    highest_buy = lowest_sell - self.flat_spread + self.flat_increment
+                else:
+                    # use only open order prices when possible
+                    _lowest_buy = buy_orders[0].origin_price
+                    lowest_sell = max(current_price, _lowest_buy - self.flat_spread + self.flat_increment)
         next_step_dependencies = None
+        trailing_buy_orders = trailing_sell_orders = []
         if trigger_trailing:
             # trailing has no initial dependencies here
-            _, __, next_step_dependencies = await self._prepare_trailing(
+            _, __, trailing_buy_orders, trailing_sell_orders, next_step_dependencies = await self._prepare_trailing(
                 sorted_orders, recently_closed_trades, lowest_buy, highest_buy, lowest_sell, highest_sell, 
                 current_price, None, ignore_available_funds
             )
@@ -520,19 +520,23 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
 
             await self._handle_missed_mirror_orders_fills(recently_closed_trades, missing_orders, current_price)
         try:
-            # apply state and (re)create missing orders
-            buy_orders = self._create_orders(lowest_buy, highest_buy,
-                                             trading_enums.TradeOrderSide.BUY, sorted_orders,
-                                             current_price, missing_orders, state, self.buy_funds, ignore_available_funds,
-                                             recently_closed_trades)
-            sell_orders = self._create_orders(lowest_sell, highest_sell,
-                                              trading_enums.TradeOrderSide.SELL, sorted_orders,
-                                              current_price, missing_orders, state, self.sell_funds, ignore_available_funds,
-                                              recently_closed_trades)
+            if trailing_buy_orders or trailing_sell_orders:
+                buy_orders = trailing_buy_orders
+                sell_orders = trailing_sell_orders
+            else:
+                # apply state and (re)create missing orders
+                buy_orders = self._create_orders(lowest_buy, highest_buy,
+                                                trading_enums.TradeOrderSide.BUY, sorted_orders,
+                                                current_price, missing_orders, state, self.buy_funds, ignore_available_funds,
+                                                recently_closed_trades)
+                sell_orders = self._create_orders(lowest_sell, highest_sell,
+                                                trading_enums.TradeOrderSide.SELL, sorted_orders,
+                                                current_price, missing_orders, state, self.sell_funds, ignore_available_funds,
+                                                recently_closed_trades)
 
-            if state is self.FILL and not trigger_trailing:
-                # don't check used funds if trailing is active to avoid cancelling trading
-                self._ensure_used_funds(buy_orders, sell_orders, sorted_orders, recently_closed_trades)
+                if state is self.FILL and not trigger_trailing:
+                    # don't check used funds if trailing is active to avoid cancelling trading
+                    self._ensure_used_funds(buy_orders, sell_orders, sorted_orders, recently_closed_trades)
             create_order_dependencies = next_step_dependencies
         except staggered_orders_trading.ForceResetOrdersException:
             lowest_buy = max(trading_constants.ZERO, self.buy_price_range.lower_bound)
