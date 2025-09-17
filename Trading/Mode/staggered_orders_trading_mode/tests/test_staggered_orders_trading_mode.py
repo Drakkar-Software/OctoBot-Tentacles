@@ -1771,6 +1771,67 @@ async def test_should_trigger_trailing_all_buy_order_created():
         assert producer._should_trigger_trailing([], current_price, True) is False  # has open orders on the other side
 
 
+async def test_order_by_order_trailing_up():
+    symbol = "BTC/USD"
+    async with _get_tools(symbol) as tools:
+        current_price = decimal.Decimal(4000)
+        producer, _, exchange_manager = tools
+        producer.increment = decimal.Decimal("0.02")    # instead of 0.04
+        producer.use_order_by_order_trailing = True
+
+        # A. no open order: no trailing
+        assert producer._should_trigger_trailing([], current_price, False) is False
+        producer.enable_trailing_up = producer.enable_trailing_down = True
+        assert producer._should_trigger_trailing([], current_price, False) is False
+
+        # create orders
+        trading_api.force_set_mark_price(exchange_manager, symbol, 4000)
+        with mock.patch.object(producer, "_ensure_current_price_in_limit_parameters", mock.Mock()) \
+                as _ensure_current_price_in_limit_parameters_mock:
+            await producer._ensure_staggered_orders()
+            _ensure_current_price_in_limit_parameters_mock.assert_called_once()
+
+        assert producer.current_price == 4000
+        await asyncio.create_task(_check_open_orders_count(exchange_manager, producer.operational_depth))
+        # now has buy and sell orders
+
+        # B. trailing disabled
+        producer.enable_trailing_up = producer.enable_trailing_down = False
+        assert producer._should_trigger_trailing([], current_price, False) is False
+        open_orders = exchange_manager.exchange_personal_data.orders_manager.get_open_orders()
+        buy_orders = [order for order in open_orders if order.side == trading_enums.TradeOrderSide.BUY]
+        sell_orders = [order for order in open_orders if order.side == trading_enums.TradeOrderSide.SELL]
+        assert len(buy_orders) > 10
+        assert len(sell_orders) > 10
+        assert producer._should_trigger_trailing(buy_orders, current_price, False) is False
+        assert producer._should_trigger_trailing(sell_orders, current_price, False) is False
+
+        # C. trailing enabled
+        producer.enable_trailing_up = True
+        assert producer._should_trigger_trailing(sell_orders, current_price, False) is False
+        assert producer._should_trigger_trailing(sell_orders, None, False) is False
+        assert producer._should_trigger_trailing(buy_orders, current_price, False) is False
+        assert producer._should_trigger_trailing(buy_orders, decimal.Decimal(6000), False) is True
+        assert producer._should_trigger_trailing(buy_orders, None, True) is True
+        assert producer._should_trigger_trailing(buy_orders, None, False) is False
+
+        producer.enable_trailing_down = True
+        assert producer._should_trigger_trailing(sell_orders, current_price, False) is False
+        assert producer._should_trigger_trailing(sell_orders, decimal.Decimal(2000), False) is True
+        assert producer._should_trigger_trailing(sell_orders, None, True) is True
+        assert producer._should_trigger_trailing(buy_orders, current_price, False) is False
+        assert producer._should_trigger_trailing(buy_orders, None, False) is False
+        assert producer._should_trigger_trailing(buy_orders, None, True) is True
+
+        # D. no trailing if at least 1 order on each side
+        assert producer._should_trigger_trailing(buy_orders + sell_orders, current_price, False) is False
+        assert producer._should_trigger_trailing([buy_orders[0]] + sell_orders, current_price, False) is False
+
+        # E. use open orders
+        assert producer._should_trigger_trailing([], current_price, False) is False
+        assert producer._should_trigger_trailing([], current_price, True) is False  # has open orders on the other side
+
+
 async def test_order_notification_callback():
     symbol = "BTC/USD"
     async with _get_tools(symbol) as tools:
