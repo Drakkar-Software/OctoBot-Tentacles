@@ -1461,7 +1461,6 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         dependencies: typing.Optional[commons_signals.SignalDependencies],
         ignore_available_funds: bool
     ) -> tuple[list, list, list, list, typing.Optional[commons_signals.SignalDependencies]]:
-        print(f"trailing : {self.exchange_manager.exchange.get_exchange_current_time()}")
         trailing_up = len([o for o in sorted_orders if o.side == trading_enums.TradeOrderSide.BUY]) > len(sorted_orders) / 2 
         log_header = (
             f"[{self.exchange_manager.exchange_name}] {self.symbol} @ {current_price} "
@@ -1505,7 +1504,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                 sorted_orders, replaced_buy_orders+replaced_sell_orders, current_price
             )
             self.logger.info(
-                f"{log_header} Replacing orders at prices: {[float(self.get_trade_or_order_price(o)) for o in (to_cancel_orders_with_trailed_prices + [to_execute_order_with_trailing_price])]} with "
+                f"{log_header} Replacing orders at prices: {[float(self.get_trade_or_order_price(o[0])) for o in (to_cancel_orders_with_trailed_prices + [to_execute_order_with_trailing_price])]} with "
                 f"{[float(o[1]) for o in (to_cancel_orders_with_trailed_prices + [to_execute_order_with_trailing_price])]}"
             )
         except TrailingAborted as err:
