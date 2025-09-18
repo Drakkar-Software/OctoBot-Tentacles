@@ -2322,7 +2322,6 @@ async def test_order_by_order_trailing_up_and_down():
                 decimal.Decimal("335"),
                 decimal.Decimal("340"),
                 decimal.Decimal("345"),
-                decimal.Decimal("350"),
             ]
             cancelled_orders_prices = [
                 # replaced by new buy orders
@@ -2331,9 +2330,8 @@ async def test_order_by_order_trailing_up_and_down():
                 decimal.Decimal("85"),
                 decimal.Decimal("90"),
                 decimal.Decimal("95"),
-                decimal.Decimal("100"),
                 # converted to BTC for the trailed sell order
-                decimal.Decimal("105"),
+                decimal.Decimal("100"),
             ]
             assert cancel_order_mock.call_count == len(cancelled_orders_prices)
             assert sorted(
@@ -2358,7 +2356,7 @@ async def test_order_by_order_trailing_up_and_down():
                 _convert_asset_to_target_asset_returned_values[-1]
             )
             await asyncio.create_task(_check_open_orders_count(exchange_manager, orders_count))
-            _check_created_orders(producer, trading_api.get_open_orders(exchange_manager), 235)
+            _check_created_orders(producer, trading_api.get_open_orders(exchange_manager), 230)
             assert create_order_mock.call_count == 25 + len(new_buy_order_prices_to_create) + 1 # replaced initial sell orders and created trailing buy orders + the "other side" order
             assert sorted(
                 call.args[0].price 
@@ -2371,7 +2369,7 @@ async def test_order_by_order_trailing_up_and_down():
                 # trailed orders
                 + new_buy_order_prices_to_create 
                 # "other side" order
-                + [decimal.Decimal("360")]
+                + [decimal.Decimal("355")]
             )
             # no conversion, will use cancel order dependencies
             assert all(
@@ -2382,13 +2380,13 @@ async def test_order_by_order_trailing_up_and_down():
             # ensure 1 sell order is open and the rest are buy orders
             sell_orders = [o for o in open_orders if o.side == trading_enums.TradeOrderSide.SELL]
             assert len(sell_orders) == 1
-            assert sell_orders[0].origin_price == decimal.Decimal("360")
+            assert sell_orders[0].origin_price == decimal.Decimal("355")
             buy_orders = [o for o in open_orders if o.side == trading_enums.TradeOrderSide.BUY]
             assert len(buy_orders) == orders_count - 1
             assert sorted(
                 o.origin_price for o in buy_orders
             ) == [
-                decimal.Decimal(str(i)) for i in range(110, 355, 5) # 110 to 350
+                decimal.Decimal(str(i)) for i in range(105, 350, 5) # 105 to 345
             ]
 
         # B. single sell orders get filled, trail again 
@@ -2488,7 +2486,7 @@ async def test_order_by_order_trailing_up_and_down():
         await producer._ensure_staggered_orders()
         await asyncio.create_task(_check_open_orders_count(exchange_manager, orders_count))
         # orders trailed
-        _check_created_orders(producer, trading_api.get_open_orders(exchange_manager), 200)
+        _check_created_orders(producer, trading_api.get_open_orders(exchange_manager), 205)
         # now contains buy and sell orders
         open_orders = trading_api.get_open_orders(exchange_manager)
         # ensure 1 buy order is open and the rest are sell orders
@@ -2497,12 +2495,12 @@ async def test_order_by_order_trailing_up_and_down():
         assert sorted(
             o.origin_price for o in sell_orders
         ) == [
-            decimal.Decimal(str(i)) for i in range(85, 330, 5) # 85 to 325
+            decimal.Decimal(str(i)) for i in range(90, 335, 5) # 90 to 330
         ]
         buy_orders = [o for o in open_orders if o.side == trading_enums.TradeOrderSide.BUY]
         assert len(buy_orders) == 1
-        assert buy_orders[0].origin_price == decimal.Decimal("75")
-        assert buy_orders[0].origin_quantity == decimal.Decimal("0.09771392")
+        assert buy_orders[0].origin_price == decimal.Decimal("80")
+        assert buy_orders[0].origin_quantity == decimal.Decimal("0.31130820")
 
 
 @contextlib.contextmanager
