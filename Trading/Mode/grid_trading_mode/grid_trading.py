@@ -563,6 +563,10 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
             origin_created_sell_orders_count = (
                 len(open_orders) + len(recent_trades) - origin_created_buy_orders_count
             )
+            if origin_created_buy_orders_count + origin_created_sell_orders_count > self.buy_orders_count + self.sell_orders_count:
+                # more orders than in config (usually because of trailing), use config values
+                origin_created_buy_orders_count = self.buy_orders_count
+                origin_created_sell_orders_count = self.sell_orders_count
         return origin_created_buy_orders_count, origin_created_sell_orders_count
 
     def _get_grid_trades_or_orders(self, trades_or_orders):
