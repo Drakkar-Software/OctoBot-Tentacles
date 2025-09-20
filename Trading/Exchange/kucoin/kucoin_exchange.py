@@ -615,10 +615,11 @@ class KucoinCCXTAdapter(exchanges.CCXTAdapter):
             elif trigger_direction == "down":
                 trigger_above = False
             else:
+                # unhandled, rely on ccxt default parsing
                 self.logger.error(
-                    f"Unknown [{self.connector.exchange_manager.exchange_name}] order trigger direction "
-                    f"{trigger_direction} ({fixed})"
+                    f"Unhandled [{self.connector.exchange_manager.exchange_name}] {trigger_direction} order: skipped custom order type parsing ({fixed})"
                 )
+                return fixed
             if is_stop_loss:
                 trigger_above = side == trading_enums.TradeOrderSide.BUY.value
             if is_stop_entry:
