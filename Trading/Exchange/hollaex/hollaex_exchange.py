@@ -333,6 +333,10 @@ class hollaex(exchanges.RestExchange):
         # The IP address you are reaching this endpoint through is not allowed to access this endpoint"}
         ("the ip address", "is not allowed"),
     ]
+    EXCHANGE_MAX_ORDERS_FOR_MARKET_REACHED_ERRORS: typing.List[typing.Iterable[str]] = [
+        # "hollaex {"message":"You are only allowed to have maximum 50 active orders per market"}"
+        ("maximum", "active orders", "per market"),
+    ]
 
     def __init__(
         self, config, exchange_manager, exchange_config_by_exchange: typing.Optional[dict[str, dict]],
