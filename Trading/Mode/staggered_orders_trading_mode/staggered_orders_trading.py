@@ -56,6 +56,10 @@ class TrailingAborted(Exception):
     pass
 
 
+class NoOrdersToTrail(Exception):
+    pass
+
+
 INCREASING = "increasing_towards_current_price"
 DECREASING = "decreasing_towards_current_price"
 STABLE = "stable_towards_current_price"
@@ -468,6 +472,14 @@ class StaggeredOrdersTradingModeConsumer(trading_modes.AbstractTradingModeConsum
                 trading_enums.TraderOrderType.SELL_LIMIT if selling else trading_enums.TraderOrderType.BUY_LIMIT,
                 order_data.quantity, order_data.price, order_data.side
             )
+            if selling and base_available < quantity and base_available > quantity * decimal.Decimal("0.99"):
+                quantity = quantity * decimal.Decimal("0.99")
+                self.logger.info(f"Slightly adapted {order_data.symbol} {order_data.side.value} quantity to {quantity} to fit available funds")
+            elif not selling:
+                cost = quantity * order_data.price
+                if quote_available < cost and quote_available > cost * decimal.Decimal("0.99"):
+                    quantity = quantity * decimal.Decimal("0.99")
+                    self.logger.info(f"Slightly adapted {order_data.symbol} {order_data.side.value} quantity to {quantity} to fit available funds")
             for order_quantity, order_price in trading_personal_data.decimal_check_and_adapt_order_details_if_necessary(
                     quantity,
                     order_data.price,
@@ -578,6 +590,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         self._expect_missing_orders = False
         self._skip_order_restore_on_recently_closed_orders = True
         self._use_recent_trades_for_order_restore = False
+        self._already_created_init_orders = False
         self.compensate_for_missed_mirror_order = False
 
         self.healthy = False
@@ -625,6 +638,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         self.allowed_mirror_orders.set()
         self.read_config()
         self._check_params()
+        self._already_created_init_orders = True if self.use_existing_orders_only else False
 
         self.logger.debug(f"Loaded healthy config for {self.symbol}")
         self.healthy = True
@@ -795,6 +809,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                     )
                     self.logger.debug(f"{self.symbol} orders updated on {self.exchange_name}")
 
+
     async def order_filled_callback(self, filled_order: dict):
         # create order on the order side
         new_order = self._create_mirror_order(filled_order)
@@ -910,7 +925,9 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
     async def _ensure_trailing_and_create_order_when_possible(self, new_order, current_price):
         if self._should_trigger_trailing(None, None, True):
             # do not give current price as in this context, having only one-sided orders requires trailing
-            await self._ensure_staggered_orders(trigger_trailing=True)
+            await self._ensure_staggered_orders(
+                trigger_trailing=True, ignore_available_funds=not self._should_lock_available_funds(True)
+            )
         else:
             async with self.get_lock():
                 await self._lock_portfolio_and_create_order_when_possible(new_order, current_price)
@@ -943,7 +960,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         one_sided_orders_trailing_threshold = self.operational_depth / 3
         if self.enable_trailing_up and not sell_orders:
             if len(buy_orders) < one_sided_orders_trailing_threshold and not trail_on_missing_orders:
-                self.logger.warning(
+                (self.logger.info if trail_on_missing_orders else self.logger.warning)(
                     f"{self.symbol} trailing up process aborted: too many missing buy orders. "
                     f"Only {len(buy_orders)} are online while configured total orders is {self.operational_depth}"
                 )
@@ -968,7 +985,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                 return True
         if self.enable_trailing_down and not buy_orders:
             if len(sell_orders) < one_sided_orders_trailing_threshold and not trail_on_missing_orders:
-                self.logger.warning(
+                (self.logger.info if trail_on_missing_orders else self.logger.warning)(
                     f"{self.symbol} trailing down process aborted: too many missing sell orders. "
                     f"Only {len(sell_orders)} are online while configured total orders is {self.operational_depth}"
                 )
@@ -1022,6 +1039,15 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                 await self._create_not_virtual_orders(
                     staggered_orders, current_price, triggering_trailing, create_order_dependencies
                 )
+                if staggered_orders:
+                    self._already_created_init_orders = True
+    
+    def _should_lock_available_funds(self, trigger_trailing: bool) -> bool:
+        if trigger_trailing:
+            # don't lock available funds during order by order trailing
+            return not self.use_order_by_order_trailing
+        # don't lock available funds again after initial orders creation
+        return not self._already_created_init_orders
 
     def _ensure_current_price_in_limit_parameters(self, current_price):
         message = None
@@ -1067,7 +1093,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             self.exchange_manager) - self.RECENT_TRADES_ALLOWED_TIME
         recently_closed_trades = trading_api.get_trade_history(self.exchange_manager, symbol=self.symbol,
                                                                since=recent_trades_time)
-        recently_closed_trades = sorted(recently_closed_trades, key=lambda trade: trade.executed_price)
+        recently_closed_trades = sorted(recently_closed_trades, key=lambda trade: trade.origin_price or trade.executed_price)
         candidate_flat_increment = None
         trigger_trailing = trigger_trailing or bool(
             sorted_orders and self._should_trigger_trailing(sorted_orders, current_price, False)
@@ -1076,14 +1102,14 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         trailing_buy_orders = trailing_sell_orders = []
         highest_buy = min(current_price, self.highest_sell)
         lowest_sell = max(current_price, self.lowest_buy)
+        confirmed_trailing = False
         if trigger_trailing:
             # trailing has no initial dependencies here
             _, __, trailing_buy_orders, trailing_sell_orders, next_step_dependencies = await self._prepare_trailing(
                 sorted_orders, recently_closed_trades, self.lowest_buy, highest_buy, lowest_sell, self.highest_sell, 
-                current_price, None, ignore_available_funds
+                current_price, None
             )
-            self.is_currently_trailing = True
-            self.last_trailing_process_started_at = self.exchange_manager.exchange.get_exchange_current_time()
+            confirmed_trailing = bool(trailing_buy_orders or trailing_sell_orders)
             # trailing will cancel all orders: set state to NEW with no existing order
             missing_orders, state, sorted_orders = None, self.NEW, []
         else:
@@ -1104,6 +1130,9 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                                                 recently_closed_trades)
                 if state is self.FILL:
                     self._ensure_used_funds(buy_orders, sell_orders, sorted_orders, recently_closed_trades)
+                elif state is self.NEW:
+                    if trigger_trailing and not (buy_orders or sell_orders):
+                        self.logger.error(f"Unhandled situation: no orders created for {self.symbol} with trigger_trailing={trigger_trailing}")
             create_order_dependencies = next_step_dependencies
         except ForceResetOrdersException:
             buy_orders, sell_orders, state, create_order_dependencies = await self._reset_orders(
@@ -1114,7 +1143,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         if state == self.NEW:
             self._set_virtual_orders(buy_orders, sell_orders, self.operational_depth)
 
-        return buy_orders, sell_orders, trigger_trailing, create_order_dependencies
+        return buy_orders, sell_orders, confirmed_trailing, create_order_dependencies
 
     async def _reset_orders(
         self, sorted_orders, lowest_buy, highest_buy, lowest_sell, highest_sell, 
@@ -1149,12 +1178,6 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             quote,
             trading_api.get_portfolio_currency(self.exchange_manager, quote).available,
         )
-
-    def _include_order_deltas_to_available_funds_if_set(self, deltas: dict[str, decimal.Decimal]):
-        for asset, delta in deltas.items():
-            if self._is_initially_available_funds_set(asset):
-                # -delta to add instead of remoiving delta
-                self._remove_from_available_funds(asset, -delta)
 
     def _ensure_used_funds(self, new_buy_orders, new_sell_orders, existing_orders, recently_closed_trades):
         if not self.allow_order_funds_redispatch:
@@ -1243,7 +1266,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         if isinstance(trade_or_order, OrderData):
             return trade_or_order.price
         else:
-            return trade_or_order.executed_price
+            return trade_or_order.origin_price or trade_or_order.executed_price
 
     def _get_locked_funds(self, orders):
         locked_base = locked_quote = trading_constants.ZERO
@@ -1409,8 +1432,10 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         mirror_order_price = missing_order_price + price_increment if now_selling \
             else missing_order_price - price_increment
         for trade in sorted_trades:
-            lower_window = trade.executed_price - price_window
-            higher_window = trade.executed_price + price_window
+            # use origin price if available, otherwise use executed price which is less accurate as it 
+            # might be different from initial order's origin price
+            lower_window = (trade.origin_price or trade.executed_price) - price_window
+            higher_window = (trade.origin_price or trade.executed_price) + price_window
             if lower_window < mirror_order_price < higher_window and trade.side is not missing_order_side:
                 # found mirror order fill
                 break
@@ -1432,7 +1457,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         if trades_with_missing_mirror_order_fills:
 
             def _printable_trade(trade):
-                return f"{trade.executed_quantity}@{trade.executed_price}"
+                return f"{trade.side.name} {trade.executed_quantity}@{trade.origin_price or trade.executed_price}"
 
             self.logger.info(
                 f"Found {len(trades_with_missing_mirror_order_fills)} {self.symbol} missing order fills based "
@@ -1459,24 +1484,26 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         lowest_buy: decimal.Decimal, highest_buy: decimal.Decimal, lowest_sell: decimal.Decimal, highest_sell: decimal.Decimal, 
         current_price: decimal.Decimal, 
         dependencies: typing.Optional[commons_signals.SignalDependencies],
-        ignore_available_funds: bool
-    ) -> tuple[list, list, list, list, typing.Optional[commons_signals.SignalDependencies]]:
-        trailing_up = len([o for o in sorted_orders if o.side == trading_enums.TradeOrderSide.BUY]) > len(sorted_orders) / 2 
+    ) -> tuple[list, list, list, list, typing.Optional[commons_signals.SignalDependencies], bool]:
+        is_trailing_up = len([o for o in sorted_orders if o.side == trading_enums.TradeOrderSide.BUY]) > len(sorted_orders) / 2 
         log_header = (
             f"[{self.exchange_manager.exchange_name}] {self.symbol} @ {current_price} "
             f"{'order by order' if self.use_order_by_order_trailing else 'full grid'} "
-            f"trailing {'up' if trailing_up else 'down'} process: "
+            f"trailing {'up' if is_trailing_up else 'down'} process: "
         )
         if current_price <= trading_constants.ZERO:
             self.logger.error(
                 f"Aborting {log_header}current price is {current_price}")
-            return [], [], [], [], None
+            return [], [], [], [], None, False
         if self.use_order_by_order_trailing:
-            return await self._prepare_order_by_order_trailing(
+            cancelled_orders, orders, trailing_buy_orders, trailing_sell_orders, dependencies, confirmed_trailing = await self._prepare_order_by_order_trailing(
                 sorted_orders, recently_closed_trades, 
-                lowest_buy, highest_buy, lowest_sell, highest_sell, current_price, 
-                dependencies, ignore_available_funds, log_header
+                lowest_buy, highest_buy, lowest_sell, highest_sell, current_price, is_trailing_up,
+                dependencies, log_header
             )
+            self.is_currently_trailing = True
+            self.last_trailing_process_started_at = self.exchange_manager.exchange.get_exchange_current_time()
+            return cancelled_orders, orders, trailing_buy_orders, trailing_sell_orders, dependencies, confirmed_trailing
         return await self._prepare_full_grid_trailing(
             sorted_orders, current_price, dependencies, log_header
         )
@@ -1485,15 +1512,15 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         self, sorted_orders: list, recently_closed_trades: list, 
         lowest_buy: decimal.Decimal, highest_buy: decimal.Decimal, 
         lowest_sell: decimal.Decimal, highest_sell: decimal.Decimal,
-        current_price: decimal.Decimal, 
+        current_price: decimal.Decimal, is_trailing_up: bool,
         dependencies: typing.Optional[commons_signals.SignalDependencies],
-        ignore_available_funds: bool,
         log_header: str
-    ) -> tuple[list, list, list, list, typing.Optional[commons_signals.SignalDependencies]]:
+    ) -> tuple[list, list, list, list, typing.Optional[commons_signals.SignalDependencies], bool]:
         # 1. identify orders to cancel
         # 1.a find and replace missing orders if any
         replaced_buy_orders = replaced_sell_orders = []
         try:
+            ignore_available_funds = True # trailing happens after initial funds locking, ignore & don't change initial funds
             replaced_buy_orders, replaced_sell_orders = await self._compute_trailing_replaced_orders(
                 sorted_orders, recently_closed_trades, lowest_buy, highest_buy, lowest_sell, highest_sell,
                 current_price, ignore_available_funds, log_header
@@ -1510,24 +1537,21 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         except TrailingAborted as err:
             # A normal missing order replacement should happen 
             # Can happen when all orders from a side are missing and price when back to a valid in-grid value
-            self.logger.info(f"{log_header}trailing aborted: {err}")
-            return [], [], replaced_buy_orders, replaced_sell_orders, None
+            self.logger.info(f"{log_header}trailing aborted: {err}. Replacing orders with: {replaced_buy_orders=} {replaced_sell_orders=}")
+            return [], [], replaced_buy_orders, replaced_sell_orders, None, True
+        except NoOrdersToTrail as err:
+            # happens when all orders are filled at once: use the "new" statte to recreate the grid
+            self.logger.info(f"{log_header}trailing signal ignored: {err}")
+            return [], [], [], [], None, True
         except ValueError as err:
             self.logger.error(f"{log_header}error when identifying orders to cancel: {err}")
-            return [], [], [], [], None
-        convert_dependencies = commons_signals.SignalDependencies()
+            return [], [], [], [], None, True
         cancelled_orders = []
         # 2. cancel orders to be replaced with updated prices
-        cancelled_replaced_orders = []
-        for order, _ in (to_cancel_orders_with_trailed_prices + [to_execute_order_with_trailing_price]):
-            if isinstance(order, OrderData):
-                cancelled_replaced_orders.append(order)
-            else:
-                cancelled, cancel_order_dependency = await self._cancel_open_order(order, dependencies)
-                if cancelled:
-                    cancelled_orders.append(order)
-                    if cancel_order_dependency:
-                        convert_dependencies.extend(cancel_order_dependency)
+        cancelled_replaced_orders, cancelled_orders, convert_dependencies = await self._cancel_replaced_orders(
+            [order for order, _ in to_cancel_orders_with_trailed_prices + [to_execute_order_with_trailing_price]],
+            dependencies
+        )
         # 3. execute extrema order amount as market order to convert funds
         to_convert_order = to_execute_order_with_trailing_price[0]
         orders = await self._convert_order_funds(
@@ -1537,10 +1561,29 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         # 4. compute trailing orders
         trailing_buy_orders, trailing_sell_orders = self._get_updated_trailing_orders(
             replaced_buy_orders, replaced_sell_orders, cancelled_replaced_orders, 
-            to_cancel_orders_with_trailed_prices, to_execute_order_with_trailing_price, current_price
+            to_cancel_orders_with_trailed_prices, to_execute_order_with_trailing_price, current_price,
+            is_trailing_up
         )
-        
-        return cancelled_orders, orders, trailing_buy_orders, trailing_sell_orders, (orders_dependencies or convert_dependencies or None)
+        self.logger.info(f"{log_header}creating {len(trailing_buy_orders)} buy orders and {len(trailing_sell_orders)} sell orders: {trailing_buy_orders=} {trailing_sell_orders=}")
+        return cancelled_orders, orders, trailing_buy_orders, trailing_sell_orders, (orders_dependencies or convert_dependencies or None), True
+
+    async def _cancel_replaced_orders(
+        self, replaced_orders: list[typing.Union[OrderData, trading_personal_data.Order]], dependencies
+    ) -> tuple[list[OrderData], list[trading_personal_data.Order], commons_signals.SignalDependencies]:
+        cancelled_orders = []
+        cancelled_replaced_orders = []
+        new_dependencies = commons_signals.SignalDependencies()
+        for order in replaced_orders:
+            if isinstance(order, OrderData):
+                cancelled_replaced_orders.append(order)
+            else:
+                cancelled, cancel_order_dependency = await self._cancel_open_order(order, dependencies)
+                if cancelled:
+                    cancelled_orders.append(order)
+                    if cancel_order_dependency:
+                        new_dependencies.extend(cancel_order_dependency)
+
+        return cancelled_replaced_orders, cancelled_orders, new_dependencies
 
     async def _compute_trailing_replaced_orders(
         self, sorted_orders, recently_closed_trades, 
@@ -1550,8 +1593,10 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         missing_orders, state, _ = self._analyse_current_orders_situation(
             sorted_orders, recently_closed_trades, lowest_buy, highest_sell, current_price
         )
+        if state == self.NEW and not sorted_orders:
+            raise NoOrdersToTrail(f"no open order to trail, nothing to replace")
         if state != self.FILL:
-            raise ValueError(f"{log_header}unhandled state: {state} (expected: self.FILL: {self.FILL})")
+            raise ValueError(f"unhandled state: {state} (expected: self.FILL: {self.FILL})")
         replaced_buy_orders = replaced_sell_orders = []
         if missing_orders:
             self.logger.info(
@@ -1601,15 +1646,12 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                     order, self.MISSING_MIRROR_ORDERS_MARKET_REBALANCE_TIMEOUT, True
                 ) for order in orders
             ])
-            order_deltas, _, __, ___ = trading_personal_data.get_assets_delta_from_orders(
-                orders, {}, False, force_fully_filled_orders=False
-            )
-            self._include_order_deltas_to_available_funds_if_set(order_deltas)
         return orders
 
     def _get_updated_trailing_orders(
         self, replaced_buy_orders, replaced_sell_orders, cancelled_replaced_orders, 
-        to_cancel_orders_with_trailed_prices, to_execute_order_with_trailing_price, current_price
+        to_cancel_orders_with_trailed_prices, to_execute_order_with_trailing_price, current_price,
+        is_trailing_up
     ) -> tuple[list[OrderData], list[OrderData]]:
         to_convert_order = to_execute_order_with_trailing_price[0]
         trailing_buy_orders = [
@@ -1624,27 +1666,36 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                 trading_enums.TradeOrderSide.BUY if trailed_price <= current_price else trading_enums.TradeOrderSide.SELL
             )
             if cancelled_order is to_convert_order:
+                # force the order side to be the opposite of the trailing direction and make sure this order 
+                # gets created at the side, even if it's at the current price
+                trailed_order_side = trading_enums.TradeOrderSide.SELL if is_trailing_up else trading_enums.TradeOrderSide.BUY
                 ideal_base_quantity = to_convert_order.total_cost / current_price 
-                # as the convert step uses a market order, make sure that the portfolio can compensate for fees 
-                required_base_amount_in_pf = to_convert_order.filled_quantity + (ideal_base_quantity * decimal.Decimal("0.1"))
+                # ???? as the convert step uses a market order, make sure that the portfolio can compensate for fees 
+                required_base_amount_in_pf = to_convert_order.origin_quantity # + (ideal_base_quantity * decimal.Decimal("0.1"))
                 parsed_symbol = symbol_util.parse_symbol(to_convert_order.symbol)
                 other_side_currency = parsed_symbol.quote if trailed_order_side is trading_enums.TradeOrderSide.BUY else parsed_symbol.base
                 available_amount = trading_api.get_portfolio_currency(self.exchange_manager, other_side_currency).available
                 available_amount_in_base = available_amount if other_side_currency == parsed_symbol.base else available_amount / current_price
                 if available_amount_in_base < required_base_amount_in_pf:
-                    # take 90% of remaining quantity to be sure to have enough funds to create this order
-                    trailing_order_quantity = to_convert_order.get_remaining_quantity() * decimal.Decimal("0.9")
+                    # ??? take 90% of remaining quantity to be sure to have enough funds to create this order
+                    trailing_order_quantity = available_amount_in_base #* decimal.Decimal("0.9")
                     self.logger.warning(
-                        f"Not enough available funds to create a full {ideal_base_quantity} {to_convert_order.symbol} {trailed_order_side.name} trailing "
+                        f"Not enough available funds to create a full {ideal_base_quantity} {parsed_symbol.base} {to_convert_order.symbol} {trailed_order_side.name} trailing "
                         f"order: available: {available_amount} {other_side_currency} < {required_base_amount_in_pf} "
                         f"(={available_amount_in_base} {parsed_symbol.base}). Using {trailing_order_quantity} instead."
                     )
                 else:
                     trailing_order_quantity = ideal_base_quantity
             else:
-                # other orders can inherit the quantity of the orders they are replacing
-                trailing_order_quantity = cancelled_order.quantity if isinstance(cancelled_order, OrderData) \
-                        else cancelled_order.get_remaining_quantity()
+                initial_quantity = cancelled_order.quantity if isinstance(cancelled_order, OrderData) \
+                    else cancelled_order.get_remaining_quantity()
+                if cancelled_order.side is trading_enums.TradeOrderSide.BUY:
+                    # trailed buy orders inherit the total cost of the orders they are replacing
+                    initial_price = self.get_trade_or_order_price(cancelled_order)
+                    trailing_order_quantity = initial_quantity * initial_price / trailed_price
+                else:
+                    # trailed sell orders can inherit the quantity of the orders they are replacing
+                    trailing_order_quantity = initial_quantity
             order = OrderData(
                 trailed_order_side, trailing_order_quantity, trailed_price, self.symbol, False
             )
@@ -1734,7 +1785,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         self, open_orders: list, current_price: decimal.Decimal, 
         dependencies: typing.Optional[commons_signals.SignalDependencies],
         log_header: str
-    ) -> tuple[list, list, list, list, typing.Optional[commons_signals.SignalDependencies]]:
+    ) -> tuple[list, list, list, list, typing.Optional[commons_signals.SignalDependencies], bool]:
         # 1. cancel all open orders
         convert_dependencies = commons_signals.SignalDependencies()
         try:
@@ -1815,7 +1866,9 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             f"created conversion orders"
         )
         orders_dependencies = signals.get_orders_dependencies(orders)
-        return cancelled_orders, orders, [], [], (orders_dependencies or convert_dependencies or None)
+        self.is_currently_trailing = True
+        self.last_trailing_process_started_at = self.exchange_manager.exchange.get_exchange_current_time()
+        return cancelled_orders, orders, [], [], (orders_dependencies or convert_dependencies or None), True
 
     def _analyse_current_orders_situation(self, sorted_orders, recently_closed_trades, lower_bound, higher_bound, current_price):
         if not sorted_orders:
@@ -2097,7 +2150,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             return None
         now_selling = trade.side == trading_enums.TradeOrderSide.BUY
         return self._compute_mirror_order_volume(
-            now_selling, trade.executed_price, price, trade.executed_quantity, trade.fee
+            now_selling, (trade.origin_price or trade.executed_price), price, trade.executed_quantity, trade.fee
         )
 
     def _get_associated_trade(self, price, trades, selling):
@@ -2106,16 +2159,17 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         price_window_higher_bound = price + increment_window
         for trade in trades:
             is_sell_trade = trade.side == trading_enums.TradeOrderSide.SELL
+            trade_price = trade.origin_price or trade.executed_price
             if is_sell_trade == selling:
                 # same side
-                if price_window_lower_bound <= trade.executed_price <= price_window_higher_bound:
+                if price_window_lower_bound <= trade_price <= price_window_higher_bound:
                     # found the exact same trade
                     return trade
             else:
                 # different side: use spread to compute mirror order price
                 price_increment = self.flat_spread - self.flat_increment
-                mirror_order_price = (trade.executed_price - price_increment) \
-                    if is_sell_trade else (trade.executed_price + price_increment)
+                mirror_order_price = (trade_price - price_increment) \
+                    if is_sell_trade else (trade_price + price_increment)
                 if price_window_lower_bound <= mirror_order_price <= price_window_higher_bound:
                     # found mirror trade
                     return trade
@@ -2195,7 +2249,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         if sorted_orders:
             if sorted_orders[0].side == trading_enums.TradeOrderSide.SELL:
                 # only sell orders
-                self.logger.warning(
+                (self.logger.info if self.enable_trailing_down else self.logger.warning)(
                     f"Only sell orders are online for {self.symbol}, "
                     f"{'checking trailing' if self.enable_trailing_down else 'now waiting for the price to go up to create new buy orders'}."
                 )
@@ -2203,7 +2257,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
                 only_sell = True
             if sorted_orders[-1].side == trading_enums.TradeOrderSide.BUY:
                 # only buy orders
-                self.logger.warning(
+                (self.logger.info if self.enable_trailing_up else self.logger.warning)(
                     f"Only buy orders are online ({len(sorted_orders)} orders) for {self.symbol}, "
                     f"{'checking trailing' if self.enable_trailing_up else 'now waiting for the price to go down to create new sell orders'}."
                 )
@@ -2388,7 +2442,8 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         else:
             inc = self.flat_spread * decimal.Decimal("1.5")
             for trade in recently_closed_trades:
-                if trade.executed_price - inc <= price <= trade.executed_price + inc:
+                trade_price = trade.origin_price or trade.executed_price
+                if trade_price - inc <= price <= trade_price + inc:
                     return True
         return False
 
@@ -2612,15 +2667,18 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
         self, orders_to_create: list, current_price: decimal.Decimal, 
         triggering_trailing: bool, dependencies: typing.Optional[commons_signals.SignalDependencies]
     ):
+        locks_available_funds = self._should_lock_available_funds(triggering_trailing)
         for index, order in enumerate(orders_to_create):
             is_completing_trailing = triggering_trailing and (index == len(orders_to_create) - 1)
             await self._create_order(order, current_price, is_completing_trailing, dependencies)
-            base, quote = symbol_util.parse_symbol(order.symbol).base_and_quote()
-            # keep track of the required funds
-            volume = order.quantity if order.side is trading_enums.TradeOrderSide.SELL \
-                else order.price * order.quantity
-            self._remove_from_available_funds(base if order.side is trading_enums.TradeOrderSide.SELL else quote,
-                                              volume)
+            if locks_available_funds:
+                base, quote = symbol_util.parse_symbol(order.symbol).base_and_quote()
+                # keep track of the required funds
+                volume = order.quantity if order.side is trading_enums.TradeOrderSide.SELL \
+                    else order.price * order.quantity
+                self._remove_from_available_funds(
+                    base if order.side is trading_enums.TradeOrderSide.SELL else quote, volume
+                )
 
     def _refresh_symbol_data(self, symbol_market):
         min_quantity, max_quantity, min_cost, max_cost, min_price, max_price = \
