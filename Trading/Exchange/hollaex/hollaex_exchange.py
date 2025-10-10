@@ -311,7 +311,7 @@ class hollaex(exchanges.RestExchange):
         trading_enums.ExchangeTypes.SPOT.value: {
             # order that should be self-managed by OctoBot
             trading_enums.ExchangeSupportedElements.UNSUPPORTED_ORDERS.value: [
-                trading_enums.TraderOrderType.STOP_LOSS,    # broken since ccxt 4.5.0: stop param is ignored by exchange because it's sent as a string instead of float. Converting it to flaat fails the signature
+                trading_enums.TraderOrderType.STOP_LOSS,    # still broken ccxt 4.5.8: stop param is ignored by exchange because it's sent as a string instead of float. Converting it to flaat fails the signature
                 trading_enums.TraderOrderType.STOP_LOSS_LIMIT,
                 trading_enums.TraderOrderType.TAKE_PROFIT,
                 trading_enums.TraderOrderType.TAKE_PROFIT_LIMIT,
