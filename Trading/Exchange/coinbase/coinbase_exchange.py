@@ -457,6 +457,7 @@ class Coinbase(exchanges.RestExchange):
         return await super().cancel_order(exchange_order_id, symbol, order_type, **kwargs)
 
     async def get_balance(self, **kwargs: dict):
+        # warning: sometimes has unexpected delays after creating / filling orders
         if "v3" not in kwargs:
             # use v3 to get free and total amounts (default is only returning free amounts)
             kwargs["v3"] = True

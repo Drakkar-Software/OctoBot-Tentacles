@@ -52,7 +52,7 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
         """
         default_config = self.get_default_pair_config(
             "BTC/USDT", 0.05, 0.005,
-            None, None, None, None
+            None, None, None, None, None
         )
         self.UI.user_input(self.CONFIG_PAIR_SETTINGS, commons_enums.UserInputTypes.OBJECT_ARRAY,
                            self.trading_config.get(self.CONFIG_PAIR_SETTINGS, None), inputs,
@@ -186,6 +186,20 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
                   "might generate a loss.",
         )
         self.UI.user_input(
+            self.CONFIG_ENABLE_TRAILING_UP, commons_enums.UserInputTypes.BOOLEAN,
+            default_config[self.CONFIG_ENABLE_TRAILING_UP], inputs,
+            parent_input_name=self.CONFIG_PAIR_SETTINGS,
+            title="Trailing up: when checked, the whole grid will be cancelled and recreated when price goes above the "
+                  "highest selling price. This might require the grid to perform a buy market order to be "
+                  "able to recreate the grid new sell orders at the updated price.",
+        )
+        self.UI.user_input(
+            self.CONFIG_ORDER_BY_ORDER_TRAILING, commons_enums.UserInputTypes.BOOLEAN,
+            default_config[self.CONFIG_ORDER_BY_ORDER_TRAILING], inputs,
+            parent_input_name=self.CONFIG_PAIR_SETTINGS,
+            title="Order by order trailing: when checked, the grid will trail order by order instead of the whole grid at once, which is adapted to less volatile markets.",
+        )
+        self.UI.user_input(
             self.CONFIG_ALLOW_FUNDS_REDISPATCH, commons_enums.UserInputTypes.BOOLEAN,
             default_config[self.CONFIG_ALLOW_FUNDS_REDISPATCH], inputs,
             parent_input_name=self.CONFIG_PAIR_SETTINGS,
@@ -209,7 +223,8 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
     def get_default_pair_config(
         cls, symbol, flat_spread: float, flat_increment: float,
         buy_count: typing.Optional[int], sell_count: typing.Optional[int],
-        enable_trailing_up: typing.Optional[bool], enable_trailing_down: typing.Optional[bool]
+        enable_trailing_up: typing.Optional[bool], enable_trailing_down: typing.Optional[bool],
+        order_by_order_trailing: typing.Optional[bool]
     ) -> dict:
         return {
           cls.CONFIG_PAIR: symbol,
@@ -228,6 +243,8 @@ class GridTradingMode(staggered_orders_trading.StaggeredOrdersTradingMode):
           cls.CONFIG_ALLOW_FUNDS_REDISPATCH: False,
           cls.CONFIG_ENABLE_TRAILING_UP: enable_trailing_up or False,
           cls.CONFIG_ENABLE_TRAILING_DOWN: enable_trailing_down or False,
+          # enabled by default
+          cls.CONFIG_ORDER_BY_ORDER_TRAILING: True if order_by_order_trailing is None else order_by_order_trailing,
           cls.CONFIG_FUNDS_REDISPATCH_INTERVAL: 24,
         }
 
@@ -329,14 +346,17 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
             self.health_check_interval_secs = self.symbol_trading_config.get(
                 self.trading_mode.CONFIG_FUNDS_REDISPATCH_INTERVAL, self.funds_redispatch_interval
             ) * commons_constants.HOURS_TO_SECONDS
-        self.compensate_for_missed_mirror_order = self.symbol_trading_config.get(
-            self.trading_mode.COMPENSATE_FOR_MISSED_MIRROR_ORDER, self.compensate_for_missed_mirror_order
-        )
         self.enable_trailing_up = self.symbol_trading_config.get(
             self.trading_mode.CONFIG_ENABLE_TRAILING_UP, self.enable_trailing_up
         )
         self.enable_trailing_down = self.symbol_trading_config.get(
             self.trading_mode.CONFIG_ENABLE_TRAILING_DOWN, self.enable_trailing_down
+        )
+        self.use_order_by_order_trailing = self.symbol_trading_config.get(
+            self.trading_mode.CONFIG_ORDER_BY_ORDER_TRAILING, self.use_order_by_order_trailing
+        )
+        self.compensate_for_missed_mirror_order = self.symbol_trading_config.get(
+            self.trading_mode.COMPENSATE_FOR_MISSED_MIRROR_ORDER, self.use_order_by_order_trailing # use use_order_by_order_trailing as default value as compensate_for_missed_mirror_order is required for order by order trailing 
         )
 
     async def _handle_staggered_orders(
@@ -359,6 +379,8 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
                 await self._create_not_virtual_orders(
                     grid_orders, current_price, triggering_trailing, create_order_dependencies
                 )
+                if grid_orders:
+                    self._already_created_init_orders = True
 
     async def trigger_staggered_orders_creation(self):
         # reload configuration
@@ -390,6 +412,7 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
             self.symbol,
             None,   # will compute flat_spread from self.spread
             None,   # will compute flat_increment from self.increment
+            None,
             None,
             None,
             None,
@@ -435,10 +458,11 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         highest_buy = self.buy_price_range.higher_bound
         lowest_sell = self.sell_price_range.lower_bound
         highest_sell = self.sell_price_range.higher_bound
-        if sorted_orders and not trigger_trailing:
+        if sorted_orders:
             if self._should_trigger_trailing(sorted_orders, current_price, False):
                 trigger_trailing = True
-            else:
+            if self.use_order_by_order_trailing or not trigger_trailing:
+                # grid boundaries are required in order by order trailing
                 buy_orders = [order for order in sorted_orders if order.side == trading_enums.TradeOrderSide.BUY]
                 sell_orders = [order for order in sorted_orders if order.side == trading_enums.TradeOrderSide.SELL]
                 highest_buy = current_price
@@ -476,10 +500,15 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
                         _lowest_buy = buy_orders[0].origin_price
                         lowest_sell = max(current_price, _lowest_buy - self.flat_spread + self.flat_increment)
         next_step_dependencies = None
+        trailing_buy_orders = trailing_sell_orders = []
+        confirmed_trailing = False
         if trigger_trailing:
             # trailing has no initial dependencies here
-            _, __, next_step_dependencies = await self._prepare_trailing(sorted_orders, current_price, None)
-            self.is_currently_trailing = True
+            _, __, trailing_buy_orders, trailing_sell_orders, next_step_dependencies = await self._prepare_trailing(
+                sorted_orders, recently_closed_trades, lowest_buy, highest_buy, lowest_sell, highest_sell, 
+                current_price, None
+            )
+            confirmed_trailing = True
             # trailing will cancel all orders: set state to NEW with no existing order
             missing_orders, state, sorted_orders = None, self.NEW, []
         else:
@@ -491,7 +520,7 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
                 self.logger.info(
                     f"{len(missing_orders)} missing {self.symbol} orders on {self.exchange_name}: {missing_orders}"
                 )
-            else:
+            elif sorted_orders:
                 self.logger.info(
                     f"All {len(sorted_orders)} out of {self.buy_orders_count + self.sell_orders_count} {self.symbol} "
                     f"target orders are in place on {self.exchange_name}"
@@ -499,19 +528,26 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
 
             await self._handle_missed_mirror_orders_fills(recently_closed_trades, missing_orders, current_price)
         try:
-            # apply state and (re)create missing orders
-            buy_orders = self._create_orders(lowest_buy, highest_buy,
-                                             trading_enums.TradeOrderSide.BUY, sorted_orders,
-                                             current_price, missing_orders, state, self.buy_funds, ignore_available_funds,
-                                             recently_closed_trades)
-            sell_orders = self._create_orders(lowest_sell, highest_sell,
-                                              trading_enums.TradeOrderSide.SELL, sorted_orders,
-                                              current_price, missing_orders, state, self.sell_funds, ignore_available_funds,
-                                              recently_closed_trades)
+            if trailing_buy_orders or trailing_sell_orders:
+                buy_orders = trailing_buy_orders
+                sell_orders = trailing_sell_orders
+            else:
+                # apply state and (re)create missing orders
+                buy_orders = self._create_orders(lowest_buy, highest_buy,
+                                                trading_enums.TradeOrderSide.BUY, sorted_orders,
+                                                current_price, missing_orders, state, self.buy_funds, ignore_available_funds,
+                                                recently_closed_trades)
+                sell_orders = self._create_orders(lowest_sell, highest_sell,
+                                                trading_enums.TradeOrderSide.SELL, sorted_orders,
+                                                current_price, missing_orders, state, self.sell_funds, ignore_available_funds,
+                                                recently_closed_trades)
 
-            if state is self.FILL and not trigger_trailing:
-                # don't check used funds if trailing is active to avoid cancelling trading
-                self._ensure_used_funds(buy_orders, sell_orders, sorted_orders, recently_closed_trades)
+                if state is self.FILL and not confirmed_trailing:
+                    # don't check used funds if trailing is active to avoid cancelling trading
+                    self._ensure_used_funds(buy_orders, sell_orders, sorted_orders, recently_closed_trades)
+                elif state is self.NEW:
+                    if trigger_trailing and not (buy_orders or sell_orders):
+                        self.logger.error(f"Unhandled situation: no orders created for {self.symbol} with trigger_trailing={trigger_trailing}")
             create_order_dependencies = next_step_dependencies
         except staggered_orders_trading.ForceResetOrdersException:
             lowest_buy = max(trading_constants.ZERO, self.buy_price_range.lower_bound)
@@ -521,9 +557,9 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
             buy_orders, sell_orders, state, create_order_dependencies = await self._reset_orders(
                 sorted_orders, lowest_buy, highest_buy, lowest_sell, highest_sell, current_price, ignore_available_funds, next_step_dependencies
             )
-            trigger_trailing = False
+            confirmed_trailing = False
 
-        return buy_orders, sell_orders, trigger_trailing, create_order_dependencies
+        return buy_orders, sell_orders, confirmed_trailing, create_order_dependencies
 
     def _get_origin_orders_count(self, recent_trades, open_orders):
         origin_created_buy_orders_count = self.buy_orders_count
@@ -536,6 +572,10 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
             origin_created_sell_orders_count = (
                 len(open_orders) + len(recent_trades) - origin_created_buy_orders_count
             )
+            if origin_created_buy_orders_count + origin_created_sell_orders_count > self.buy_orders_count + self.sell_orders_count:
+                # more orders than in config (usually because of trailing), use config values
+                origin_created_buy_orders_count = self.buy_orders_count
+                origin_created_sell_orders_count = self.sell_orders_count
         return origin_created_buy_orders_count, origin_created_sell_orders_count
 
     def _get_grid_trades_or_orders(self, trades_or_orders):

@@ -188,6 +188,11 @@ class Binance(exchanges.RestExchange):
             )
             return default_count
 
+    def uses_demo_trading_instead_of_sandbox(self) -> bool:
+        if self.exchange_manager.is_future:
+            return True
+        return False
+
     def _infer_account_types(self, exchange_manager):
         account_types = []
         symbol_counts = trading_util.get_symbol_types_counts(exchange_manager.config, True)
