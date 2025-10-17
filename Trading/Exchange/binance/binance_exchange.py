@@ -125,6 +125,10 @@ class Binance(exchanges.RestExchange):
     def get_adapter_class(self):
         return BinanceCCXTAdapter
 
+    @staticmethod
+    def get_default_reference_market(exchange_name: str) -> str:
+        return "USDC"
+
     def supports_native_edit_order(self, order_type: trading_enums.TraderOrderType) -> bool:
         # return False when default edit_order can't be used and order should always be canceled and recreated instead
         is_stop = order_type in (
