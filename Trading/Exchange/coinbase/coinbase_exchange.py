@@ -360,6 +360,10 @@ class Coinbase(exchanges.RestExchange):
     def get_adapter_class(self):
         return CoinbaseCCXTAdapter
 
+    @staticmethod
+    def get_default_reference_market(exchange_name: str) -> str:
+        return "USDC"
+
     def get_alias_symbols(self) -> set[str]:
         """
         :return: a set of symbol of this exchange that are aliases to other symbols

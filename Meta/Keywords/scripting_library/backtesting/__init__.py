@@ -1,4 +1,4 @@
-#  Drakkar-Software OctoBot-Trading
+#  Drakkar-Software OctoBot-Tentacles
 #  Copyright (c) Drakkar-Software, All rights reserved.
 #
 #  This library is free software; you can redistribute it and/or
@@ -19,3 +19,5 @@ from .run_data_analysis import *
 from .backtesting_data_selector import *
 from .backtesting_settings import *
 from .default_backtesting_run_analysis_script import *
+from .backtesting_intialization import *
+from .backtesting_data_collector import *

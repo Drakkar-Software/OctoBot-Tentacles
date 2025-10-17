@@ -502,6 +502,7 @@ class GridTradingModeProducer(staggered_orders_trading.StaggeredOrdersTradingMod
         next_step_dependencies = None
         trailing_buy_orders = trailing_sell_orders = []
         confirmed_trailing = False
+        # print(f"{self.use_order_by_order_trailing=}")
         if trigger_trailing:
             # trailing has no initial dependencies here
             _, __, trailing_buy_orders, trailing_sell_orders, next_step_dependencies = await self._prepare_trailing(

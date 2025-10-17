@@ -1,4 +1,4 @@
-#  Drakkar-Software OctoBot-Trading
+#  Drakkar-Software OctoBot-Tentacles
 #  Copyright (c) Drakkar-Software, All rights reserved.
 #
 #  This library is free software; you can redistribute it and/or
@@ -21,6 +21,8 @@ from .TA import *
 from .settings import *
 from .backtesting import *
 from .alerts import *
+from .configuration import *
+from .exchanges import *
 
 # shortcut to octobot-trading keywords
 from octobot_trading.modes.script_keywords.basic_keywords import *

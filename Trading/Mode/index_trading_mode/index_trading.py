@@ -926,6 +926,31 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
     def get_ideal_distribution(cls, config: dict):
         return config.get(IndexTradingModeProducer.INDEX_CONTENT, None)
 
+    @staticmethod
+    def get_default_historical_time_frame() -> typing.Optional[commons_enums.TimeFrames]:
+        return commons_enums.TimeFrames.ONE_DAY
+
+    @staticmethod
+    def use_backtesting_accurate_price_update() -> bool:
+        """
+        Return True if the trading mode is more accurate in backtesting when using a short price update time frame
+        """
+        # a short price update time frame is not increasing accuracy for index trading mode
+        return False
+
+    @staticmethod
+    def get_config_history_propagated_tentacles_config_keys() -> list[str]:
+        """
+        Returns the list of config keys that should be propagated to historical configurations
+        """
+        return [
+            # The selected rebalance trigger profile should be applied to all historical configs 
+            # to ensure the user selected profile is always used
+            IndexTradingModeProducer.SELECTED_REBALANCE_TRIGGER_PROFILE,
+            IndexTradingModeProducer.REBALANCE_TRIGGER_PROFILES,
+            IndexTradingModeProducer.SYNCHRONIZATION_POLICY,
+        ]
+
     def _get_currently_applied_historical_config_according_to_holdings(
         self, config: dict, traded_bases: set[str]
     ) -> dict:
