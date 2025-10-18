@@ -36,12 +36,10 @@ class AbstractWebSocketNamespaceNotifier(flask_socketio.Namespace, web_interface
 
     def on_connect(self):
         self.clients_count += 1
-        self.logger.debug(f"Client connected. {self.clients_count} total clients.")
 
     def on_disconnect(self, reason):
         # will be called after some time (requires timeout)
         self.clients_count -= 1
-        self.logger.debug(f"Client disconnected ({reason}). {self.clients_count} remaining clients.")
 
     def _has_clients(self):
         return self.clients_count > 0

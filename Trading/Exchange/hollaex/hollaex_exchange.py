@@ -52,6 +52,12 @@ class hollaexConnector(exchanges.CCXTConnector):
         market_filter: typing.Union[None, typing.Callable[[dict], bool]] = None
     ):
         await super().load_symbol_markets(reload=reload, market_filter=market_filter)
+        # all_tickers = await self.get_all_currencies_price_ticker()
+        # tradable_symbols = set(
+        #     symbol 
+        #     for symbol, values in all_tickers.items() 
+        #     if values.get(trading_enums.ExchangeConstantsTickersColumns.CLOSE.value, None) != None
+        # )
         # also refresh fee tiers when necessary
         if self.exchange_manager.exchange_name not in _REFRESHED_EXCHANGE_FEE_TIERS_BY_EXCHANGE_NAME:
             # always update fees cache using all markets to avoid market filter side effects from the current client

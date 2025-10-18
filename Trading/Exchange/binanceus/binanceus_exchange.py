@@ -65,6 +65,10 @@ class BinanceUS(binance_tentacle.Binance):
             trading_enums.ExchangeTypes.SPOT,
         ]
 
+    @staticmethod
+    def get_default_reference_market(exchange_name: str) -> str:
+        return "USDT"
+
     def get_additional_connector_config(self):
         config = super().get_additional_connector_config()
         # override to fix ccxt values

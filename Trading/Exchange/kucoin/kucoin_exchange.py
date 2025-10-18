@@ -150,6 +150,11 @@ class Kucoin(exchanges.RestExchange):
         # 'kucoinfutures Access denied, require more permission'
         ("require more permission",),
     ]
+    # text content of errors due to account compliancy issues
+    EXCHANGE_COMPLIANCY_ERRORS: typing.List[typing.Iterable[str]] = [
+        # kucoin {"msg":"Unfortunately, trading is currently unavailable in your location due to country, region, or IP restrictions.","code":"600004"}
+        ("trading is currently unavailable in your location",),
+    ]
     # text content of errors due to orders not found errors
     EXCHANGE_ORDER_NOT_FOUND_ERRORS: typing.List[typing.Iterable[str]] = [
         # 'kucoin The order does not exist.'
