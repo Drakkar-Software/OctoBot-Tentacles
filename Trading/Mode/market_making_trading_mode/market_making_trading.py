@@ -74,6 +74,7 @@ class OrdersUpdatePlan:
     order_actions: list[OrderAction] = dataclasses.field(default_factory=list)
     cancelled: bool = False
     cancellable: bool = True
+    force_cancelled: bool = False
     processed: asyncio.Event = dataclasses.field(default_factory=asyncio.Event)
     trigger_source: str = ""
 
@@ -297,7 +298,9 @@ class MarketMakingTradingModeConsumer(trading_modes.AbstractTradingModeConsumer)
         while scheduled_actions:
             action = scheduled_actions.popleft()
             try:
-                if order_actions_plan.cancelled and order_actions_plan.cancellable:
+                if (
+                    (order_actions_plan.cancelled and order_actions_plan.cancellable) or order_actions_plan.force_cancelled
+                ):
                     actions_class = action.__class__.__name__
                     self.logger.debug(
                         f"{self.trading_mode.symbol} {self.exchange_manager.exchange_name} "
@@ -1187,32 +1190,37 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
             if isinstance(order, (trading_personal_data.BuyLimitOrder, trading_personal_data.SellLimitOrder))
         ]
 
+    async def on_new_reference_price(self, reference_price: decimal.Decimal) -> bool:
+        trigger = False
+        open_orders = self.get_market_making_orders()
+        buy_orders = [
+            order
+            for order in open_orders
+            if order.side == trading_enums.TradeOrderSide.BUY
+        ]
+        if not buy_orders:
+            trigger = True
+        else:
+            max_buy_price = max(order.origin_price for order in buy_orders)
+            if max_buy_price > reference_price:
+                trigger = True
+        sell_orders = [
+            order
+            for order in open_orders
+            if order.side == trading_enums.TradeOrderSide.SELL
+        ]
+        if not sell_orders:
+            trigger = True
+        else:
+            min_sell_price = min(order.origin_price for order in sell_orders)
+            if min_sell_price < reference_price:
+                trigger = True
+        return trigger
+
     async def _on_reference_price_update(self):
         trigger = False
         if reference_price := await self._get_reference_price():
-            open_orders = self.get_market_making_orders()
-            buy_orders = [
-                order
-                for order in open_orders
-                if order.side == trading_enums.TradeOrderSide.BUY
-            ]
-            if not buy_orders:
-                trigger = True
-            else:
-                max_buy_price = max(order.origin_price for order in buy_orders)
-                if max_buy_price > reference_price:
-                    trigger = True
-            sell_orders = [
-                order
-                for order in open_orders
-                if order.side == trading_enums.TradeOrderSide.SELL
-            ]
-            if not sell_orders:
-                trigger = True
-            else:
-                min_sell_price = min(order.origin_price for order in sell_orders)
-                if min_sell_price < reference_price:
-                    trigger = True
+            trigger = await self.on_new_reference_price(reference_price)
         if trigger:
             await self._ensure_market_making_orders(f"reference price update: {float(reference_price)}")
 
