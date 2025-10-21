@@ -52,17 +52,46 @@ class hollaexConnector(exchanges.CCXTConnector):
         market_filter: typing.Union[None, typing.Callable[[dict], bool]] = None
     ):
         await super().load_symbol_markets(reload=reload, market_filter=market_filter)
-        # all_tickers = await self.get_all_currencies_price_ticker()
-        # tradable_symbols = set(
-        #     symbol 
-        #     for symbol, values in all_tickers.items() 
-        #     if values.get(trading_enums.ExchangeConstantsTickersColumns.CLOSE.value, None) != None
-        # )
+        await self.disable_quick_trade_only_pairs()
         # also refresh fee tiers when necessary
         if self.exchange_manager.exchange_name not in _REFRESHED_EXCHANGE_FEE_TIERS_BY_EXCHANGE_NAME:
             # always update fees cache using all markets to avoid market filter side effects from the current client
             all_markets = ccxt_clients_cache.get_exchange_parsed_markets(ccxt_clients_cache.get_client_key(self.client))
             await self._refresh_exchange_fee_tiers(all_markets)
+
+    async def disable_quick_trade_only_pairs(self):
+        # on hollaex exchanges, a market can be "quick trade only" or "spot order book trade" as well.
+        # a quick trade only market can't be traded like a spot market, disable it.
+        exchange_constants = await self.client.publicGetConstants()
+        for quick_trade_only_pairs in self._parse_quick_trades_only_pairs(exchange_constants):
+            self._disable_pair(quick_trade_only_pairs)
+
+    def _disable_pair(self, symbol: str):
+        if symbol in self.client.markets:
+            self.logger.info(f"Disabling [{self.exchange_manager.exchange_name}] quick trade only pair: {symbol}")
+            self.client.markets[symbol][trading_enums.ExchangeConstantsMarketStatusColumns.ACTIVE.value] = False
+
+    def _parse_quick_trades_only_pairs(self, exchange_constants: dict) -> list[str]:
+        if 'quicktrade' not in exchange_constants:
+            self.logger.error(
+                f"Unexpected [{self.exchange_manager.exchange_name}] no 'quicktrade' key found in exchange constants"
+            )
+            return []
+        quick_trade_details = exchange_constants['quicktrade']
+        # format: [{'type': 'network', 'symbol': 'rune-usdt', 'active': True}, ...]
+        quick_trade_only_pairs = []
+        for pair_details in quick_trade_details:
+            if "type" not in pair_details or "symbol" not in pair_details:
+                self.logger.error(f"Ignored invalid quick trade only pair details: {pair_details}")
+                continue
+            # type=pro means this pair is traded in spot order book markets, otherwise it's a quick trade only pair
+            if pair_details['type'] != "pro":
+                market_id = pair_details["symbol"]
+                market = self.client.safe_market(market_id, None, '-')
+                quick_trade_only_pairs.append(
+                    market[trading_enums.ExchangeConstantsMarketStatusColumns.SYMBOL.value]
+                )
+        return quick_trade_only_pairs
 
     async def _refresh_exchange_fee_tiers(self, all_markets: list[dict]):
         self.logger.info(f"Refreshing {self.exchange_manager.exchange_name} fee tiers")
