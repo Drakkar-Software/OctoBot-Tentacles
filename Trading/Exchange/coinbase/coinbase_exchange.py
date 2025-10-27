@@ -248,7 +248,7 @@ class CoinbaseConnector(ccxt_connector.CCXTConnector):
 
     @ccxt_client_util.converted_ccxt_common_errors
     async def _ensure_auth(self):
-        # Override of ccxt_connector._ensure_auth to use get_open_orders instead
+        # Override of ccxt_connector._ensure_auth to use get_open_orders instead and propagate authentication errors
         try:
             # load markets before calling _ensure_auth() to avoid fetching markets status while they are cached
             with self.error_describer():
@@ -259,9 +259,9 @@ class CoinbaseConnector(ccxt_connector.CCXTConnector):
             # replace self.exchange_manager.exchange.get_balance by get_open_orders
             # to mitigate coinbase balance cache side effect
             await self.exchange_manager.exchange.get_open_orders(symbol="BTC/USDC")
-        except (octobot_trading.errors.AuthenticationError, ccxt.AuthenticationError) as e:
-            await self.client.close()
-            self.unauthenticated_exchange_fallback(e)
+        except (octobot_trading.errors.AuthenticationError, ccxt.AuthenticationError):
+            # this error is critical on coinbase as it prevents loading markets: propagate it
+            raise 
         except Exception as e:
             # Is probably handled in exchange tentacles, important thing here is that authentication worked
             self.logger.debug(f"Error when checking exchange connection: {e}. This should not be an issue.")

@@ -18,6 +18,7 @@ import decimal
 import time
 import typing
 import ccxt
+from ccxt.base.types import Entry
 
 import octobot_trading.exchanges as exchanges
 import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
@@ -77,8 +78,18 @@ class MEXC(exchanges.RestExchange):
         }
 
     async def get_account_id(self, **kwargs: dict) -> str:
-        # current impossible to get account UID (10/01/25)
-        return constants.DEFAULT_ACCOUNT_ID
+        # https://www.mexc.com/api-docs/spot-v3/spot-account-trade#query-uid
+        private_get_uid = Entry('uid', ['spot', 'private'], 'GET', {'cost': 10})
+        try:
+            resp = await private_get_uid.unbound_method(self.connector.client)
+            return str(resp["uid"])
+        except Exception as err:
+            self.logger.exception(
+                err, 
+                True, 
+                f"Unexpected error when getting {self.get_name()} account ID: {err}. Using default account ID."
+            )
+            return constants.DEFAULT_ACCOUNT_ID
 
     def get_max_orders_count(self, symbol: str, order_type: trading_enums.TraderOrderType) -> int:
         # unknown (05/06/2025)

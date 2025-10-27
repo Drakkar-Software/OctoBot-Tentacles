@@ -559,6 +559,8 @@ def get_oldest_historical_config_symbols_and_time(profile_data: commons_profiles
     first_traded_symbols = _get_all_tentacles_configured_traded_symbols(profile_data, first_historical_config_time)
     last_traded_symbols = _get_all_tentacles_configured_traded_symbols(profile_data, None)
     return list(first_traded_symbols), list(last_traded_symbols), first_historical_config_time
+
+
 def _get_all_tentacles_configured_traded_symbols(
     profile_data: commons_profiles.ProfileData, first_historical_config_time: typing.Optional[float]
 ) -> set:

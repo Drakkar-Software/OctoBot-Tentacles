@@ -135,6 +135,10 @@ class HollaexAutofilled(hollaex):
                 f"Error text: {await response.text()}"
             )
             response.raise_for_status()
+        except aiohttp.ClientResponseError as err:
+            if err.status == 404:
+                raise errors.FailedRequest(f"{url} returned 404: not found: {err.message}") from err
+            raise # forward unexpected errors
         except aiohttp.ClientConnectionError as err:
             raise errors.NetworkError(
                 f"Failed to execute request: {err.__class__.__name__}: {html_util.get_html_summary_if_relevant(err)}"
