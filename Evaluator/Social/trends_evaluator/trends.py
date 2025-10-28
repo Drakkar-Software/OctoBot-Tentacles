@@ -23,7 +23,6 @@ import octobot_services.constants as services_constants
 import tentacles.Evaluator.Util as EvaluatorUtil
 import tentacles.Services.Services_feeds as Services_feeds
 
-
 class GoogleTrendsEvaluator(evaluators.SocialEvaluator):
     SERVICE_FEED_CLASS = Services_feeds.GoogleServiceFeed if hasattr(Services_feeds, 'GoogleServiceFeed') else None
 
@@ -81,3 +80,52 @@ class GoogleTrendsEvaluator(evaluators.SocialEvaluator):
 
     async def prepare(self):
         self.stats_analyser = tentacles_management.get_single_deepest_child_class(EvaluatorUtil.StatisticAnalysis)()
+
+CONFIG_TREND_AVERAGES = "trend_averages"
+
+class MarketCapEvaluator(evaluators.SocialEvaluator):
+    SERVICE_FEED_CLASS = Services_feeds.CoindeskServiceFeed
+
+    def __init__(self, tentacles_setup_config):
+        evaluators.SocialEvaluator.__init__(self, tentacles_setup_config)
+        self.stats_analyser = None
+        self.feed_config = {
+            services_constants.CONFIG_COINDESK_TOPICS: [services_constants.COINDESK_TOPIC_MARKETCAP]
+        }
+        self.trend_averages = [40, 30, 20, 15, 10]
+
+    def init_user_inputs(self, inputs: dict) -> None:
+        self.trend_averages = self.UI.user_input(CONFIG_TREND_AVERAGES,
+                                                 commons_enums.UserInputTypes.OBJECT_ARRAY,
+                                                 self.trend_averages, inputs,
+                                                 title="Averages to use to compute the trend evaluation.")
+
+    @classmethod
+    def get_is_cryptocurrencies_wildcard(cls) -> bool:
+        """
+        :return: True if the evaluator is not cryptocurrency dependant else False
+        """
+        return True
+
+    @classmethod
+    def get_is_cryptocurrency_name_wildcard(cls) -> bool:
+        """
+        :return: True if the evaluator is not cryptocurrency name dependant else False
+        """
+        return True
+
+    async def _feed_callback(self, data):
+        if self._is_interested_by_this_notification(data[services_constants.FEED_METADATA]):
+            marketcap_data = self.get_data_cache(self.get_current_exchange_time(), key=services_constants.COINDESK_TOPIC_MARKETCAP)
+            if marketcap_data is not None and len(marketcap_data) > 0:
+                marketcap_history = [item.close for item in marketcap_data]
+                self.eval_note = self.stats_analyser.get_trend(marketcap_history, self.trend_averages)
+                await self.evaluation_completed(cryptocurrency=None, 
+                                                eval_time=self.get_current_exchange_time(),
+                                                eval_note_description="Latest market cap values: " + ", ".join([str(v) for v in marketcap_history[-5:]]))
+
+    def _is_interested_by_this_notification(self, notification_description):
+        return notification_description == services_constants.COINDESK_TOPIC_MARKETCAP
+
+    async def prepare(self):
+        self.stats_analyser = tentacles_management.get_single_deepest_child_class(EvaluatorUtil.TrendAnalysis)()

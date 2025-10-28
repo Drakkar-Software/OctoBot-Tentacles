@@ -1,1 +1,1 @@
-from .news import TwitterNewsEvaluator
+from .news import TwitterNewsEvaluator, CryptoNewsEvaluator

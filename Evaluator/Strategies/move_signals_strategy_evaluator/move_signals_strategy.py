@@ -58,6 +58,8 @@ class MoveSignalsStrategyEvaluator(evaluators.StrategyEvaluator):
                               evaluator_type,
                               eval_note,
                               eval_note_type,
+                              eval_note_description,
+                              eval_note_metadata,
                               exchange_name,
                               cryptocurrency,
                               symbol,
