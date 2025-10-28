@@ -78,7 +78,9 @@ class SimpleStrategyEvaluator(evaluators.StrategyEvaluator):
                                default_config[self.BACKGROUND_SOCIAL_EVALUATORS],
                                inputs, other_schema_values={"minItems": 0, "uniqueItems": True},
                             options=["RedditForumEvaluator", "TwitterNewsEvaluator",
-                                     "TelegramSignalEvaluator", "GoogleTrendsEvaluator"],
+                                     "TelegramSignalEvaluator", "GoogleTrendsEvaluator", 
+                                     "FearAndGreedIndexEvaluator", "SocialScoreEvaluator", 
+                                     "CryptoNewsEvaluator", "MarketCapEvaluator"],
                             title="Social evaluator to consider as background evaluators: they won't trigger technical "
                                   "evaluators re-evaluation when updated. Avoiding unnecessary updates increases "
                                   "performances.")
@@ -101,6 +103,8 @@ class SimpleStrategyEvaluator(evaluators.StrategyEvaluator):
                               evaluator_type,
                               eval_note,
                               eval_note_type,
+                              eval_note_description,
+                              eval_note_metadata,
                               exchange_name,
                               cryptocurrency,
                               symbol,
@@ -300,6 +304,8 @@ class TechnicalAnalysisStrategyEvaluator(evaluators.StrategyEvaluator):
                               evaluator_type,
                               eval_note,
                               eval_note_type,
+                              eval_note_description,
+                              eval_note_metadata,
                               exchange_name,
                               cryptocurrency,
                               symbol,
