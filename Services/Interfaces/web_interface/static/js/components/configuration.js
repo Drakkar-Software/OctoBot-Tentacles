@@ -720,6 +720,7 @@ function updated_validated_updated_global_config(updated_data){
 }
 
 function fetch_currencies(){
+    const maxDisplayedOptions = 2000;  // display only the first 2000 options to avoid select performance issues
     const getCurrencyOption = (addCurrencySelect, details) => {
         return new Option(`${details.n} - ${details.s}`, details.i, false, false);
     }
@@ -732,7 +733,7 @@ function fetch_currencies(){
         success: function (data) {
             const addCurrencySelect = $("#AddCurrencySelect");
             const options = [];
-            data.forEach((element) => {
+            data.slice(0, maxDisplayedOptions).forEach((element) => {
                 if(!currencyDetailsById.hasOwnProperty(element.i)){
                     currencyDetailsById[element.i] = element
                 }
