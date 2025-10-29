@@ -1156,15 +1156,18 @@ async def test_create_new_orders(tools):
     with mock.patch.object(
             consumer, "_rebalance_portfolio", mock.AsyncMock(return_value="plop")
     ) as _rebalance_portfolio_mock:
+        assert mode.is_processing_rebalance is False
         with pytest.raises(KeyError):
             # missing "data"
             await consumer.create_new_orders(None, None, None)
         assert await consumer.create_new_orders(None, None, None, data="hello", dependencies=trading_signals.get_orders_dependencies([mock.Mock(order_id="123")])) == []
+        assert mode.is_processing_rebalance is False
         _rebalance_portfolio_mock.assert_not_called()
         assert await consumer.create_new_orders(
             None, None, trading_enums.EvaluatorStates.NEUTRAL.value, data="hello", dependencies=trading_signals.get_orders_dependencies([mock.Mock(order_id="123")])
         ) == "plop"
         _rebalance_portfolio_mock.assert_called_once_with("hello", trading_signals.get_orders_dependencies([mock.Mock(order_id="123")]))
+        assert mode.is_processing_rebalance is False
 
 
 async def test_rebalance_portfolio(tools):
