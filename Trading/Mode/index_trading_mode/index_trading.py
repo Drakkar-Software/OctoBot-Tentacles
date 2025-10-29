@@ -78,7 +78,11 @@ class IndexTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
         details = kwargs[self.CREATE_ORDER_DATA_PARAM]
         dependencies = kwargs.get(self.CREATE_ORDER_DEPENDENCIES_PARAM, None)
         if state == trading_enums.EvaluatorStates.NEUTRAL.value:
-            return await self._rebalance_portfolio(details, dependencies)
+            try:
+                self.trading_mode.is_processing_rebalance = True
+                return await self._rebalance_portfolio(details, dependencies)
+            finally:
+                self.trading_mode.is_processing_rebalance = False
         self.logger.error(f"Unknown index state: {state}")
         return []
 
@@ -409,6 +413,11 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
         ) >= self.trading_mode.refresh_interval_days * commons_constants.DAYS_TO_SECONDS:
             if self.trading_mode.automatically_update_historical_config_on_set_intervals():
                 self.trading_mode.update_config_and_user_inputs_if_necessary()
+            if self.trading_mode.is_processing_rebalance:
+                self.logger.info(
+                    f"[{self.exchange_manager.exchange_name}] Index is already being rebalanced, skipping index check"
+                )
+                return
             if len(self.trading_mode.indexed_coins) < self.MIN_INDEXED_COINS:
                 self.logger.error(
                     f"At least {self.MIN_INDEXED_COINS} coin is required to maintain an index. Please "
@@ -717,6 +726,7 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
             order
             for order in self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders()
             if order.symbol in self.exchange_manager.exchange_config.traded_symbol_pairs
+            and not isinstance(order, trading_personal_data.MarketOrder) # market orders can't be cancelled
         ]:
             self.logger.info(
                 f"Cancelling {len(symbol_open_orders)} open orders"
@@ -751,7 +761,8 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
         self.synchronization_policy: SynchronizationPolicy = SynchronizationPolicy.SELL_REMOVED_INDEX_COINS_AS_SOON_AS_POSSIBLE
         self.requires_initializing_appropriate_coins_distribution = False
         self.indexed_coins = [] 
-
+        self.is_processing_rebalance = False
+    
     def init_user_inputs(self, inputs: dict) -> None:
         """
         Called right before starting the tentacle, should define all the tentacle's user inputs unless
