@@ -16,12 +16,11 @@
 
 import octobot_commons.constants as commons_constants
 import octobot_commons.enums as commons_enums
-
 import octobot_commons.tentacles_management as tentacles_management
 import octobot_services.constants as services_constants
 import octobot_evaluators.evaluators as evaluators
-from tentacles.Evaluator.Util.text_analysis import TextAnalysis
 import tentacles.Services.Services_feeds as Services_feeds
+import tentacles.Evaluator.Util as EvaluatorUtil
 
 
 # disable inheritance to disable tentacle visibility. Disabled as starting from feb 9 2023, API is now paid only
@@ -177,4 +176,64 @@ class TwitterNewsEvaluator:
         return {}
 
     async def prepare(self):
-        self.sentiment_analyser = tentacles_management.get_single_deepest_child_class(TextAnalysis)()
+        self.sentiment_analyser = tentacles_management.get_single_deepest_child_class(EvaluatorUtil.TextAnalysis)()
+
+
+NEWS_CONFIG_LANGUAGE = "language"
+
+# Should use any feed available to fetch crypto news (coindesk, etc.)
+class CryptoNewsEvaluator(evaluators.SocialEvaluator):
+    SERVICE_FEED_CLASS = Services_feeds.CoindeskServiceFeed
+
+    def __init__(self, tentacles_setup_config):
+        evaluators.SocialEvaluator.__init__(self, tentacles_setup_config)
+        self.stats_analyser = None   
+        self.language = None
+
+    def init_user_inputs(self, inputs: dict) -> None:
+        self.language = self.UI.user_input(NEWS_CONFIG_LANGUAGE,
+                               commons_enums.UserInputTypes.TEXT,
+                               self.language, inputs,
+                               title="Language to use to fetch crypto news.",
+                               options=["en", "fr"])
+        self.feed_config = {
+            services_constants.CONFIG_COINDESK_TOPICS: [services_constants.COINDESK_TOPIC_NEWS],
+            services_constants.CONFIG_COINDESK_LANGUAGE: self.language
+        }
+
+    @classmethod
+    def get_is_cryptocurrencies_wildcard(cls) -> bool:
+        """
+        :return: True if the evaluator is not cryptocurrency dependant else False
+        """
+        return True
+
+    @classmethod
+    def get_is_cryptocurrency_name_wildcard(cls) -> bool:
+        """
+        :return: True if the evaluator is not cryptocurrency name dependant else False
+        """
+        return True
+
+    async def _feed_callback(self, data):
+        if self._is_interested_by_this_notification(data[services_constants.FEED_METADATA]):
+            latest_news = self.get_data_cache(self.get_current_exchange_time(), key=services_constants.COINDESK_TOPIC_NEWS)
+            if latest_news is not None and len(latest_news) > 0:
+                sentiment_sum = 0
+                news_count = 0
+                for news in latest_news:
+                    sentiment = news.sentiment
+                    sentiment_sum += 0 if sentiment is None else -1 if sentiment == "NEGATIVE" else 1 if sentiment == "POSITIVE" else 0
+                    news_count += 1
+
+                if news_count > 0:  
+                    self.eval_note = sentiment_sum / news_count
+                    await self.evaluation_completed(eval_time=self.get_current_exchange_time())
+                else:
+                    self.debug(f"No news found")
+
+    def _is_interested_by_this_notification(self, notification_description):
+        return notification_description == services_constants.COINDESK_TOPIC_NEWS
+
+    async def prepare(self):
+        self.sentiment_analyser = tentacles_management.get_single_deepest_child_class(EvaluatorUtil.TextAnalysis)()

@@ -78,7 +78,9 @@ class SimpleStrategyEvaluator(evaluators.StrategyEvaluator):
                                default_config[self.BACKGROUND_SOCIAL_EVALUATORS],
                                inputs, other_schema_values={"minItems": 0, "uniqueItems": True},
                             options=["RedditForumEvaluator", "TwitterNewsEvaluator",
-                                     "TelegramSignalEvaluator", "GoogleTrendsEvaluator"],
+                                     "TelegramSignalEvaluator", "GoogleTrendsEvaluator", 
+                                     "FearAndGreedIndexEvaluator", "SocialScoreEvaluator", 
+                                     "CryptoNewsEvaluator", "MarketCapEvaluator"],
                             title="Social evaluator to consider as background evaluators: they won't trigger technical "
                                   "evaluators re-evaluation when updated. Avoiding unnecessary updates increases "
                                   "performances.")
