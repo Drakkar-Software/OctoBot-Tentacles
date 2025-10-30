@@ -98,7 +98,7 @@ class GPTService(services.AbstractService):
             return {"role": USER, "content": content}
         return {"role": role, "content": content}
 
-    async def get_chat_completion(
+    async def get_signal_chat_completion(
         self,
         messages,
         model=None,
@@ -124,7 +124,7 @@ class GPTService(services.AbstractService):
                     f"for timestamp: {candle_open_time} with version: {version}"
                 )
             return signal
-        return await self._get_signal_from_gpt(messages, model, max_tokens, n, stop, temperature)
+        return await self.get_chat_completion(messages, model, max_tokens, n, stop, temperature)
 
     def _get_client(self) -> openai.AsyncOpenAI:
         return openai.AsyncOpenAI(
@@ -151,7 +151,7 @@ class GPTService(services.AbstractService):
                 return True
         return False
 
-    async def _get_signal_from_gpt(
+    async def get_chat_completion(
         self,
         messages,
         model=None,

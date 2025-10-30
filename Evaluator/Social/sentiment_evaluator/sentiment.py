@@ -59,8 +59,23 @@ class FearAndGreedIndexEvaluator(evaluators.SocialEvaluator):
             fear_and_greed_history = self.get_data_cache(self.get_current_exchange_time(), key=services_constants.ALTERNATIVE_ME_TOPIC_FEAR_AND_GREED)
             if fear_and_greed_history is not None and len(fear_and_greed_history) > 0:
                 fear_and_greed_history_values = [item.value for item in fear_and_greed_history]
-                self.eval_note = self.stats_analyser.get_trend(fear_and_greed_history_values, self.trend_averages)
-                await self.evaluation_completed(eval_time=self.get_current_exchange_time())
+                trend = self.stats_analyser.get_trend(fear_and_greed_history_values, self.trend_averages)
+                
+                self.eval_note = trend
+
+                current_value = fear_and_greed_history[-1]
+
+                # TODO add more analysis to the description
+                await self.evaluation_completed(eval_time=self.get_current_exchange_time(),
+                                                eval_note_description=f"""
+                                                Overall crypto fear and greed index is on a {'UP' if trend > 0 else 'DOWN' if trend < 0 else 'NEUTRAL'} trend. 
+                                                Current value: {current_value.value_classification} ({current_value.value})
+                                                """,
+                                                eval_note_metadata={
+                                                    "trend": trend,
+                                                    "current_value": current_value.value,
+                                                    "current_value_label": current_value.value_classification
+                                                })
 
     def _is_interested_by_this_notification(self, notification_description):
         return notification_description == services_constants.ALTERNATIVE_ME_TOPIC_FEAR_AND_GREED
@@ -100,7 +115,8 @@ class SocialScoreEvaluator(evaluators.SocialEvaluator):
             coin_data = self.get_data_cache(self.get_current_exchange_time(), key=f"{coin};{services_constants.LUNARCRUSH_COIN_METRICS}")
             if coin_data is not None and len(coin_data) > 0:
                 self.eval_note = coin_data[-1].sentiment
-                await self.evaluation_completed(cryptocurrency=self.cryptocurrency, eval_time=self.get_current_exchange_time())
+                await self.evaluation_completed(cryptocurrency=self.cryptocurrency, eval_time=self.get_current_exchange_time(),
+                                                eval_note_description=f"{self.eval_note}% of {self.cryptocurrency_name} social posts (weighted by interactions) are positive")
 
     def _is_interested_by_this_notification(self, notification_description):
         try:

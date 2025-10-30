@@ -38,6 +38,7 @@ class CoindeskNews:
     published_on: datetime.datetime
     image_url: str
     title: str
+    subtitle: str
     url: str
     source_id: str
     body: str
@@ -149,6 +150,7 @@ class CoindeskServiceFeed(service_feeds.AbstractServiceFeed):
                     published_on=article["PUBLISHED_ON"],
                     image_url=article.get("IMAGE_URL", ""),
                     title=article["TITLE"],
+                    subtitle=article.get("SUBTITLE", ""),
                     url=article["URL"],
                     source_id=article["SOURCE_ID"],
                     body=article.get("BODY", ""),

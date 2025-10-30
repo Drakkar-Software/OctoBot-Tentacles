@@ -119,8 +119,12 @@ class MarketCapEvaluator(evaluators.SocialEvaluator):
             marketcap_data = self.get_data_cache(self.get_current_exchange_time(), key=services_constants.COINDESK_TOPIC_MARKETCAP)
             if marketcap_data is not None and len(marketcap_data) > 0:
                 marketcap_history = [item.close for item in marketcap_data]
-                self.eval_note = self.stats_analyser.get_trend(marketcap_history, self.trend_averages)
-                await self.evaluation_completed(eval_time=self.get_current_exchange_time())
+                trend = self.stats_analyser.get_trend(marketcap_history, self.trend_averages)
+                self.eval_note = trend
+
+                # TODO add more analysis to the description
+                await self.evaluation_completed(eval_time=self.get_current_exchange_time(),
+                                                eval_note_description=f"Overall crypto marketcap is on a {'UP' if trend > 0 else 'DOWN' if trend < 0 else 'NEUTRAL'} trend")
 
     def _is_interested_by_this_notification(self, notification_description):
         return notification_description == services_constants.COINDESK_TOPIC_MARKETCAP

@@ -232,7 +232,7 @@ class GPTEvaluator(evaluators.TAEvaluator):
             )
             service.apply_daily_token_limit_if_possible(self.gpt_tokens_limit)
             model = self.gpt_model if self.enable_model_selector else None
-            resp = await service.get_chat_completion(
+            resp = await service.get_signal_chat_completion(
                 [
                     service.create_message("system", preprompt, model=model),
                     service.create_message("user", inputs, model=model),

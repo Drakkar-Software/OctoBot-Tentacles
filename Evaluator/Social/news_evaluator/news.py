@@ -221,14 +221,35 @@ class CryptoNewsEvaluator(evaluators.SocialEvaluator):
             if latest_news is not None and len(latest_news) > 0:
                 sentiment_sum = 0
                 news_count = 0
+                sentiment_values = []
                 for news in latest_news:
                     sentiment = news.sentiment
-                    sentiment_sum += 0 if sentiment is None else -1 if sentiment == "NEGATIVE" else 1 if sentiment == "POSITIVE" else 0
+                    value = 0 if sentiment is None else -1 if sentiment == "NEGATIVE" else 1 if sentiment == "POSITIVE" else 0
+                    sentiment_sum += value
+                    sentiment_values.append(value)
                     news_count += 1
 
                 if news_count > 0:  
-                    self.eval_note = sentiment_sum / news_count
-                    await self.evaluation_completed(eval_time=self.get_current_exchange_time())
+                    avg_sentiment = sentiment_sum / news_count
+                    self.eval_note = avg_sentiment
+
+                    sorted_vals = sorted(sentiment_values)
+                    mid = news_count // 2
+                    if news_count % 2 == 1:
+                        median_value = sorted_vals[mid]
+                    else:
+                        median_value = (sorted_vals[mid - 1] + sorted_vals[mid]) / 2
+
+                    median_label = "POSITIVE" if median_value > 0 else "NEGATIVE" if median_value < 0 else "NEUTRAL"
+                    avg_label = "POSITIVE" if avg_sentiment > 0 else "NEGATIVE" if avg_sentiment < 0 else "NEUTRAL"
+
+                    await self.evaluation_completed(eval_time=self.get_current_exchange_time(),
+                                                    eval_note_description=f"Overall crypto news sentiment: average {avg_label} ({avg_sentiment:.2f}), median {median_label} ({median_value:.2f})",
+                                                    eval_note_metadata={
+                                                        "news_count": news_count,
+                                                        "average_sentiment": avg_sentiment,
+                                                        "median_sentiment": median_value
+                                                    })
                 else:
                     self.debug(f"No news found")
 

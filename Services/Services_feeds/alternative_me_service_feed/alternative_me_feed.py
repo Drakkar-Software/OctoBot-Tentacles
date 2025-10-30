@@ -80,7 +80,7 @@ class AlternativeMeServiceFeed(service_feeds.AbstractServiceFeed):
                     timestamp=datetime.datetime.strptime(entry["timestamp"], '%m-%d-%Y').timestamp(),
                     value=float(entry["value"]),
                     value_classification=entry["value_classification"]
-                ) for entry in data]
+                ) for entry in reversed(data)]
             return True
 
     def get_data_cache(self, current_time: float, key: typing.Optional[str] = None):
