@@ -1644,6 +1644,7 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
             }, asset_amount=amount_to_convert,
             dependencies=convert_dependencies
         )
+        orders = [order for order in orders if order is not None]
         if orders:
             await asyncio.gather(*[
                 trading_personal_data.wait_for_order_fill(
