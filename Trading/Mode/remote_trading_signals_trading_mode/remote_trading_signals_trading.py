@@ -420,6 +420,14 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
             ))
         )
         active_trigger_above = order_description.get(trading_enums.TradingSignalOrdersAttrs.ACTIVE_TRIGGER_ABOVE.value)
+        cancel_policy = None
+        if cancel_policy_type := order_description.get(
+            trading_enums.TradingSignalOrdersAttrs.CANCEL_POLICY_TYPE.value
+        ):
+            cancel_policy = personal_data.create_cancel_policy(
+                cancel_policy_type,
+                order_description[trading_enums.TradingSignalOrdersAttrs.CANCEL_POLICY_KWARGS.value]
+            )
         order = personal_data.create_order_instance(
             trader=self.exchange_manager.trader,
             order_type=order_type,
@@ -438,7 +446,8 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
             trailing_profile=trailing_profile,
             is_active=is_active,
             active_trigger_price=active_trigger_price,
-            active_trigger_above=active_trigger_above
+            active_trigger_above=active_trigger_above,
+            cancel_policy=cancel_policy
         )
         if associated_entries and len(associated_entries) > 1:
             for associated_entry in associated_entries[1:]:

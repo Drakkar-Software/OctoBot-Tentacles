@@ -158,25 +158,38 @@ async def test_set_state(tools):
             await origin_cancel_symbol_open_orders(*args, **kwargs)
             return (
                 True, 
-                trading_signals.get_orders_dependencies([mock.Mock(order_id="123"), mock.Mock(order_id="456")])
+                trading_signals.get_orders_dependencies([mock.Mock(order_id="123"), mock.Mock(order_id="456-cancel_symbol_open_orders")])
+            )
+
+        async def _apply_cancel_policies(*args, **kwargs):
+            await origin_apply_cancel_policies(*args, **kwargs)
+            return (
+                True, 
+                trading_signals.get_orders_dependencies([mock.Mock(order_id="456-cancel_policy")])
             )
 
         origin_cancel_symbol_open_orders = producer.cancel_symbol_open_orders
+        origin_apply_cancel_policies = producer.apply_cancel_policies
         producer.final_eval = decimal.Decimal(str(-0.5))
         with mock.patch.object(
             producer, "cancel_symbol_open_orders",
             mock.AsyncMock(side_effect=_cancel_symbol_open_orders)
-        ) as cancel_symbol_open_orders_mock:
+        ) as cancel_symbol_open_orders_mock, mock.patch.object(
+            producer, "apply_cancel_policies",
+            mock.AsyncMock(side_effect=_apply_cancel_policies)
+        ) as apply_cancel_policies_mock:
             await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.LONG)
             cancel_symbol_open_orders_mock.assert_called_once_with(symbol)
             cancel_symbol_open_orders_mock.reset_mock()
+            apply_cancel_policies_mock.assert_called_once_with()
+            apply_cancel_policies_mock.reset_mock()
             assert producer.state == trading_enums.EvaluatorStates.LONG
             # create as task to allow creator's queue to get processed
             await asyncio.create_task(_check_open_orders_count(trader, 1))
             create_order_mock.assert_called_once()
             # cancelled orders dependencies are forwarded to create_order
             expected_dependencies = trading_signals.get_orders_dependencies(
-                [mock.Mock(order_id="123"), mock.Mock(order_id="456")]
+                [mock.Mock(order_id="456-cancel_policy"), mock.Mock(order_id="123"), mock.Mock(order_id="456-cancel_symbol_open_orders")]
             )
             assert create_order_mock.mock_calls[0].kwargs["dependencies"] == expected_dependencies
             create_order_mock.reset_mock()
@@ -184,6 +197,7 @@ async def test_set_state(tools):
             producer.final_eval = trading_constants.ZERO
             await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.NEUTRAL)
             cancel_symbol_open_orders_mock.assert_not_called()
+            apply_cancel_policies_mock.assert_not_called()
             assert producer.state == trading_enums.EvaluatorStates.NEUTRAL
             # create as task to allow creator's queue to get processed
             await asyncio.create_task(_check_open_orders_count(trader, 1))
@@ -191,6 +205,8 @@ async def test_set_state(tools):
 
             producer.final_eval = decimal.Decimal(str(0.5))
             await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.SHORT)
+            apply_cancel_policies_mock.assert_called_once_with()
+            apply_cancel_policies_mock.reset_mock()
             cancel_symbol_open_orders_mock.assert_called_once_with(symbol)
             cancel_symbol_open_orders_mock.reset_mock()
             assert producer.state == trading_enums.EvaluatorStates.SHORT
@@ -207,6 +223,7 @@ async def test_set_state(tools):
             producer.final_eval = trading_constants.ZERO
             await producer._set_state(currency, symbol, trading_enums.EvaluatorStates.NEUTRAL)
             cancel_symbol_open_orders_mock.assert_not_called()
+            apply_cancel_policies_mock.assert_not_called()
             assert producer.state == trading_enums.EvaluatorStates.NEUTRAL
             # create as task to allow creator's queue to get processed
             await asyncio.create_task(_check_open_orders_count(trader, 2))

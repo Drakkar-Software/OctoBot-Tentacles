@@ -925,6 +925,64 @@ async def ensure_smaller_orders(consumer, symbol, trader):
         await trading_mode_test_toolkit.fill_orders(orders4, trader)
 
 
+async def test_create_new_orders_with_cancel_policy(tools):
+    exchange_manager, trader, symbol, consumer, last_btc_price = tools
+
+    # with BTC/USDT
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.value_converter.last_prices_by_trading_pair[symbol] = \
+        last_btc_price
+    exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder.portfolio_current_value = \
+        decimal.Decimal(str(10 + 1000 / last_btc_price))
+
+    # simple buy order
+    data = {
+        consumer.VOLUME_KEY: decimal.Decimal("0.01"),
+        consumer.CANCEL_POLICY: trading_personal_data.ChainedOrderFillingPriceOrderCancelPolicy.__name__,
+    }
+    orders = await consumer.create_new_orders(symbol, decimal.Decimal(str(-1)), trading_enums.EvaluatorStates.LONG.value, data=data)
+    buy_order = orders[0]
+    assert isinstance(buy_order, trading_personal_data.BuyLimitOrder)
+    assert isinstance(buy_order.cancel_policy, trading_personal_data.ChainedOrderFillingPriceOrderCancelPolicy)
+    assert len(buy_order.chained_orders) == 0
+    
+    # buy order order with stop
+    data = {
+        consumer.STOP_PRICE_KEY: decimal.Decimal("10"),
+        consumer.VOLUME_KEY: decimal.Decimal("0.01"),
+        consumer.CANCEL_POLICY: trading_personal_data.ChainedOrderFillingPriceOrderCancelPolicy.__name__,
+    }
+    orders_with_stop = await consumer.create_new_orders(symbol, decimal.Decimal(str(-1)), trading_enums.EvaluatorStates.VERY_LONG.value, data=data)
+    buy_order = orders_with_stop[0]
+    assert isinstance(buy_order, trading_personal_data.BuyMarketOrder)
+    assert isinstance(buy_order.cancel_policy, trading_personal_data.ChainedOrderFillingPriceOrderCancelPolicy)
+    assert len(buy_order.chained_orders) == 1
+    stop_order = buy_order.chained_orders[0]
+    assert stop_order.cancel_policy is None # cancel policy is set on the entry order only
+    assert stop_order.is_open()
+
+    # simple sell order with invalid policy
+    data = {
+        consumer.VOLUME_KEY: decimal.Decimal("0.01"),
+        consumer.CANCEL_POLICY: trading_personal_data.ExpirationTimeOrderCancelPolicy.__name__,
+    }
+    with pytest.raises(trading_errors.InvalidCancelPolicyError):
+        orders = await consumer.create_new_orders(symbol, decimal.Decimal(str(1)), trading_enums.EvaluatorStates.SHORT.value, data=data)
+    
+    # simple sell order with valid policy
+    data = {
+        consumer.VOLUME_KEY: decimal.Decimal("0.01"),
+        consumer.CANCEL_POLICY: trading_personal_data.ExpirationTimeOrderCancelPolicy.__name__,
+        consumer.CANCEL_POLICY_PARAMS: {
+            "expiration_time": 1000.0,
+        },
+    }
+    orders = await consumer.create_new_orders(symbol, decimal.Decimal(str(1)), trading_enums.EvaluatorStates.SHORT.value, data=data)
+    sell_order = orders[0]
+    assert isinstance(sell_order, trading_personal_data.SellLimitOrder)
+    assert isinstance(sell_order.cancel_policy, trading_personal_data.ExpirationTimeOrderCancelPolicy)
+    assert sell_order.cancel_policy.expiration_time == 1000.0
+    assert len(sell_order.chained_orders) == 0
+
 async def test_chained_stop_loss_and_take_profit_orders(tools):
     exchange_manager, trader, symbol, consumer, last_btc_price = tools
 
@@ -943,6 +1001,7 @@ async def test_chained_stop_loss_and_take_profit_orders(tools):
     }
     orders_with_stop = await consumer.create_new_orders(symbol, decimal.Decimal(str(-1)), state, data=data)
     buy_order = orders_with_stop[0]
+    assert buy_order.cancel_policy is None
     assert len(buy_order.chained_orders) == 1
     assert buy_order.tag == "super"
     stop_order = buy_order.chained_orders[0]
@@ -956,6 +1015,7 @@ async def test_chained_stop_loss_and_take_profit_orders(tools):
     assert stop_order.tag == "super"
     assert stop_order.reduce_only is False
     assert stop_order.trailing_profile is None
+    assert stop_order.cancel_policy is None
     assert stop_order.is_open()
 
     state = trading_enums.EvaluatorStates.LONG.value
@@ -1016,6 +1076,7 @@ async def test_chained_stop_loss_and_take_profit_orders(tools):
     assert stop_order.is_waiting_for_chained_trigger
     assert stop_order.associated_entry_ids == [buy_order.order_id]
     assert stop_order.trailing_profile is None
+    assert stop_order.cancel_policy is None
     assert not take_profit_order.is_open()
     assert not take_profit_order.is_created()
     take_profit_order = buy_order.chained_orders[1]
@@ -1031,6 +1092,7 @@ async def test_chained_stop_loss_and_take_profit_orders(tools):
     assert isinstance(stop_order.order_group, trading_personal_data.OneCancelsTheOtherOrderGroup)
     assert take_profit_order.order_group is stop_order.order_group
     assert take_profit_order.trailing_profile is None
+    assert take_profit_order.cancel_policy is None
 
     # stop loss and take profit but decreasing position size: create stop loss and no take profit
     # (this initial order is a take profit already)
@@ -1053,6 +1115,7 @@ async def test_chained_stop_loss_and_take_profit_orders(tools):
     assert stop_loss.reduce_only is True    # True as force stop loss
     assert stop_loss.origin_price == decimal.Decimal("123")
     assert stop_loss.trailing_profile is None
+    assert stop_loss.cancel_policy is None
     assert stop_loss.origin_quantity == decimal.Decimal("0.01") \
            - trading_personal_data.get_fees_for_currency(sell_limit.fee, stop_loss.quantity_currency)
 
