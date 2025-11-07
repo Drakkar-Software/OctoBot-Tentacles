@@ -16,12 +16,15 @@
 import decimal
 import math
 import typing
+import json
 
 import async_channel.channels as channels
 import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_commons.enums as commons_enums
 import octobot_commons.signals as commons_signals
+import octobot_commons.tentacles_management as tentacles_management
 import octobot_services.api as services_api
+import octobot_trading.personal_data as trading_personal_data
 import tentacles.Services.Services_feeds.trading_view_service_feed as trading_view_service_feed
 import tentacles.Trading.Mode.daily_trading_mode.daily_trading as daily_trading_mode
 import octobot_trading.constants as trading_constants
@@ -30,6 +33,9 @@ import octobot_trading.exchanges as trading_exchanges
 import octobot_trading.modes as trading_modes
 import octobot_trading.errors as trading_errors
 import octobot_trading.modes.script_keywords as script_keywords
+
+
+_CANCEL_POLICIES_CACHE = {}
 
 
 class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
@@ -53,6 +59,8 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
     TAKE_PROFIT_VOLUME_RATIO_KEY = "TAKE_PROFIT_VOLUME_RATIO"
     ALLOW_HOLDINGS_ADAPTATION_KEY = "ALLOW_HOLDINGS_ADAPTATION"
     TRAILING_PROFILE = "TRAILING_PROFILE"
+    CANCEL_POLICY = "CANCEL_POLICY"
+    CANCEL_POLICY_PARAMS = "CANCEL_POLICY_PARAMS"
     PARAM_PREFIX_KEY = "PARAM_"
     BUY_SIGNAL = "buy"
     SELL_SIGNAL = "sell"
@@ -217,7 +225,7 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
                 await self.producers[0].signal_callback(parsed_data, script_keywords.get_base_context(self))
             else:
                 self._log_error_message_if_relevant(parsed_data, signal_data)
-        except trading_errors.InvalidArgumentError as e:
+        except (trading_errors.InvalidArgumentError, trading_errors.InvalidCancelPolicyError) as e:
             self.logger.error(f"Error when processing trading view signal: {e} (signal: {signal_data})")
         except trading_errors.MissingFunds as e:
             self.logger.error(f"Error when processing trading view signal: not enough funds: {e} (signal: {signal_data})")
@@ -341,6 +349,7 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             ctx, parsed_data, parsed_side, target_price, allow_holdings_adaptation, reduce_only
         )
         trailing_profile = parsed_data.get(TradingViewSignalsTradingMode.TRAILING_PROFILE)
+        maybe_cancel_policy, cancel_policy_params = self._parse_cancel_policy(parsed_data)
         order_data = {
             TradingViewSignalsModeConsumer.PRICE_KEY: target_price,
             TradingViewSignalsModeConsumer.VOLUME_KEY: amount,
@@ -353,6 +362,8 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             TradingViewSignalsModeConsumer.TAG_KEY:
                 parsed_data.get(TradingViewSignalsTradingMode.TAG_KEY, None),
             TradingViewSignalsModeConsumer.TRAILING_PROFILE: trailing_profile.casefold() if trailing_profile else None,
+            TradingViewSignalsModeConsumer.CANCEL_POLICY: maybe_cancel_policy,
+            TradingViewSignalsModeConsumer.CANCEL_POLICY_PARAMS: cancel_policy_params,
             TradingViewSignalsModeConsumer.EXCHANGE_ORDER_IDS:
                 parsed_data.get(TradingViewSignalsTradingMode.EXCHANGE_ORDER_IDS, None),
             TradingViewSignalsModeConsumer.LEVERAGE:
@@ -360,6 +371,26 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             TradingViewSignalsModeConsumer.ORDER_EXCHANGE_CREATION_PARAMS: order_exchange_creation_params,
         }
         return state, order_data
+
+    def _parse_cancel_policy(self, parsed_data):
+        if policy := parsed_data.get(TradingViewSignalsTradingMode.CANCEL_POLICY, None):
+            lowercase_policy = policy.casefold()
+            if not _CANCEL_POLICIES_CACHE:
+                _CANCEL_POLICIES_CACHE.update({
+                    policy.__name__.casefold(): policy.__name__
+                    for policy in tentacles_management.get_all_classes_from_parent(trading_personal_data.OrderCancelPolicy)
+                })
+            try:
+                policy_class = _CANCEL_POLICIES_CACHE[lowercase_policy]
+                policy_params = parsed_data.get(TradingViewSignalsTradingMode.CANCEL_POLICY_PARAMS)
+                parsed_policy_params = json.loads(policy_params.replace("'", '"')) if isinstance(policy_params, str) else policy_params
+                return policy_class, parsed_policy_params
+            except KeyError:
+                raise trading_errors.InvalidCancelPolicyError(
+                    f"Unknown cancel policy: {policy}. Available policies: {', '.join(_CANCEL_POLICIES_CACHE.keys())}"
+                )
+
+        return None, None
 
     async def _parse_additional_decimal_elements(self, ctx, parsed_data, element_prefix, default, is_price):
         values: list[decimal.Decimal] = []
@@ -397,15 +428,23 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
         )
 
     async def signal_callback(self, parsed_data: dict, ctx):
+        _, dependencies = await self.apply_cancel_policies()
         if self.trading_mode.CANCEL_PREVIOUS_ORDERS:
             # cancel open orders
-            await self.cancel_symbol_open_orders(self.trading_mode.symbol)
+            _, new_dependencies = await self.cancel_symbol_open_orders(self.trading_mode.symbol)
+            if new_dependencies:
+                if dependencies:
+                    dependencies.extend(new_dependencies)
+                else:
+                    dependencies = new_dependencies
         pre_update_data = self._parse_pre_update_order_details(parsed_data)
         await self._process_pre_state_update_actions(ctx, pre_update_data)
         state, order_data = await self._parse_order_details(ctx, parsed_data)
         self.final_eval = self.EVAL_BY_STATES[state]
         # Use daily trading mode state system
-        await self._set_state(self.trading_mode.cryptocurrency, ctx.symbol, state, order_data)
+        await self._set_state(
+            self.trading_mode.cryptocurrency, ctx.symbol, state, order_data, dependencies=dependencies
+        )
 
     async def _process_pre_state_update_actions(self, context, data: dict):
         try:
@@ -416,7 +455,10 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
                 err, True, f"Error when processing pre_state_update_actions: {err} (data: {data})"
             )
 
-    async def _set_state(self, cryptocurrency: str, symbol: str, new_state, order_data):
+    async def _set_state(
+        self, cryptocurrency: str, symbol: str, new_state, order_data, 
+        dependencies: typing.Optional[commons_signals.SignalDependencies] = None
+    ):
         async with self.trading_mode_trigger():
             self.state = new_state
             self.logger.info(f"[{symbol}] new state: {self.state.name}")
@@ -429,7 +471,8 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
                                                      time_frame=None,
                                                      final_note=self.final_eval,
                                                      state=self.state,
-                                                     data=order_data)
+                                                     data=order_data,
+                                                     dependencies=dependencies)
 
                 # send_notification
                 if not self.exchange_manager.is_backtesting:

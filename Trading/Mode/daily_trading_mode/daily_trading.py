@@ -198,6 +198,8 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
     ADDITIONAL_TAKE_PROFIT_VOLUME_RATIOS_KEY = "ADDITIONAL_TAKE_PROFIT_VOLUME_RATIOS"
     STOP_ONLY = "STOP_ONLY"
     TRAILING_PROFILE = "TRAILING_PROFILE"
+    CANCEL_POLICY = "CANCEL_POLICY"
+    CANCEL_POLICY_PARAMS = "CANCEL_POLICY_PARAMS"
     REDUCE_ONLY_KEY = "REDUCE_ONLY"
     TAG_KEY = "TAG"
     EXCHANGE_ORDER_IDS = "EXCHANGE_ORDER_IDS"
@@ -633,6 +635,9 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             trailing_profile_type = trading_personal_data.TrailingProfileTypes(
                 data[self.TRAILING_PROFILE]
             ) if data.get(self.TRAILING_PROFILE) else None
+            cancel_policy = trading_personal_data.create_cancel_policy(
+                data.get(self.CANCEL_POLICY), data.get(self.CANCEL_POLICY_PARAMS)
+            ) if data.get(self.CANCEL_POLICY) else None
             is_reducing_position = not increasing_position
             if self.USE_TARGET_PROFIT_MODE:
                 if is_reducing_position:
@@ -715,6 +720,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         reduce_only=user_reduce_only,
                         exchange_creation_params=exchange_creation_params,
                         tag=tag,
+                        cancel_policy=cancel_policy,
                     )
                     if current_order := await self._create_order(
                         current_order,
@@ -754,6 +760,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         reduce_only=user_reduce_only,
                         exchange_creation_params=exchange_creation_params,
                         tag=tag,
+                        cancel_policy=cancel_policy,
                     )
                     if create_stop_only or use_stop_orders:
                         oco_group = None
@@ -778,6 +785,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                             group=oco_group,
                             exchange_creation_params=exchange_creation_params,
                             tag=tag,
+                            cancel_policy=cancel_policy if create_stop_only else None,
                         )
                         # in futures, inactive orders are not necessary
                         if (
@@ -840,6 +848,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         reduce_only=user_reduce_only,
                         exchange_creation_params=exchange_creation_params,
                         tag=tag,
+                        cancel_policy=cancel_policy,
                     )
                     if create_stop_only or use_stop_orders:
                         oco_group = None
@@ -864,6 +873,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                             group=oco_group,
                             exchange_creation_params=exchange_creation_params,
                             tag=tag,
+                            cancel_policy=cancel_policy if create_stop_only else None,
                         )
                         # in futures, inactive orders are not necessary
                         if (
@@ -920,6 +930,7 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                         reduce_only=user_reduce_only,
                         exchange_creation_params=exchange_creation_params,
                         tag=tag,
+                        cancel_policy=cancel_policy,
                     )
                     if current_order := await self._create_order(
                         current_order,
@@ -942,7 +953,8 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             trading_errors.MissingMinimalExchangeTradeVolume,
             trading_errors.OrderCreationError,
             trading_errors.InvalidPositionSide,
-            trading_errors.UnsupportedContractConfigurationError
+            trading_errors.UnsupportedContractConfigurationError,
+            trading_errors.InvalidCancelPolicyError
         ):
             raise
         except asyncio.TimeoutError as e:
@@ -1040,13 +1052,18 @@ class DailyTradingModeProducer(trading_modes.AbstractTradingModeProducer):
 
             # if new state is not neutral --> cancel orders and create new else keep orders
             if new_state is not trading_enums.EvaluatorStates.NEUTRAL:
-                dependencies = None
+                _, dependencies = await self.apply_cancel_policies()
                 if self.trading_mode.consumers:
                     if self.trading_mode.consumers[0].USE_TARGET_PROFIT_MODE:
-                        dependencies = await self._cancel_position_opening_orders(symbol)
+                        new_dependencies = await self._cancel_position_opening_orders(symbol)
                     else:
                         # cancel open orders when not on target profit mode
-                        _, dependencies = await self.cancel_symbol_open_orders(symbol)
+                        _, new_dependencies = await self.cancel_symbol_open_orders(symbol)
+                    if new_dependencies:
+                        if dependencies:
+                            dependencies.extend(new_dependencies)
+                        else:
+                            dependencies = new_dependencies
 
                 # call orders creation from consumers
                 await self.submit_trading_evaluation(cryptocurrency=cryptocurrency,

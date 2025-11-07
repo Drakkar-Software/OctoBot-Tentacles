@@ -118,6 +118,7 @@ async def test_handle_signal_orders(local_trader, mocked_bundle_stop_loss_in_sel
     assert orders[0].trigger_above is False
     assert orders[0].is_active is True
     assert orders[0].active_trigger is None
+    assert isinstance(orders[0].cancel_policy, trading_personal_data.ChainedOrderFillingPriceOrderCancelPolicy)
     assert isinstance(orders[1], trading_personal_data.SellLimitOrder)
     assert orders[1].order_group is orders[0].order_group
     assert orders[1].trailing_profile is None
@@ -127,6 +128,7 @@ async def test_handle_signal_orders(local_trader, mocked_bundle_stop_loss_in_sel
     assert orders[1].update_with_triggering_order_fees is True
     assert orders[1].trigger_above is True
     assert orders[1].origin_quantity == decimal.Decimal("0.10713784")   # initial quantity as
+    assert orders[1].cancel_policy is None
     # update_with_triggering_order_fees is False
     trades = list(exchange_manager.exchange_personal_data.trades_manager.trades.values())
     assert len(trades) == 1
@@ -164,7 +166,7 @@ async def test_handle_signal_orders(local_trader, mocked_bundle_stop_loss_in_sel
     assert "1" in consumer.trading_mode.last_signal_description
 
 
-async def test_handle_signal_orders_trailing_stop(
+async def test_handle_signal_orders_trailing_stop_with_cancel_policy(
     local_trader, mocked_bundle_trailing_stop_loss_in_sell_limit_in_market_signal
 ):
     _, consumer, trader = local_trader
@@ -189,12 +191,15 @@ async def test_handle_signal_orders_trailing_stop(
     assert orders[0].update_with_triggering_order_fees is False
     assert orders[0].origin_price == decimal.Decimal("9990")
     assert orders[0].trigger_above is False
+    assert isinstance(orders[0].cancel_policy, trading_personal_data.ExpirationTimeOrderCancelPolicy)
+    assert orders[0].cancel_policy.expiration_time == 1000.0
     assert isinstance(orders[1], trading_personal_data.SellLimitOrder)
     assert orders[1].order_group is orders[0].order_group
     assert orders[1].trailing_profile is None
     assert orders[1].update_with_triggering_order_fees is True
     assert orders[1].trigger_above is True
     assert orders[1].origin_quantity == decimal.Decimal("0.10713784")   # initial quantity as
+    assert orders[1].cancel_policy is None
     # update_with_triggering_order_fees is False
     trades = list(exchange_manager.exchange_personal_data.trades_manager.trades.values())
     assert len(trades) == 1

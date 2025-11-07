@@ -322,6 +322,8 @@ def mocked_bundle_stop_loss_in_sell_limit_in_market_signal(mocked_sell_limit_sig
             trading_enums.TradingSignalOrdersAttrs.ACTIVE_SWAP_STRATEGY_TRIGGER_CONFIG.value: trading_enums.ActiveOrderSwapTriggerPriceConfiguration.FILLING_PRICE.value,
             trading_enums.TradingSignalOrdersAttrs.TRAILING_PROFILE_TYPE.value: None,
             trading_enums.TradingSignalOrdersAttrs.TRAILING_PROFILE.value: None,
+            trading_enums.TradingSignalOrdersAttrs.CANCEL_POLICY_TYPE.value: trading_personal_data.ChainedOrderFillingPriceOrderCancelPolicy.__name__,
+            trading_enums.TradingSignalOrdersAttrs.CANCEL_POLICY_KWARGS.value: None,
             trading_enums.TradingSignalOrdersAttrs.TAG.value: "managed_order long exit (id: 143968020)",
             trading_enums.TradingSignalOrdersAttrs.ORDER_ID.value: "5ad2a999-5ac2-47f0-9b69-c75a36f3858a",
             trading_enums.TradingSignalOrdersAttrs.BUNDLED_WITH.value: "adc24701-573b-40dd-b6c9-3666cd22f33e",
@@ -377,6 +379,10 @@ def mocked_bundle_trailing_stop_loss_in_sell_limit_in_market_signal(mocked_sell_
             trading_enums.TradingSignalOrdersAttrs.ADDITIONAL_ORDERS.value: [],
             trading_enums.TradingSignalOrdersAttrs.ASSOCIATED_ORDER_IDS.value: None,
             trading_enums.TradingSignalOrdersAttrs.UPDATE_WITH_TRIGGERING_ORDER_FEES.value: False,
+            trading_enums.TradingSignalOrdersAttrs.CANCEL_POLICY_TYPE.value: trading_personal_data.ExpirationTimeOrderCancelPolicy.__name__,
+            trading_enums.TradingSignalOrdersAttrs.CANCEL_POLICY_KWARGS.value: {
+                "expiration_time": 1000.0,
+            },
         }
     )
     mocked_buy_market_signal.content[trading_enums.TradingSignalOrdersAttrs.ADDITIONAL_ORDERS.value].append(
