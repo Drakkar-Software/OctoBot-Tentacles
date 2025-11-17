@@ -36,6 +36,9 @@ MAX_HANDLED_ASKS_ORDERS = 5
 INCREASING = "increasing_towards_current_price"
 DECREASING = "decreasing_towards_current_price"
 
+# allow up to 10 decimals to avoid floating point precision issues due to percent ratios
+_MAX_PRECISION = decimal.Decimal("1.0000000000")
+
 @dataclasses.dataclass
 class InferredOrderData:
     ideal_price: decimal.Decimal
@@ -760,11 +763,19 @@ class OrderBookDistribution:
         ideal_total_volume = (
             target_before_threshold_volume / percent_volume_before_threshold * trading_constants.ONE_HUNDRED
         )
-        return ideal_total_volume
+        # keep up to 10 decimals to avoid floating point precision issues due to percent ratios
+        return _quantize_decimal(ideal_total_volume)
 
     @classmethod
     def get_logger(cls):
         return commons_logging.get_logger(cls.__name__)
+
+
+def _quantize_decimal(value: decimal.Decimal) -> decimal.Decimal:
+    return value.quantize(
+        _MAX_PRECISION, 
+        rounding=decimal.ROUND_HALF_UP
+    )
 
 
 def get_sorted_sided_orders(orders: list[BookOrderData], closer_to_further: bool) -> list[BookOrderData]:
