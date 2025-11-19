@@ -43,9 +43,12 @@ class TradingViewService(services.AbstractService):
         return True
 
     def get_required_config(self):
-        return [services_constants.CONFIG_REQUIRE_TRADING_VIEW_TOKEN,
-                services_constants.CONFIG_TRADING_VIEW_TOKEN,
-                services_constants.CONFIG_TRADING_VIEW_USE_EMAIL_ALERTS]
+        return [
+            services_constants.CONFIG_REQUIRE_TRADING_VIEW_TOKEN,
+            services_constants.CONFIG_TRADING_VIEW_TOKEN,
+            # disabled until TradingView email alerts are restored
+            # services_constants.CONFIG_TRADING_VIEW_USE_EMAIL_ALERTS
+        ]
 
     def get_fields_description(self):
         return {
@@ -66,7 +69,8 @@ class TradingViewService(services.AbstractService):
         return {
             services_constants.CONFIG_REQUIRE_TRADING_VIEW_TOKEN: False,
             services_constants.CONFIG_TRADING_VIEW_TOKEN: self.get_security_token(uuid.uuid4().hex),
-            services_constants.CONFIG_TRADING_VIEW_USE_EMAIL_ALERTS: False,
+            # disabled until TradingView email alerts are restored
+            # services_constants.CONFIG_TRADING_VIEW_USE_EMAIL_ALERTS: False,
         }
 
     def is_improved_by_extensions(self) -> bool:
@@ -81,10 +85,12 @@ class TradingViewService(services.AbstractService):
                 configuration_title="Configure on TradingView", configuration_path="tradingview_email_config"
             ))
         else:
-            read_only_info.append(services.ReadOnlyInfo(
-                'Email address:', "Generate email", services_enums.ReadOnlyInfoType.CTA,
-                path="tradingview_email_config"
-            ))
+            pass
+            # disabled until TradingView email alerts are restored
+            # read_only_info.append(services.ReadOnlyInfo(
+            #     'Email address:', "Generate email", services_enums.ReadOnlyInfoType.CTA,
+            #     path="tradingview_email_config"
+            # ))
         if self._webhook_url:
             read_only_info.append(services.ReadOnlyInfo(
                 'Webhook url:',
@@ -120,8 +126,9 @@ class TradingViewService(services.AbstractService):
                 self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_TRADING_VIEW][
                     services_constants.CONFIG_TRADING_VIEW_TOKEN]
             self.use_email_alert = \
-                self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_TRADING_VIEW][
-                    services_constants.CONFIG_TRADING_VIEW_USE_EMAIL_ALERTS]
+                self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_TRADING_VIEW].get(
+                    services_constants.CONFIG_TRADING_VIEW_USE_EMAIL_ALERTS, False
+                )
         except KeyError:
             if self.requires_token is None:
                 self.requires_token = self.get_default_value()[services_constants.CONFIG_REQUIRE_TRADING_VIEW_TOKEN]
@@ -133,8 +140,11 @@ class TradingViewService(services.AbstractService):
             updated_config = {
                 services_constants.CONFIG_REQUIRE_TRADING_VIEW_TOKEN: self.requires_token,
                 services_constants.CONFIG_TRADING_VIEW_TOKEN: self.token,
-                services_constants.CONFIG_TRADING_VIEW_USE_EMAIL_ALERTS: self.use_email_alert,
             }
+            if self.use_email_alert:
+                # only save CONFIG_TRADING_VIEW_USE_EMAIL_ALERTS if use_email_alert is True
+                # (to keep the option of users still using it)
+                updated_config[services_constants.CONFIG_TRADING_VIEW_USE_EMAIL_ALERTS] = self.use_email_alert
             self.save_service_config(services_constants.CONFIG_TRADING_VIEW, updated_config)
 
     @staticmethod
