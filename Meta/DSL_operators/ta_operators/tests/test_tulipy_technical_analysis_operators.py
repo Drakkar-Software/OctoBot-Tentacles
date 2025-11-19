@@ -62,6 +62,24 @@ async def test_operator_invalid_dynamic_parameters(interpreter, operator, dynami
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("operator, dynamic_parameters", [
+    # list all operator and invalid parameters that should raise a tulipy error that will be converted to a TypeError
+    ("rsi", ["(close, 999999)", "(close, 0)", "(close, -1)"]),
+    ("macd", ["(close, 14, 99999, 2)", "(close, 99999, 12, 2)", "(close, 0, 12, 2)", "(close, 7, 12, -1)"]),
+    ("ma", ["(close, 999999)", "(close, 0)", "(close, -1)"]),
+    ("ema", ["(close, -1)"]),
+    ("vwma", ["(close, volume, 999999)", "(close, volume, 0)", "(close, volume, -1)"]),
+])
+async def test_operator_converted_tulipy_error(interpreter, operator, dynamic_parameters):
+    for param in dynamic_parameters:
+        # static validation: do not raise
+        interpreter.prepare(f"{operator}{param}")
+        with pytest.raises(TypeError):
+            # dynamic validation
+            await interpreter.interprete(f"{operator}{param}")
+
+
+@pytest.mark.asyncio
 async def test_operator_operations(interpreter):
     # ensure the output is a list and can be used in arithmetic operations
     assert isinstance(await interpreter.interprete("rsi(close, 14)"), list)
