@@ -44,6 +44,17 @@ def _to_int(value):
         raise octobot_commons.errors.InvalidParametersError(f"Unsupported value type: {type(value)}")
 
 
+def converted_tulipy_error(f):
+    def converted_tulipy_error_wrapper(*args, **kwargs):
+        try:
+            return f(*args, **kwargs)
+        except tulipy.InvalidOptionError as err:
+            raise TypeError(
+                f"Invalid technical indicator parameter - {err.__class__.__name__}"
+            ) from err
+    return converted_tulipy_error_wrapper
+
+
 class RSIOperator(ta_operator.TAOperator):
     @staticmethod
     def get_name() -> str:
@@ -56,6 +67,7 @@ class RSIOperator(ta_operator.TAOperator):
             dsl_interpreter.OperatorParameter(name="period", description="the period to use for the RSI", required=True, type=int),
         ]
 
+    @converted_tulipy_error
     def compute(self) -> dsl_interpreter.ComputedOperatorParameterType:
         operands = self.get_computed_parameters()
         return list(tulipy.rsi(_to_numpy_array(operands[0]), period=_to_int(operands[1])))
@@ -75,6 +87,7 @@ class MACDOperator(ta_operator.TAOperator):
             dsl_interpreter.OperatorParameter(name="signal_period", description="the signal period to use for the MACD", required=True, type=int),
         ]
 
+    @converted_tulipy_error
     def compute(self) -> dsl_interpreter.ComputedOperatorParameterType:
         operands = self.get_computed_parameters()
         macd, macd_signal, macd_hist = tulipy.macd(
@@ -95,6 +108,7 @@ class MAOperator(ta_operator.TAOperator):
             dsl_interpreter.OperatorParameter(name="period", description="the period to use for the moving average", required=True, type=int),
         ]
 
+    @converted_tulipy_error
     def compute(self) -> dsl_interpreter.ComputedOperatorParameterType:
         operands = self.get_computed_parameters()
         return list(tulipy.sma(_to_numpy_array(operands[0]), period=_to_int(operands[1])))
@@ -112,6 +126,7 @@ class EMAOperator(ta_operator.TAOperator):
             dsl_interpreter.OperatorParameter(name="period", description="the period to use for the exponential moving average", required=True, type=int),
         ]
 
+    @converted_tulipy_error
     def compute(self) -> dsl_interpreter.ComputedOperatorParameterType:
         operands = self.get_computed_parameters()
         return list(tulipy.ema(_to_numpy_array(operands[0]), period=_to_int(operands[1])))
@@ -130,6 +145,7 @@ class VWMAOperator(ta_operator.TAOperator):
             dsl_interpreter.OperatorParameter(name="period", description="the period to use for the volume weighted moving average", required=True, type=int),
         ]
 
+    @converted_tulipy_error
     def compute(self) -> dsl_interpreter.ComputedOperatorParameterType:
         operands = self.get_computed_parameters()
         return list(tulipy.vwma(_to_numpy_array(operands[0]), _to_numpy_array(operands[1]), period=_to_int(operands[2])))
