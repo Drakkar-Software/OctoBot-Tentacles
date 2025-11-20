@@ -15,11 +15,13 @@
 #  License along with this library.
 import mock
 import pytest
+import typing
 
 import numpy as np
 
 import octobot_commons.enums
 import octobot_commons.errors
+import octobot_commons.constants
 import octobot_commons.dsl_interpreter as dsl_interpreter
 import tentacles.Meta.DSL_operators.exchange_operators as exchange_operators
 
@@ -28,6 +30,7 @@ SYMBOL = "BTC/USDT"
 SYMBOL2 = "ETH/USDT"
 TIME_FRAME = "1h"
 TIME_FRAME2 = "4h"
+KLINE_SIGNATURE = 0.00666
 
 
 @pytest.fixture
@@ -38,6 +41,12 @@ def historical_prices():
         93.12, 93.18, 92.08, 92.82, 92.92, 92.25, 92.22
     ])
 
+@pytest.fixture
+def historical_times(historical_prices):
+    return np.array([
+        i + 10 for i in range(len(historical_prices))
+    ], dtype=np.float64)
+
 
 @pytest.fixture
 def historical_volume(historical_prices):
@@ -45,33 +54,54 @@ def historical_volume(historical_prices):
         # will create an int np.array, which will updated to float64 to comply with tulipy requirements
         903, 1000, 2342, 992, 900, 1231, 1211, 1113
     ]
-    return np.array(base_volume_pattern*(len(historical_prices) // len(base_volume_pattern) + 1))[:len(historical_prices)]
+    return np.array(base_volume_pattern*(len(historical_prices) // len(base_volume_pattern) + 1), dtype=np.float64)[:len(historical_prices)]
 
 
-def _get_candle_managers(historical_prices, historical_volume):
+def _get_candle_managers(historical_prices, historical_volume, historical_times):
     btc_1h_candles_manager = mock.Mock(
-        get_symbol_open_candles=mock.Mock(return_value=historical_prices),
-        get_symbol_high_candles=mock.Mock(return_value=historical_prices),
-        get_symbol_low_candles=mock.Mock(return_value=historical_prices),
-        get_symbol_close_candles=mock.Mock(return_value=historical_prices),
-        get_symbol_volume_candles=mock.Mock(return_value=historical_volume),
-        get_symbol_time_candles=mock.Mock(return_value=historical_prices),
+        get_symbol_open_candles=mock.Mock(side_effect=lambda _ : historical_prices.copy()),
+        get_symbol_high_candles=mock.Mock(side_effect=lambda _ : historical_prices.copy()),
+        get_symbol_low_candles=mock.Mock(side_effect=lambda _ : historical_prices.copy()),
+        get_symbol_close_candles=mock.Mock(side_effect=lambda _ : historical_prices.copy()),
+        get_symbol_volume_candles=mock.Mock(side_effect=lambda _ : historical_volume.copy()),
+        get_symbol_time_candles=mock.Mock(side_effect=lambda _ : historical_times.copy()),
+        time_candles_index=len(historical_times),
+        open_candles_index=len(historical_prices),
+        high_candles_index=len(historical_prices),
+        low_candles_index=len(historical_prices),
+        close_candles_index=len(historical_prices),
+        volume_candles_index=len(historical_volume),
+        time_candles=historical_times,
     )
     eth_1h_candles_manager = mock.Mock(
-        get_symbol_open_candles=mock.Mock(return_value=historical_prices / 2),
-        get_symbol_high_candles=mock.Mock(return_value=historical_prices / 2),
-        get_symbol_low_candles=mock.Mock(return_value=historical_prices / 2),
-        get_symbol_close_candles=mock.Mock(return_value=historical_prices / 2),
-        get_symbol_volume_candles=mock.Mock(return_value=historical_volume / 2),
-        get_symbol_time_candles=mock.Mock(return_value=historical_prices / 2),
+        get_symbol_open_candles=mock.Mock(side_effect=lambda _ : historical_prices.copy() / 2),
+        get_symbol_high_candles=mock.Mock(side_effect=lambda _ : historical_prices.copy() / 2),
+        get_symbol_low_candles=mock.Mock(side_effect=lambda _ : historical_prices.copy() / 2),
+        get_symbol_close_candles=mock.Mock(side_effect=lambda _ : historical_prices.copy() / 2),
+        get_symbol_volume_candles=mock.Mock(side_effect=lambda _ : historical_volume.copy() / 2),
+        get_symbol_time_candles=mock.Mock(side_effect=lambda _ : historical_times.copy() / 2),
+        time_candles_index=len(historical_times),
+        open_candles_index=len(historical_prices),
+        high_candles_index=len(historical_prices),
+        low_candles_index=len(historical_prices),
+        close_candles_index=len(historical_prices),
+        volume_candles_index=len(historical_volume),
+        time_candles=historical_times / 2,
     )
     btc_4h_candles_manager = mock.Mock(
-        get_symbol_open_candles=mock.Mock(return_value=historical_prices * 2),
-        get_symbol_high_candles=mock.Mock(return_value=historical_prices * 2),
-        get_symbol_low_candles=mock.Mock(return_value=historical_prices * 2),
-        get_symbol_close_candles=mock.Mock(return_value=historical_prices * 2),
-        get_symbol_volume_candles=mock.Mock(return_value=historical_volume * 2),
-        get_symbol_time_candles=mock.Mock(return_value=historical_prices * 2),
+        get_symbol_open_candles=mock.Mock(side_effect=lambda _ : historical_prices.copy() * 2),
+        get_symbol_high_candles=mock.Mock(side_effect=lambda _ : historical_prices.copy() * 2),
+        get_symbol_low_candles=mock.Mock(side_effect=lambda _ : historical_prices.copy() * 2),
+        get_symbol_close_candles=mock.Mock(side_effect=lambda _ : historical_prices.copy() * 2),
+        get_symbol_volume_candles=mock.Mock(side_effect=lambda _ : historical_volume.copy() * 2),
+        get_symbol_time_candles=mock.Mock(side_effect=lambda _ : historical_times.copy() * 2),
+        time_candles_index=len(historical_times),
+        open_candles_index=len(historical_prices),
+        high_candles_index=len(historical_prices),
+        low_candles_index=len(historical_prices),
+        close_candles_index=len(historical_prices),
+        volume_candles_index=len(historical_volume),
+        time_candles=historical_times * 2,
     )
     return (
         btc_1h_candles_manager,
@@ -80,11 +110,24 @@ def _get_candle_managers(historical_prices, historical_volume):
     )
 
 
-@pytest.fixture
-def exchange_manager_with_candles(historical_prices, historical_volume):
-    btc_1h_candles_manager, eth_1h_candles_manager, btc_4h_candles_manager = _get_candle_managers(
-        historical_prices, historical_volume
+def _get_kline(candles_manager: mock.Mock, signature: float, kline_time_delta: typing.Optional[float]) -> list:
+    kline = [0] * len(octobot_commons.enums.PriceIndexes)
+    kline[octobot_commons.enums.PriceIndexes.IND_PRICE_TIME.value] = (
+        candles_manager.get_symbol_time_candles(-1)[-1] + kline_time_delta
+        if kline_time_delta is not None
+        else candles_manager.get_symbol_time_candles(-1)[-1]
     )
+    kline[octobot_commons.enums.PriceIndexes.IND_PRICE_OPEN.value] = candles_manager.get_symbol_open_candles(-1)[-1] + signature
+    kline[octobot_commons.enums.PriceIndexes.IND_PRICE_HIGH.value] = candles_manager.get_symbol_high_candles(-1)[-1] + signature
+    kline[octobot_commons.enums.PriceIndexes.IND_PRICE_LOW.value] = candles_manager.get_symbol_low_candles(-1)[-1] + signature
+    kline[octobot_commons.enums.PriceIndexes.IND_PRICE_CLOSE.value] = candles_manager.get_symbol_close_candles(-1)[-1] + signature
+    kline[octobot_commons.enums.PriceIndexes.IND_PRICE_VOL.value] = candles_manager.get_symbol_volume_candles(-1)[-1] + signature
+    return kline
+
+
+def _get_symbol_data_factory(
+    btc_1h_candles_manager, eth_1h_candles_manager, btc_4h_candles_manager, kline_type: str
+):
     def _get_symbol_data(symbol: str, **kwargs):
         symbol_candles = {}
         one_h_candles_manager = btc_1h_candles_manager if symbol == SYMBOL else eth_1h_candles_manager if symbol == SYMBOL2 else None
@@ -94,21 +137,87 @@ def exchange_manager_with_candles(historical_prices, historical_volume):
         symbol_candles[octobot_commons.enums.TimeFrames(TIME_FRAME)] = one_h_candles_manager
         if four_h_candles_manager:
             symbol_candles[octobot_commons.enums.TimeFrames(TIME_FRAME2)] = four_h_candles_manager
-        return mock.Mock(symbol_candles=symbol_candles)
+        if kline_type == "no_kline":
+            symbol_klines = {}
+        elif kline_type == "same_time_kline":
+            symbol_klines = {
+                octobot_commons.enums.TimeFrames(TIME_FRAME): mock.Mock(kline=_get_kline(one_h_candles_manager, KLINE_SIGNATURE, None)),
+            }
+            if four_h_candles_manager:
+                symbol_klines[octobot_commons.enums.TimeFrames(TIME_FRAME2)] = mock.Mock(kline=_get_kline(four_h_candles_manager, KLINE_SIGNATURE, None))
+        elif kline_type == "new_time_kline":
+            symbol_klines = {
+                octobot_commons.enums.TimeFrames(TIME_FRAME): mock.Mock(kline=_get_kline(
+                    one_h_candles_manager, KLINE_SIGNATURE, 
+                    octobot_commons.enums.TimeFramesMinutes[octobot_commons.enums.TimeFrames(TIME_FRAME)] * octobot_commons.constants.MINUTE_TO_SECONDS
+                )),
+            }
+            if four_h_candles_manager:
+                symbol_klines[octobot_commons.enums.TimeFrames(TIME_FRAME2)] = mock.Mock(kline=_get_kline(
+                    four_h_candles_manager, KLINE_SIGNATURE, 
+                    octobot_commons.enums.TimeFramesMinutes[octobot_commons.enums.TimeFrames(TIME_FRAME2)] * octobot_commons.constants.MINUTE_TO_SECONDS
+                ))
+        else:
+            raise NotImplementedError(f"Kline type {kline_type} not implemented")
+        return mock.Mock(
+            symbol_candles=symbol_candles,
+            symbol_klines=symbol_klines
+        )
+    return _get_symbol_data
+
+
+@pytest.fixture
+def exchange_manager_with_candles(historical_prices, historical_volume, historical_times):
+    btc_1h_candles_manager, eth_1h_candles_manager, btc_4h_candles_manager = _get_candle_managers(
+        historical_prices, historical_volume, historical_times
+    )
     return mock.Mock(
         id="exchange_manager_id",
+        exchange_name="binance",
         exchange_symbols_data=mock.Mock(
-            get_exchange_symbol_data=mock.Mock(
-                side_effect=_get_symbol_data
+            get_exchange_symbol_data=_get_symbol_data_factory(
+                btc_1h_candles_manager, eth_1h_candles_manager, btc_4h_candles_manager, "no_kline"
             )
         )
     )
 
 
 @pytest.fixture
-def candle_manager_by_time_frame_by_symbol(historical_prices, historical_volume):
+def exchange_manager_with_candles_and_klines(historical_prices, historical_volume, historical_times):
     btc_1h_candles_manager, eth_1h_candles_manager, btc_4h_candles_manager = _get_candle_managers(
-        historical_prices, historical_volume
+        historical_prices, historical_volume, historical_times
+    )
+    return mock.Mock(
+        id="exchange_manager_id",
+        exchange_name="binance",
+        exchange_symbols_data=mock.Mock(
+            get_exchange_symbol_data=_get_symbol_data_factory(
+                btc_1h_candles_manager, eth_1h_candles_manager, btc_4h_candles_manager, "same_time_kline"
+            )
+        )
+    )
+
+
+@pytest.fixture
+def exchange_manager_with_candles_and_new_candle_klines(historical_prices, historical_volume, historical_times):
+    btc_1h_candles_manager, eth_1h_candles_manager, btc_4h_candles_manager = _get_candle_managers(
+        historical_prices, historical_volume, historical_times
+    )
+    return mock.Mock(
+        id="exchange_manager_id",
+        exchange_name="binance",
+        exchange_symbols_data=mock.Mock(
+            get_exchange_symbol_data=_get_symbol_data_factory(
+                btc_1h_candles_manager, eth_1h_candles_manager, btc_4h_candles_manager, "new_time_kline"
+            )
+        )
+    )
+
+
+@pytest.fixture
+def candle_manager_by_time_frame_by_symbol(historical_prices, historical_volume, historical_times):
+    btc_1h_candles_manager, eth_1h_candles_manager, btc_4h_candles_manager = _get_candle_managers(
+        historical_prices, historical_volume, historical_times
     )
     return {
         TIME_FRAME: {
@@ -126,6 +235,22 @@ def interpreter(exchange_manager_with_candles):
     return dsl_interpreter.Interpreter(
         dsl_interpreter.get_all_operators() + 
         exchange_operators.create_ohlcv_operators(exchange_manager_with_candles, SYMBOL, TIME_FRAME)
+    )
+
+
+@pytest.fixture
+def interpreter_with_exchange_manager_and_klines(exchange_manager_with_candles_and_klines):
+    return dsl_interpreter.Interpreter(
+        dsl_interpreter.get_all_operators() + 
+        exchange_operators.create_ohlcv_operators(exchange_manager_with_candles_and_klines, SYMBOL, TIME_FRAME)
+    )
+
+
+@pytest.fixture
+def interpreter_with_exchange_manager_and_new_candle_klines(exchange_manager_with_candles_and_new_candle_klines):
+    return dsl_interpreter.Interpreter(
+        dsl_interpreter.get_all_operators() + 
+        exchange_operators.create_ohlcv_operators(exchange_manager_with_candles_and_new_candle_klines, SYMBOL, TIME_FRAME)
     )
 
 
