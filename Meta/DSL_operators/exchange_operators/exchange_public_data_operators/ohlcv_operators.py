@@ -16,9 +16,12 @@
 #  License along with this library.
 import typing
 import dataclasses
+import numpy as np
 
 import octobot_commons.constants
 import octobot_commons.errors
+import octobot_commons.logging
+import octobot_commons.enums as commons_enums
 import octobot_commons.dsl_interpreter as dsl_interpreter
 import octobot_trading.exchanges
 import octobot_trading.exchange_data
@@ -84,19 +87,43 @@ def create_ohlcv_operators(
     if exchange_manager is None and candle_manager_by_time_frame_by_symbol is None:
         raise octobot_commons.errors.InvalidParametersError("exchange_manager or candle_manager_by_time_frame_by_symbol must be provided")
 
-    def _get_candle_manager(
-        input_symbol: typing.Optional[str], input_time_frame: typing.Optional[str]
-    ) -> octobot_trading.exchange_data.CandlesManager:
+    def _get_candles_values_with_latest_kline_if_available(
+        input_symbol: typing.Optional[str], input_time_frame: typing.Optional[str],
+        value_type: commons_enums.PriceIndexes, limit: int = -1
+    ) -> np.ndarray:
         _symbol = input_symbol or symbol
         _time_frame = input_time_frame or time_frame
-        if candle_manager_by_time_frame_by_symbol is not None:
-            return candle_manager_by_time_frame_by_symbol[_time_frame][_symbol]
-        return octobot_trading.api.get_symbol_candles_manager(
-            octobot_trading.api.get_symbol_data(
+        if exchange_manager is None:
+            if candle_manager_by_time_frame_by_symbol is not None:
+                candles_manager = candle_manager_by_time_frame_by_symbol[_time_frame][_symbol]
+            symbol_data = None
+        else:
+            symbol_data = octobot_trading.api.get_symbol_data(
                 exchange_manager, _symbol, allow_creation=False
-            ), 
-            _time_frame
-        )
+            )
+            candles_manager = octobot_trading.api.get_symbol_candles_manager(
+                symbol_data, _time_frame
+            )
+        candles_values = _get_candles_values(candles_manager, value_type, limit)
+        if symbol_data is not None and (kline := _get_kline(symbol_data, _time_frame)):
+            kline_time = kline[commons_enums.PriceIndexes.IND_PRICE_TIME.value]
+            last_candle_time = candles_manager.time_candles[candles_manager.time_candles_index - 1]
+            if kline_time == last_candle_time:
+                # kline is an update of the last candle
+                return _adapt_last_candle_value(candles_manager, value_type, candles_values, kline)
+            else:
+                tf_seconds = commons_enums.TimeFramesMinutes[commons_enums.TimeFrames(_time_frame)] * octobot_commons.constants.MINUTE_TO_SECONDS
+                if kline_time == last_candle_time + tf_seconds:
+                    # kline is a new candle
+                    kline_value = kline[value_type.value]
+                    return np.append(candles_values[1:], kline_value)
+                else:
+                    octobot_commons.logging.get_logger(OHLCVOperator.__name__).error(
+                        f"{exchange_manager.exchange_name + '' if exchange_manager is not None else ''}{_symbol} {_time_frame} "
+                        f"kline time ({kline_time}) is not equal to last candle time not the last time + {time_frame} "
+                        f"({last_candle_time} + {tf_seconds}) seconds. Kline has been ignored."
+                    )
+        return candles_values
 
     def _get_dependencies() -> typing.List[ExchangeDataDependency]:
         return [
@@ -107,28 +134,109 @@ def create_ohlcv_operators(
             )
         ]
 
-    class _ClosePriceOperator(OHLCVOperator):
+    class _LocalOHLCVOperator(OHLCVOperator):
+        PRICE_INDEX: commons_enums.PriceIndexes = None # type: ignore
+
+        def get_dependencies(self) -> typing.List[dsl_interpreter.InterpreterDependency]:
+            return super().get_dependencies() + _get_dependencies()
+
+        async def pre_compute(self) -> None:
+            await super().pre_compute()
+            self.value = _get_candles_values_with_latest_kline_if_available(*self.get_symbol_and_time_frame(), self.PRICE_INDEX, -1)
+    
+    class _OpenPriceOperator(_LocalOHLCVOperator):
+        PRICE_INDEX = commons_enums.PriceIndexes.IND_PRICE_OPEN
+
+        @staticmethod
+        def get_name() -> str:
+            return "open"
+    
+    class _HighPriceOperator(_LocalOHLCVOperator):
+        PRICE_INDEX = commons_enums.PriceIndexes.IND_PRICE_HIGH
+
+        @staticmethod
+        def get_name() -> str:
+            return "high"
+
+    class _LowPriceOperator(_LocalOHLCVOperator):
+        PRICE_INDEX = commons_enums.PriceIndexes.IND_PRICE_LOW
+
+        @staticmethod
+        def get_name() -> str:
+            return "low"
+
+    class _ClosePriceOperator(_LocalOHLCVOperator):
+        PRICE_INDEX = commons_enums.PriceIndexes.IND_PRICE_CLOSE
+
         @staticmethod
         def get_name() -> str:
             return "close"
 
-        def get_dependencies(self) -> typing.List[dsl_interpreter.InterpreterDependency]:
-            return super().get_dependencies() + _get_dependencies()
+    class _VolumePriceOperator(_LocalOHLCVOperator):
+        PRICE_INDEX = commons_enums.PriceIndexes.IND_PRICE_VOL
 
-        async def pre_compute(self) -> None:
-            await super().pre_compute()
-            self.value = _get_candle_manager(*self.get_symbol_and_time_frame()).get_symbol_close_candles(-1)
-
-    class _VolumePriceOperator(OHLCVOperator):
         @staticmethod
         def get_name() -> str:
             return "volume"
+    
+    class _TimePriceOperator(_LocalOHLCVOperator):
+        PRICE_INDEX = commons_enums.PriceIndexes.IND_PRICE_TIME
 
-        def get_dependencies(self) -> typing.List[dsl_interpreter.InterpreterDependency]:
-            return super().get_dependencies() + _get_dependencies()
+        @staticmethod
+        def get_name() -> str:
+            return "time"
 
-        async def pre_compute(self) -> None:
-            await super().pre_compute()
-            self.value = _get_candle_manager(*self.get_symbol_and_time_frame()).get_symbol_volume_candles(-1)
+    return [_OpenPriceOperator, _HighPriceOperator, _LowPriceOperator, _ClosePriceOperator, _VolumePriceOperator, _TimePriceOperator]
 
-    return [_ClosePriceOperator, _VolumePriceOperator]
+def _get_kline(
+    symbol_data: octobot_trading.exchange_data.ExchangeSymbolData, _time_frame: str
+) -> typing.Optional[list]:
+    try:
+        return octobot_trading.api.get_symbol_klines(symbol_data, _time_frame)
+    except KeyError:
+        return None
+
+
+def _get_candles_values(
+    candles_manager: octobot_trading.exchange_data.CandlesManager,
+    candle_value: commons_enums.PriceIndexes, limit: int = -1
+) -> np.ndarray:
+    match candle_value:
+        case commons_enums.PriceIndexes.IND_PRICE_CLOSE:
+            return candles_manager.get_symbol_close_candles(limit)
+        case commons_enums.PriceIndexes.IND_PRICE_OPEN:
+            return candles_manager.get_symbol_open_candles(limit)
+        case commons_enums.PriceIndexes.IND_PRICE_HIGH:
+            return candles_manager.get_symbol_high_candles(limit)
+        case commons_enums.PriceIndexes.IND_PRICE_LOW:
+            return candles_manager.get_symbol_low_candles(limit)
+        case commons_enums.PriceIndexes.IND_PRICE_VOL:
+            return candles_manager.get_symbol_volume_candles(limit)
+        case commons_enums.PriceIndexes.IND_PRICE_TIME:
+            return candles_manager.get_symbol_time_candles(limit)
+        case _:
+            raise octobot_commons.errors.InvalidParametersError(f"Invalid candle value: {candle_value}")
+
+def _adapt_last_candle_value(
+    candles_manager: octobot_trading.exchange_data.CandlesManager,
+    candle_value: commons_enums.PriceIndexes,
+    candles_values: np.ndarray,
+    kline: list
+) -> np.ndarray:
+    match candle_value:
+        case commons_enums.PriceIndexes.IND_PRICE_CLOSE:
+            candles_values[candles_manager.close_candles_index - 1] = kline[commons_enums.PriceIndexes.IND_PRICE_CLOSE.value]
+        case commons_enums.PriceIndexes.IND_PRICE_OPEN:
+            candles_values[candles_manager.open_candles_index - 1] = kline[commons_enums.PriceIndexes.IND_PRICE_OPEN.value]
+        case commons_enums.PriceIndexes.IND_PRICE_HIGH:
+            candles_values[candles_manager.high_candles_index - 1] = kline[commons_enums.PriceIndexes.IND_PRICE_HIGH.value]
+        case commons_enums.PriceIndexes.IND_PRICE_LOW:
+            candles_values[candles_manager.low_candles_index - 1] = kline[commons_enums.PriceIndexes.IND_PRICE_LOW.value]
+        case commons_enums.PriceIndexes.IND_PRICE_VOL:
+            candles_values[candles_manager.volume_candles_index - 1] = kline[commons_enums.PriceIndexes.IND_PRICE_VOL.value]
+        case commons_enums.PriceIndexes.IND_PRICE_TIME:
+            # nothing to do for time (this value is constant)
+            pass
+        case _:
+            raise octobot_commons.errors.InvalidParametersError(f"Invalid candle value: {candle_value}")
+    return candles_values

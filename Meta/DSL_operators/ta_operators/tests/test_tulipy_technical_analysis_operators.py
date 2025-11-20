@@ -19,6 +19,7 @@ import octobot_commons.errors
 from tentacles.Meta.DSL_operators.exchange_operators.tests import (
     historical_prices,
     historical_volume,
+    historical_times,
     exchange_manager_with_candles,
     interpreter,
 )
