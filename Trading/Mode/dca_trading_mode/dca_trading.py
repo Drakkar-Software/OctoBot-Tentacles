@@ -225,7 +225,8 @@ class DCATradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
 
         except (trading_errors.MissingFunds,
                 trading_errors.MissingMinimalExchangeTradeVolume,
-                trading_errors.OrderCreationError):
+                trading_errors.OrderCreationError,
+                trading_errors.InvalidCancelPolicyError):
             raise
         except Exception as err:
             self.logger.exception(

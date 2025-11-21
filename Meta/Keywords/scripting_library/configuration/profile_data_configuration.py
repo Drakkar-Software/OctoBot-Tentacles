@@ -329,14 +329,33 @@ def is_auth_required_exchanges(
     exchange_config_by_exchange: typing.Optional[dict[str, dict]]
 ):
     try:
+        if exchange_config_by_exchange and any(
+            exchange_config.get(common_constants.CONFIG_FORCE_AUTHENTICATION, False)
+            for exchange_config in exchange_config_by_exchange.values()
+        ):
+            # don't use cache when force authentication is True: this can be specific to this context
+            return _get_is_auth_required_exchange(
+                exchange_data, tentacles_setup_config, exchange_config_by_exchange
+            )
         # use cache to avoid using introspection each time
         return _AUTH_REQUIRED_EXCHANGES[exchange_data.exchange_details.name]
     except KeyError:
-        exchange_class = exchanges.get_rest_exchange_class(
-            exchange_data.exchange_details.name, tentacles_setup_config, exchange_config_by_exchange
+        _AUTH_REQUIRED_EXCHANGES[exchange_data.exchange_details.name] = _get_is_auth_required_exchange(
+            exchange_data, tentacles_setup_config, exchange_config_by_exchange
         )
-        _AUTH_REQUIRED_EXCHANGES[exchange_data.exchange_details.name] = exchange_class.REQUIRES_AUTHENTICATION
         return _AUTH_REQUIRED_EXCHANGES[exchange_data.exchange_details.name]
+
+def _get_is_auth_required_exchange(
+    exchange_data: exchange_data_import.ExchangeData,
+    tentacles_setup_config,
+    exchange_config_by_exchange: typing.Optional[dict[str, dict]]
+):
+    exchange_class = exchanges.get_rest_exchange_class(
+        exchange_data.exchange_details.name, tentacles_setup_config, exchange_config_by_exchange
+    )
+    return exchange_class.requires_authentication(
+        None, tentacles_setup_config, exchange_config_by_exchange
+    )
 
 
 def _set_portfolio(
@@ -369,14 +388,15 @@ def get_full_tentacles_setup_config(
         octobot_tentacles_manager.api.ensure_tentacle_info()
     classes = [
         tentacle_class.__name__
-        for tentacle_class in tentacles_management.get_all_classes_from_parent(exchanges.RestExchange)
+        for tentacle_class in tentacles_configuration.get_all_exchange_tentacles()
         if not (tentacle_class.is_default_exchange() or tentacle_class.__name__ == exchanges.ExchangeSimulator.__name__)
     ]
     if profile_data:
         try:
             classes.extend(
+                # always use tentacle class names here as tentacles are indexed by name
                 tentacle_data.name if extra_tentacle_names and tentacle_data.name in extra_tentacle_names
-                else octobot_tentacles_manager.api.get_tentacle_class_from_string(tentacle_data.name).get_name()
+                else octobot_tentacles_manager.api.get_tentacle_class_from_string(tentacle_data.name).__name__
                 for tentacle_data in profile_data.tentacles
             )
         except RuntimeError as err:

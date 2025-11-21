@@ -33,6 +33,8 @@ import octobot_trading.exchange_channel as exchanges_channel
 import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
 import octobot_trading.errors as errors
+import octobot_trading.personal_data as trading_personal_data
+import octobot_trading.signals as trading_signals
 import octobot_trading.modes.script_keywords as script_keywords
 import tentacles.Trading.Mode as Mode
 import tests.test_utils.config as test_utils_config
@@ -321,6 +323,8 @@ async def test_signal_callback(tools):
             consumer.EXCHANGE_ORDER_IDS: None,
             consumer.LEVERAGE: None,
             consumer.ORDER_EXCHANGE_CREATION_PARAMS: {},
+            consumer.CANCEL_POLICY: None,
+            consumer.CANCEL_POLICY_PARAMS: None,
         })
         _set_state_mock.reset_mock()
 
@@ -332,7 +336,12 @@ async def test_signal_callback(tools):
             mode.STOP_PRICE_KEY: 25000,
             mode.VOLUME_KEY: "12%",
             mode.TAG_KEY: "stop_1_tag",
+            mode.CANCEL_POLICY: trading_personal_data.ExpirationTimeOrderCancelPolicy.__name__,
+            mode.CANCEL_POLICY_PARAMS: {
+                "expiration_time": 1000.0,
+            },
             consumer.EXCHANGE_ORDER_IDS: None,
+
         }, context)
         set_leverage_mock.assert_not_called()
         _set_state_mock.assert_awaited_once()
@@ -352,6 +361,8 @@ async def test_signal_callback(tools):
             consumer.TRAILING_PROFILE: None,
             consumer.LEVERAGE: None,
             consumer.ORDER_EXCHANGE_CREATION_PARAMS: {},
+            consumer.CANCEL_POLICY: trading_personal_data.ExpirationTimeOrderCancelPolicy.__name__,
+            consumer.CANCEL_POLICY_PARAMS: {'expiration_time': 1000.0},
         })
         _set_state_mock.reset_mock()
 
@@ -366,6 +377,7 @@ async def test_signal_callback(tools):
             mode.STOP_PRICE_KEY: "12",
             mode.TAKE_PROFIT_PRICE_KEY: "22222",
             mode.EXCHANGE_ORDER_IDS: ["ab1", "aaaaa"],
+            mode.CANCEL_POLICY: "chainedorderfillingpriceordercancelpolicy",
             consumer.LEVERAGE: 22,
             "PARAM_TAG_1": "ttt",
             "PARAM_Plop": False,
@@ -393,6 +405,8 @@ async def test_signal_callback(tools):
                 "TAG_1": "ttt",
                 "Plop": False,
             },
+            consumer.CANCEL_POLICY: trading_personal_data.ChainedOrderFillingPriceOrderCancelPolicy.__name__,
+            consumer.CANCEL_POLICY_PARAMS: None,
         })
         _set_state_mock.reset_mock()
 
@@ -410,6 +424,8 @@ async def test_signal_callback(tools):
             mode.TAKE_PROFIT_VOLUME_RATIO_KEY: "1",
             mode.EXCHANGE_ORDER_IDS: ["ab1", "aaaaa"],
             mode.TRAILING_PROFILE: "fiLLED_take_profit",
+            mode.CANCEL_POLICY: "expirationtimeordercancelpolicy",
+            mode.CANCEL_POLICY_PARAMS: "{'expiration_time': 1000.0}",
             consumer.LEVERAGE: 22,
             "PARAM_TAG_1": "ttt",
             "PARAM_Plop": False,
@@ -437,6 +453,8 @@ async def test_signal_callback(tools):
                 "TAG_1": "ttt",
                 "Plop": False,
             },
+            consumer.CANCEL_POLICY: trading_personal_data.ExpirationTimeOrderCancelPolicy.__name__,
+            consumer.CANCEL_POLICY_PARAMS: {'expiration_time': 1000.0},
         })
         _set_state_mock.reset_mock()
 
@@ -495,6 +513,8 @@ async def test_signal_callback(tools):
                 "TAG_1": "ttt",
                 "Plop": False,
             },
+            consumer.CANCEL_POLICY: None,
+            consumer.CANCEL_POLICY_PARAMS: None,
         })
         _set_state_mock.reset_mock()
         set_leverage_mock.reset_mock()
@@ -537,15 +557,78 @@ async def test_signal_callback(tools):
         set_leverage_mock.assert_not_called()
         _set_state_mock.assert_not_called()
 
+        with pytest.raises(errors.InvalidCancelPolicyError):
+            await producer.signal_callback({
+                mode.EXCHANGE_KEY: exchange_manager.exchange_name,
+                mode.SYMBOL_KEY: "unused",
+                mode.SIGNAL_KEY: "SelL",
+                mode.CANCEL_POLICY: "unknown_cancel_policy",
+            }, context)
+        set_leverage_mock.assert_not_called()
+        _set_state_mock.assert_not_called()
+
+
+async def test_signal_callback_with_cancel_policies(tools):
+    exchange_manager, symbol, mode, producer, consumer = tools
+    context = script_keywords.get_base_context(producer.trading_mode)
+    mode.CANCEL_PREVIOUS_ORDERS = True
+
+    async def _apply_cancel_policies(*args, **kwargs):
+        return True, trading_signals.get_orders_dependencies([mock.Mock(order_id="123"), mock.Mock(order_id="456-cancel_policy")])
+    async def _cancel_symbol_open_orders(*args, **kwargs):
+        return True, trading_signals.get_orders_dependencies([mock.Mock(order_id="456-cancel_symbol_open_orders")])
+
+    with mock.patch.object(producer, "_set_state", mock.AsyncMock()) as _set_state_mock, \
+        mock.patch.object(producer, "_process_pre_state_update_actions", mock.AsyncMock()) as _process_pre_state_update_actions_mock, \
+        mock.patch.object(producer, "_parse_order_details", mock.AsyncMock(return_value=(trading_enums.EvaluatorStates.LONG, {}))) as _parse_order_details_mock, \
+        mock.patch.object(producer, "apply_cancel_policies", mock.AsyncMock(side_effect=_apply_cancel_policies)) as apply_cancel_policies_mock, \
+        mock.patch.object(producer, "cancel_symbol_open_orders", mock.AsyncMock(side_effect=_cancel_symbol_open_orders)) as cancel_symbol_open_orders_mock:
+        await producer.signal_callback({
+            mode.EXCHANGE_KEY: exchange_manager.exchange_name,
+            mode.SYMBOL_KEY: "unused",
+            mode.SIGNAL_KEY: "BUY",
+        }, context)
+        _process_pre_state_update_actions_mock.assert_awaited_once()
+        _parse_order_details_mock.assert_awaited_once()
+        apply_cancel_policies_mock.assert_awaited_once()
+        cancel_symbol_open_orders_mock.assert_awaited_once()
+        _set_state_mock.assert_awaited_once()
+        assert _set_state_mock.mock_calls[0].kwargs["dependencies"] == trading_signals.get_orders_dependencies([
+            mock.Mock(order_id="123"), 
+            mock.Mock(order_id="456-cancel_policy"), 
+            mock.Mock(order_id="456-cancel_symbol_open_orders")
+        ])
+    mode.CANCEL_PREVIOUS_ORDERS = False
+    with mock.patch.object(producer, "_set_state", mock.AsyncMock()) as _set_state_mock, \
+        mock.patch.object(producer, "_process_pre_state_update_actions", mock.AsyncMock()) as _process_pre_state_update_actions_mock, \
+        mock.patch.object(producer, "_parse_order_details", mock.AsyncMock(return_value=(trading_enums.EvaluatorStates.LONG, {}))) as _parse_order_details_mock, \
+        mock.patch.object(producer, "apply_cancel_policies", mock.AsyncMock(side_effect=_apply_cancel_policies)) as apply_cancel_policies_mock, \
+        mock.patch.object(producer, "cancel_symbol_open_orders", mock.AsyncMock(side_effect=_cancel_symbol_open_orders)) as cancel_symbol_open_orders_mock:
+        await producer.signal_callback({
+            mode.EXCHANGE_KEY: exchange_manager.exchange_name,
+            mode.SYMBOL_KEY: "unused",
+            mode.SIGNAL_KEY: "BUY",
+        }, context)
+        _process_pre_state_update_actions_mock.assert_awaited_once()
+        _parse_order_details_mock.assert_awaited_once()
+        apply_cancel_policies_mock.assert_awaited_once()
+        cancel_symbol_open_orders_mock.assert_not_called() # CANCEL_PREVIOUS_ORDERS is False
+        _set_state_mock.assert_awaited_once()
+        assert _set_state_mock.mock_calls[0].kwargs["dependencies"] == trading_signals.get_orders_dependencies([
+            mock.Mock(order_id="123"), 
+            mock.Mock(order_id="456-cancel_policy"),
+        ])
+
 
 def compare_dict_with_nan(d_1, d_2):
     try:
         for key, val in d_1.items():
             assert (
                 d_2[key] == d_1[key]
-                or (d_2[key].is_nan() and d_1[key].is_nan())
+                or (isinstance(d_2[key], decimal.Decimal) and d_2[key].is_nan() and isinstance(d_1[key], decimal.Decimal) and d_1[key].is_nan())
                 or compare_dict_with_nan(d_1[key], d_2[key])
-            )
+            ), f"Key {key} is not equal: {d_1[key]} != {d_2[key]}"
         return True
-    except (KeyError, AttributeError):
+    except (KeyError, AttributeError) as err:
+        # print(f"Error comparing dicts: {err.__class__.__name__}: {err}")
         return False

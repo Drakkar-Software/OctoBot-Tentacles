@@ -32,6 +32,7 @@ import octobot_trading.errors as trading_errors
 import octobot_trading.modes as trading_modes
 import octobot_trading.personal_data as trading_personal_data
 import octobot_trading.exchanges as trading_exchanges
+import octobot_tentacles_manager.configuration as tm_configuration
 import tentacles.Trading.Mode.market_making_trading_mode.order_book_distribution as order_book_distribution
 import tentacles.Trading.Mode.market_making_trading_mode.reference_price as reference_price_import
 
@@ -172,8 +173,20 @@ class MarketMakingTradingMode(trading_modes.AbstractTradingMode):
         return [MarketMakingTradingModeConsumer]
 
     @classmethod
-    def get_forced_updater_channels(cls) -> set[str]:
-        return {trading_constants.TICKER_CHANNEL, trading_constants.TRADES_CHANNEL}
+    async def get_forced_updater_channels(
+        cls, 
+        exchange_manager: trading_exchanges.ExchangeManager,
+        tentacles_setup_config: tm_configuration.TentaclesSetupConfiguration, 
+        trading_config: typing.Optional[dict]
+    ) -> set[trading_exchanges.ChannelSpecs]:
+        return set([
+            trading_exchanges.ChannelSpecs(
+                channel=trading_constants.TICKER_CHANNEL,
+            ),
+            trading_exchanges.ChannelSpecs(
+                channel=trading_constants.TRADES_CHANNEL,
+            )
+        ])
 
     @classmethod
     def get_is_trading_on_exchange(cls, exchange_name, tentacles_setup_config) -> bool:
@@ -474,7 +487,7 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
 
         self.symbol_trading_config: dict = None
         self.healthy = False
-        self.subscribed_exchange_ids: set = set()
+        self.subscribed_channel_specs_by_exchange_id: dict[str, set[trading_exchanges.ChannelSpecs]] = {}
         self.is_first_execution: bool = True
         self._started_at = 0
         self._last_error_at = 0
@@ -1248,14 +1261,28 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
         await self._on_reference_price_update()
 
     async def _subscribe_to_exchange_mark_price(self, exchange_id: str, exchange_manager):
-        await exchanges_channel.get_chan(trading_constants.MARK_PRICE_CHANNEL, exchange_id).new_consumer(
-            self._mark_price_callback,
-            symbol=self.trading_mode.symbol
+        specs = trading_exchanges.ChannelSpecs(
+            trading_constants.MARK_PRICE_CHANNEL,
+            self.trading_mode.symbol,
+            None
         )
-        self.subscribed_exchange_ids.add(exchange_id)
-        self.logger.info(
-            f"{self.trading_mode.get_name()} for {self.trading_mode.symbol} on {self.exchange_name}:  "
-            f"{exchange_manager.exchange_name} price data feed."
+        if not self.already_subscribed_to_channel(exchange_id, specs):
+            await exchanges_channel.get_chan(trading_constants.MARK_PRICE_CHANNEL, exchange_id).new_consumer(
+                callback=self._mark_price_callback,
+                symbol=self.trading_mode.symbol
+            )
+            if exchange_id not in self.subscribed_channel_specs_by_exchange_id:
+                self.subscribed_channel_specs_by_exchange_id[exchange_id] = set()
+            self.subscribed_channel_specs_by_exchange_id[exchange_id].add(specs)
+            self.logger.info(
+                f"{self.trading_mode.get_name()} for {self.trading_mode.symbol} on {self.exchange_name}:  "
+                f"{exchange_manager.exchange_name} price data feed."
+            )
+
+    def already_subscribed_to_channel(self, exchange_id: str, specs: trading_exchanges.ChannelSpecs) -> bool:
+        return (
+            exchange_id in self.subscribed_channel_specs_by_exchange_id
+            and specs in self.subscribed_channel_specs_by_exchange_id[exchange_id]
         )
 
     async def _get_reference_price(self) -> decimal.Decimal:

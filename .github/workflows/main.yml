@@ -15,14 +15,14 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ macos-13, windows-latest, ubuntu-latest ]
+        os: [windows-latest, ubuntu-latest ]
         arch: [ x64 ]
         python: [ '3.10' ]
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - name: Set up Python ${{ matrix.python }}
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python }}
         architecture: ${{ matrix.arch }}
@@ -108,7 +108,7 @@ jobs:
         python: [ '3.10' ]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Set Environment Variables
         run: |
           echo "S3_API_KEY=${{ secrets.S3_API_KEY }}" >> $GITHUB_ENV
@@ -121,7 +121,7 @@ jobs:
           echo "TARGET_BRANCH=${TARGET_BRANCH}" >> $GITHUB_ENV
 
       - name: Set up Python ${{ matrix.python }}
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
           architecture: ${{ matrix.arch }}
