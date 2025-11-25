@@ -21,11 +21,21 @@ import json
 import async_channel.channels as channels
 import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_commons.enums as commons_enums
+import octobot_commons.constants as commons_constants
 import octobot_commons.signals as commons_signals
 import octobot_commons.tentacles_management as tentacles_management
 import octobot_services.api as services_api
 import octobot_trading.personal_data as trading_personal_data
-import tentacles.Services.Services_feeds.trading_view_service_feed as trading_view_service_feed
+try:
+    import tentacles.Services.Services_feeds.trading_view_service_feed as trading_view_service_feed
+except ImportError:
+    if commons_constants.USE_MINIMAL_LIBS:
+        # mock trading_view_service_feed imports
+        class TradingViewServiceFeedImportMock:
+            class TradingViewServiceFeed:
+                def get_name(self, *args, **kwargs):
+                    raise ImportError("trading_view_service_feed not installed")
+    trading_view_service_feed = TradingViewServiceFeedImportMock()
 import tentacles.Trading.Mode.daily_trading_mode.daily_trading as daily_trading_mode
 import octobot_trading.constants as trading_constants
 import octobot_trading.enums as trading_enums
@@ -39,7 +49,7 @@ _CANCEL_POLICIES_CACHE = {}
 
 
 class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
-    SERVICE_FEED_CLASS = trading_view_service_feed.TradingViewServiceFeed
+    SERVICE_FEED_CLASS = trading_view_service_feed.TradingViewServiceFeed if hasattr(trading_view_service_feed, 'TradingViewServiceFeed') else None
     TRADINGVIEW_FUTURES_SUFFIXES = [".P"]
     PARAM_SEPARATORS = [";", "\\n", "\n"]
 
@@ -128,14 +138,22 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
         parsed_symbol = symbol_util.parse_symbol(self.symbol)
         self.str_symbol = str(parsed_symbol)
         self.merged_simple_symbol = parsed_symbol.merged_str_base_and_quote_only_symbol(market_separator="")
-        service_feed = services_api.get_service_feed(self.SERVICE_FEED_CLASS, self.bot_id)
         feed_consumer = []
-        if service_feed is not None:
-            feed_consumer = [await channels.get_chan(service_feed.FEED_CHANNEL.get_name()).new_consumer(
-                self._trading_view_signal_callback
-            )]
+        if self.SERVICE_FEED_CLASS is None:
+            if commons_constants.USE_MINIMAL_LIBS:
+                self.logger.debug(
+                    "Trading view service feed not installed, this trading mode won't be listening to trading view signals."
+                )
+            else:
+                raise ImportError("TradingViewServiceFeed not installed")
         else:
-            self.logger.error("Impossible to find the Trading view service feed, this trading mode can't work.")
+            service_feed = services_api.get_service_feed(self.SERVICE_FEED_CLASS, self.bot_id)
+            if service_feed is not None:
+                feed_consumer = [await channels.get_chan(service_feed.FEED_CHANNEL.get_name()).new_consumer(
+                    self._trading_view_signal_callback
+                )]
+            else:
+                self.logger.error("Impossible to find the Trading view service feed, this trading mode can't work.")
         return feed_consumer
 
     async def create_consumers(self) -> list:
