@@ -1,1 +1,3 @@
-from .trading_view_feed import TradingViewServiceFeed
+import octobot_commons.constants as commons_constants
+if not commons_constants.USE_MINIMAL_LIBS:
+    from .trading_view_feed import TradingViewServiceFeed

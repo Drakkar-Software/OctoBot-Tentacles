@@ -44,9 +44,10 @@ DATA_COLLECTOR_NOTIFICATION_KEY = "data_collector_notifications"
 STRATEGY_OPTIMIZER_NOTIFICATION_KEY = "strategy_optimizer_notifications"
 DASHBOARD_NOTIFICATION_KEY = "dashboard_notifications"
 
-
-# Make WebInterface visible to imports
-from tentacles.Services.Interfaces.web_interface.web import WebInterface
+import octobot_commons.constants as commons_constants
+if not commons_constants.USE_MINIMAL_LIBS:
+    # Make WebInterface visible to imports
+    from tentacles.Services.Interfaces.web_interface.web import WebInterface
 
 
 # disable server logging
