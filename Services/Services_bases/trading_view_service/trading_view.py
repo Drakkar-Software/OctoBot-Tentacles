@@ -135,7 +135,7 @@ class TradingViewService(services.AbstractService):
             if self.token is None:
                 self.token = self.get_default_value()[services_constants.CONFIG_TRADING_VIEW_TOKEN]
             if self.use_email_alert is None:
-                self.use_email_alert = self.get_default_value()[services_constants.CONFIG_TRADING_VIEW_USE_EMAIL_ALERTS]
+                self.use_email_alert = self.get_default_value().get(services_constants.CONFIG_TRADING_VIEW_USE_EMAIL_ALERTS, False)
             # save new values into config file
             updated_config = {
                 services_constants.CONFIG_REQUIRE_TRADING_VIEW_TOKEN: self.requires_token,
