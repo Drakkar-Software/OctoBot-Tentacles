@@ -70,10 +70,19 @@ def _kucoin_retrier(f):
 class KucoinConnector(ccxt_connector.CCXTConnector):
 
     @_kucoin_retrier
-    async def _load_markets(self, client, reload: bool):
+    async def _load_markets(
+        self, 
+        client, 
+        reload: bool, 
+        market_filter: typing.Optional[typing.Callable[[dict], bool]] = None
+    ):
         # override for retrier
         try:
-            await client.load_markets(reload=reload)
+            if self.exchange_manager.exchange.FETCH_MIN_EXCHANGE_MARKETS and market_filter:
+                with ccxt_client_util.filtered_fetched_markets(client, market_filter):
+                    await client.load_markets(reload=reload)
+            else:
+                await client.load_markets(reload=reload)
             # sometimes market fees are missing because they are fetched from all tickers 
             # and all ticker can miss symbols on kucoin
             if client.markets:
