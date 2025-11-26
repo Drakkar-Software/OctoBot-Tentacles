@@ -249,7 +249,7 @@ class Binance(exchanges.RestExchange):
                 "filterClosed": False,  # return empty positions as well
             }
         }
-        if trading_constants.FETCH_MIN_EXCHANGE_MARKETS:
+        if self.FETCH_MIN_EXCHANGE_MARKETS:
             config[ccxt_constants.CCXT_OPTIONS][ccxt_constants.CCXT_FETCH_MARKETS] = (
                 [
                     BinanceMarkets.LINEAR.value, BinanceMarkets.INVERSE.value

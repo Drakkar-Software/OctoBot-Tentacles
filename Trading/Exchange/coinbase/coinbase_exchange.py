@@ -114,10 +114,19 @@ class CoinbaseConnector(ccxt_connector.CCXTConnector):
         return creds
 
     @_coinbase_retrier
-    async def _load_markets(self, client, reload: bool):
+    async def _load_markets(
+        self, 
+        client, 
+        reload: bool, 
+        market_filter: typing.Optional[typing.Callable[[dict], bool]] = None
+    ):
         # override for retrier and populate ALIASED_SYMBOLS
         try:
-            await client.load_markets(reload=reload)
+            if self.exchange_manager.exchange.FETCH_MIN_EXCHANGE_MARKETS and market_filter:
+                with ccxt_client_util.filtered_fetched_markets(client, market_filter):
+                    await client.load_markets(reload=reload)
+            else:
+                await client.load_markets(reload=reload)
         except Exception as err:
             # ensure this is not a proxy error, raise dedicated error if it is
             if proxy_error := ccxt_client_util.get_proxy_error_if_any(self, err):
