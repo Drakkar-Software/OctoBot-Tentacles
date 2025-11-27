@@ -268,12 +268,20 @@ class CoinbaseConnector(ccxt_connector.CCXTConnector):
             # replace self.exchange_manager.exchange.get_balance by get_open_orders
             # to mitigate coinbase balance cache side effect
             await self.exchange_manager.exchange.get_open_orders(symbol="BTC/USDC")
-        except (octobot_trading.errors.AuthenticationError, ccxt.AuthenticationError):
+        except (
+            octobot_trading.errors.AuthenticationError, 
+            octobot_trading.errors.ExchangeProxyError, 
+            ccxt.AuthenticationError
+        ):
             # this error is critical on coinbase as it prevents loading markets: propagate it
-            raise 
-        except Exception as e:
+            raise
+        except Exception as err:
+            if self.force_authentication:
+                raise
             # Is probably handled in exchange tentacles, important thing here is that authentication worked
-            self.logger.debug(f"Error when checking exchange connection: {e}. This should not be an issue.")
+            self.logger.warning(
+                f"Error when checking exchange connection: {err} ({err.__class__.__name__}). This should not be an issue."
+            )
 
 
 class Coinbase(exchanges.RestExchange):
