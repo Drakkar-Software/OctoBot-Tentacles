@@ -121,17 +121,7 @@ class CoinbaseConnector(ccxt_connector.CCXTConnector):
         market_filter: typing.Optional[typing.Callable[[dict], bool]] = None
     ):
         # override for retrier and populate ALIASED_SYMBOLS
-        try:
-            if self.exchange_manager.exchange.FETCH_MIN_EXCHANGE_MARKETS and market_filter:
-                with ccxt_client_util.filtered_fetched_markets(client, market_filter):
-                    await client.load_markets(reload=reload)
-            else:
-                await client.load_markets(reload=reload)
-        except Exception as err:
-            # ensure this is not a proxy error, raise dedicated error if it is
-            if proxy_error := ccxt_client_util.get_proxy_error_if_any(self, err):
-                raise ccxt_client_util.get_proxy_error_class(proxy_error)(proxy_error) from err
-            raise
+        await self._filtered_if_necessary_load_markets(client, reload, market_filter)
         # only call _refresh_alias_symbols from here as markets just got reloaded,
         # no market can be missing unlike when using cached markets
         _refresh_alias_symbols(client)
@@ -260,11 +250,7 @@ class CoinbaseConnector(ccxt_connector.CCXTConnector):
         # Override of ccxt_connector._ensure_auth to use get_open_orders instead and propagate authentication errors
         try:
             # load markets before calling _ensure_auth() to avoid fetching markets status while they are cached
-            with self.error_describer():
-                await self.load_symbol_markets(
-                    reload=not self.exchange_manager.use_cached_markets,
-                    market_filter=self.exchange_manager.market_filter,
-                )
+            await self._unauth_ensure_exchange_init()
             # replace self.exchange_manager.exchange.get_balance by get_open_orders
             # to mitigate coinbase balance cache side effect
             await self.exchange_manager.exchange.get_open_orders(symbol="BTC/USDC")
