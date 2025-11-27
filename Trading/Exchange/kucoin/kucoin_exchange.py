@@ -77,21 +77,11 @@ class KucoinConnector(ccxt_connector.CCXTConnector):
         market_filter: typing.Optional[typing.Callable[[dict], bool]] = None
     ):
         # override for retrier
-        try:
-            if self.exchange_manager.exchange.FETCH_MIN_EXCHANGE_MARKETS and market_filter:
-                with ccxt_client_util.filtered_fetched_markets(client, market_filter):
-                    await client.load_markets(reload=reload)
-            else:
-                await client.load_markets(reload=reload)
-            # sometimes market fees are missing because they are fetched from all tickers 
-            # and all ticker can miss symbols on kucoin
-            if client.markets:
-                ccxt_client_util.fix_client_missing_markets_fees(client, reload, _CACHED_CONFIRMED_FEES_BY_SYMBOL)
-        except Exception as err:
-            # ensure this is not a proxy error, raise dedicated error if it is
-            if proxy_error := ccxt_client_util.get_proxy_error_if_any(self, err):
-                raise ccxt_client_util.get_proxy_error_class(proxy_error)(proxy_error) from err
-            raise
+        await self._filtered_if_necessary_load_markets(client, reload, market_filter)
+        # sometimes market fees are missing because they are fetched from all tickers 
+        # and all ticker can miss symbols on kucoin
+        if client.markets:
+            ccxt_client_util.fix_client_missing_markets_fees(client, reload, _CACHED_CONFIRMED_FEES_BY_SYMBOL)
 
 class Kucoin(exchanges.RestExchange):
     FIX_MARKET_STATUS = True
