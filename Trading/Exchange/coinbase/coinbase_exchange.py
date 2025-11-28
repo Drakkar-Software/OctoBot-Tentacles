@@ -253,7 +253,14 @@ class CoinbaseConnector(ccxt_connector.CCXTConnector):
             await self._unauth_ensure_exchange_init()
             # replace self.exchange_manager.exchange.get_balance by get_open_orders
             # to mitigate coinbase balance cache side effect
-            await self.exchange_manager.exchange.get_open_orders(symbol="BTC/USDC")
+            if self.client.markets:
+                # fetch orders for any available symbol to ensure authentication is working
+                first_symbol = next(iter(self.client.markets.keys()))
+                await self.exchange_manager.exchange.get_open_orders(symbol=first_symbol)
+            else:
+                self.logger.error(
+                    f"Unexpected: No [{self.exchange_manager.exchange_name}] markets loaded. Impossible to check authentication."
+                )
         except (
             octobot_trading.errors.AuthenticationError, 
             octobot_trading.errors.ExchangeProxyError, 
