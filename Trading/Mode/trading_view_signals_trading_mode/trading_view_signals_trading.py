@@ -17,6 +17,7 @@ import decimal
 import math
 import typing
 import json
+import copy
 
 import async_channel.channels as channels
 import octobot_commons.symbols.symbol_util as symbol_util
@@ -172,6 +173,9 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
 
     @classmethod
     def parse_signal_data(cls, signal_data: str, errors: list) -> dict:
+        if isinstance(signal_data, dict):
+            # already parsed: return a deep copy to avoid modifying the original data
+            return copy.deepcopy(signal_data)
         parsed_data = {}
         # replace all split char by a single one
         splittable_data = signal_data
