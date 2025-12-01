@@ -17,12 +17,20 @@
 import octobot_trading.exchanges as exchanges
 import octobot_trading.enums as trading_enums
 
+import typing
+
 
 class GateIO(exchanges.RestExchange):
     ORDERS_LIMIT = 100
 
     FIX_MARKET_STATUS = True
     REMOVE_MARKET_STATUS_PRICE_LIMITS = True
+
+    # text content of errors due to unhandled IP white list issues
+    EXCHANGE_IP_WHITELIST_ERRORS: typing.List[typing.Iterable[str]] = [
+        # gateio {"message":"Request IP not in whitelist: 11.11.11.11","label":"FORBIDDEN"}
+        ("ip not in whitelist",),
+    ]
 
     @classmethod
     def get_name(cls):
