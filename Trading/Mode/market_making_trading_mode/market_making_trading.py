@@ -443,7 +443,7 @@ class MarketMakingTradingModeConsumer(trading_modes.AbstractTradingModeConsumer)
         except (SkippedAction, trading_errors.MissingFunds):
             raise
         except Exception as e:
-            self.logger.exception(e, True, f"Failed to create order : {e}. Order: {order_data}")
+            self.logger.error(f"Failed to create order : {e}. Order: {order_data}")
             return []
         return [] if created_order is None else [created_order]
 
@@ -579,9 +579,9 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
             except asyncio.TimeoutError:
                 can_create_orders = False
         if not self.should_stop:
-            self._reschedule_if_necessary(can_create_orders)
+            await self._reschedule_if_necessary(can_create_orders)
 
-    def _reschedule_if_necessary(self, can_create_orders):
+    async def _reschedule_if_necessary(self, can_create_orders: bool):
         if not can_create_orders:
             self.logger.info(
                 f"Can't yet create initialize orders for {self.symbol}, retrying in {self.INIT_RETRY_TIMER} seconds"
