@@ -191,7 +191,16 @@ class MarketMakingTradingMode(trading_modes.AbstractTradingMode):
     @classmethod
     def get_is_trading_on_exchange(cls, exchange_name, tentacles_setup_config) -> bool:
         """
-        returns True if exchange_name is not in price sources
+        returns True if exchange_name is trading exchange or the hedging exchange
+        """
+        return cls.has_trading_exchange_configuration(
+            exchange_name, octobot_tentacles_manager.api.get_tentacle_config(tentacles_setup_config, cls)
+        )
+
+    @classmethod
+    def get_is_using_trading_mode_on_exchange(cls, exchange_name, tentacles_setup_config) -> bool:
+        """
+        returns True if exchange_name is a trading exchange that is not the hedging exchange
         """
         return cls.has_trading_exchange_configuration(
             exchange_name, octobot_tentacles_manager.api.get_tentacle_config(tentacles_setup_config, cls)
@@ -762,8 +771,8 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
         outdated_orders = self._get_orders_to_cancel(sorted_orders, reference_price)
         if outdated_orders:
             self.logger.info(
-                f"{len(outdated_orders)} outdated orders for {self.symbol} {self.exchange_manager.exchange_name}: "
-                f"{[str(o) for o in outdated_orders]} [trigger source: {trigger_source}]"
+                f"{len(outdated_orders)} outdated orders for {self.symbol} on {self.exchange_manager.exchange_name} (trigger_source: {trigger_source}): "
+                f"{[str(o) for o in outdated_orders]}"
             )
 
         # get ideal distribution
@@ -1071,12 +1080,11 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
         ]
 
     def _is_outdated(
-        self, price: decimal.Decimal, side: trading_enums.TradeOrderSide, reference_price: decimal.Decimal
+        self, order_price: decimal.Decimal, side: trading_enums.TradeOrderSide, reference_price: decimal.Decimal
     ) -> bool:
-        return (
-            (side == trading_enums.TradeOrderSide.BUY and price > reference_price)
-            or (side == trading_enums.TradeOrderSide.SELL and price < reference_price)
-        )
+        if side == trading_enums.TradeOrderSide.BUY:
+            return order_price > reference_price
+        return order_price < reference_price
 
     def _sort_orders(self, open_orders: list) -> list:
         """
@@ -1292,7 +1300,7 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
             local_exchange_name, self.exchange_manager.id
         ):
             exchange_manager = trading_api.get_exchange_manager_from_exchange_id(exchange_id)
-            if exchange_manager.is_trading and exchange_manager is not self.exchange_manager:
+            if exchange_manager.trading_modes and exchange_manager is not self.exchange_manager:
                 await self.sent_once_critical_notification(
                     "Configuration issue",
                     f"Multiple simultaneous trading exchanges is not supported on {self.trading_mode.get_name()}"
