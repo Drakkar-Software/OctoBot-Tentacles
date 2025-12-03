@@ -17,6 +17,7 @@ import typing
 
 import octobot_trading.exchanges as exchanges
 import octobot_trading.enums as trading_enums
+import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
 
 
 class HyperliquidConnector(exchanges.CCXTConnector):
@@ -50,6 +51,15 @@ class Hyperliquid(exchanges.RestExchange):
 
     def get_adapter_class(self):
         return HyperLiquidCCXTAdapter
+
+    def get_additional_connector_config(self):
+        return {
+            ccxt_constants.CCXT_OPTIONS: {
+                "fetchMarkets": {
+                    "types": ["spot"],  # only hyperliquid spot markets are supported
+                }
+            }
+        }
 
 
 class HyperLiquidCCXTAdapter(exchanges.CCXTAdapter):
