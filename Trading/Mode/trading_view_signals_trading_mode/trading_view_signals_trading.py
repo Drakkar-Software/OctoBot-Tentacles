@@ -209,8 +209,8 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
 
     def _log_error_message_if_relevant(self, parsed_data: dict, signal_data: str):
         # only log error messages on one TradingViewSignalsTradingMode instance to avoid logging errors multiple times
-        all_trading_modes = trading_modes.get_trading_modes_of_this_type_on_this_matrix(self)
-        if all_trading_modes and all_trading_modes[0] is self:
+        if self.is_first_trading_mode_on_this_matrix():
+            all_trading_modes = trading_modes.get_trading_modes_of_this_type_on_this_matrix(self)
             # Can log error message: this is the first trading mode on this matrix. 
             # Each is notified by signals and only this one will log errors to avoid duplicating logs
             if not any(
