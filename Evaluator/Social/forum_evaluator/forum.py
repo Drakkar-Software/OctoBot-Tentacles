@@ -30,8 +30,7 @@ CONFIG_REDDIT_ENTRY_WEIGHT = "entry_weight"
 # RedditForumEvaluator is used to get an overall state of a market, it will not trigger a trade
 # (notify its evaluators) but is used to measure hype and trend of a market.
 class RedditForumEvaluator(evaluators.SocialEvaluator):
-
-    SERVICE_FEED_CLASS = Services_feeds.RedditServiceFeed
+    SERVICE_FEED_CLASS = Services_feeds.RedditServiceFeed if hasattr(Services_feeds, 'RedditServiceFeed') else None
 
     def __init__(self, tentacles_setup_config):
         evaluators.SocialEvaluator.__init__(self, tentacles_setup_config)

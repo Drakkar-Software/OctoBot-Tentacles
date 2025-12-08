@@ -114,15 +114,14 @@ class CoinbaseConnector(ccxt_connector.CCXTConnector):
         return creds
 
     @_coinbase_retrier
-    async def _load_markets(self, client, reload: bool):
+    async def _load_markets(
+        self, 
+        client, 
+        reload: bool, 
+        market_filter: typing.Optional[typing.Callable[[dict], bool]] = None
+    ):
         # override for retrier and populate ALIASED_SYMBOLS
-        try:
-            await client.load_markets(reload=reload)
-        except Exception as err:
-            # ensure this is not a proxy error, raise dedicated error if it is
-            if proxy_error := ccxt_client_util.get_proxy_error_if_any(self, err):
-                raise ccxt_client_util.get_proxy_error_class(proxy_error)(proxy_error) from err
-            raise
+        await self._filtered_if_necessary_load_markets(client, reload, market_filter)
         # only call _refresh_alias_symbols from here as markets just got reloaded,
         # no market can be missing unlike when using cached markets
         _refresh_alias_symbols(client)
@@ -251,20 +250,31 @@ class CoinbaseConnector(ccxt_connector.CCXTConnector):
         # Override of ccxt_connector._ensure_auth to use get_open_orders instead and propagate authentication errors
         try:
             # load markets before calling _ensure_auth() to avoid fetching markets status while they are cached
-            with self.error_describer():
-                await self.load_symbol_markets(
-                    reload=not self.exchange_manager.use_cached_markets,
-                    market_filter=self.exchange_manager.market_filter,
-                )
+            await self._unauth_ensure_exchange_init()
             # replace self.exchange_manager.exchange.get_balance by get_open_orders
             # to mitigate coinbase balance cache side effect
-            await self.exchange_manager.exchange.get_open_orders(symbol="BTC/USDC")
-        except (octobot_trading.errors.AuthenticationError, ccxt.AuthenticationError):
+            if self.client.markets:
+                # fetch orders for any available symbol to ensure authentication is working
+                first_symbol = next(iter(self.client.markets.keys()))
+                await self.exchange_manager.exchange.get_open_orders(symbol=first_symbol)
+            else:
+                self.logger.error(
+                    f"Unexpected: No [{self.exchange_manager.exchange_name}] markets loaded. Impossible to check authentication."
+                )
+        except (
+            octobot_trading.errors.AuthenticationError, 
+            octobot_trading.errors.ExchangeProxyError, 
+            ccxt.AuthenticationError
+        ):
             # this error is critical on coinbase as it prevents loading markets: propagate it
-            raise 
-        except Exception as e:
+            raise
+        except Exception as err:
+            if self.force_authentication:
+                raise
             # Is probably handled in exchange tentacles, important thing here is that authentication worked
-            self.logger.debug(f"Error when checking exchange connection: {e}. This should not be an issue.")
+            self.logger.warning(
+                f"Error when checking exchange connection: {err} ({err.__class__.__name__}). This should not be an issue."
+            )
 
 
 class Coinbase(exchanges.RestExchange):

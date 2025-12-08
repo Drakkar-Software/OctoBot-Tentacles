@@ -14,7 +14,17 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-import vaderSentiment.vaderSentiment as vaderSentiment
+import octobot_commons.constants as commons_constants
+try:
+    import vaderSentiment.vaderSentiment as vaderSentiment
+except ImportError:
+    if commons_constants.USE_MINIMAL_LIBS:
+        # mock vaderSentiment imports
+        class VaderSentimentImportMock:
+            class SentimentIntensityAnalyzer:
+                def __init__(self, *args):
+                    raise ImportError("vaderSentiment not installed")
+    vaderSentiment = VaderSentimentImportMock()
 
 
 class TextAnalysis:

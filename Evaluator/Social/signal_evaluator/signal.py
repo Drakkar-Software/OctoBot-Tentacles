@@ -23,7 +23,7 @@ import tentacles.Services.Services_feeds as Services_feeds
 
 
 class TelegramSignalEvaluator(evaluators.SocialEvaluator):
-    SERVICE_FEED_CLASS = Services_feeds.TelegramServiceFeed
+    SERVICE_FEED_CLASS = Services_feeds.TelegramServiceFeed if hasattr(Services_feeds, 'TelegramServiceFeed') else None
 
     def init_user_inputs(self, inputs: dict) -> None:
         channels_config = self.UI.user_input(services_constants.CONFIG_TELEGRAM_CHANNEL,
@@ -106,7 +106,7 @@ class TelegramSignalEvaluator(evaluators.SocialEvaluator):
 
 
 class TelegramChannelSignalEvaluator(evaluators.SocialEvaluator):
-    SERVICE_FEED_CLASS = Services_feeds.TelegramApiServiceFeed
+    SERVICE_FEED_CLASS = Services_feeds.TelegramApiServiceFeed if hasattr(Services_feeds, 'TelegramApiServiceFeed') else None
 
     SIGNAL_PATTERN_KEY = "signal_pattern"
     SIGNAL_PATTERN_MARKET_BUY_KEY = "MARKET_BUY"

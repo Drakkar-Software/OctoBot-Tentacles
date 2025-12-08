@@ -22,6 +22,8 @@ import octobot_trading.modes
 
 import octobot_tentacles_manager.api
 
+_EXPECTED_MAX_TENTACLES_COUNT = 256
+
 
 def get_config_history_propagated_tentacles_config_keys(tentacle: str) -> list[str]:
     tentacle_class = octobot_tentacles_manager.api.get_tentacle_class_from_string(tentacle)
@@ -29,14 +31,14 @@ def get_config_history_propagated_tentacles_config_keys(tentacle: str) -> list[s
 
 
 # cached to avoid calling default_parents_inspection when unnecessary
-@functools.lru_cache(maxsize=128)
+@functools.lru_cache(maxsize=_EXPECTED_MAX_TENTACLES_COUNT)
 def is_trading_mode_tentacle(tentacle_name: str) -> bool:
     tentacle_class = octobot_tentacles_manager.api.get_tentacle_class_from_string(tentacle_name)
     return tentacles_management.default_parents_inspection(tentacle_class, octobot_trading.modes.AbstractTradingMode)
 
 
 # cached to avoid calling default_parents_inspection when unnecessary
-@functools.lru_cache(maxsize=128)
+@functools.lru_cache(maxsize=_EXPECTED_MAX_TENTACLES_COUNT)
 def is_exchange_tentacle(tentacle_name: str) -> bool:
     tentacle_class = octobot_tentacles_manager.api.get_tentacle_class_from_string(tentacle_name)
     return tentacles_management.default_parents_inspection(tentacle_class, exchanges.RestExchange)

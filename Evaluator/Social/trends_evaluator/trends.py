@@ -25,7 +25,7 @@ import tentacles.Services.Services_feeds as Services_feeds
 
 
 class GoogleTrendsEvaluator(evaluators.SocialEvaluator):
-    SERVICE_FEED_CLASS = Services_feeds.GoogleServiceFeed
+    SERVICE_FEED_CLASS = Services_feeds.GoogleServiceFeed if hasattr(Services_feeds, 'GoogleServiceFeed') else None
 
     def __init__(self, tentacles_setup_config):
         evaluators.SocialEvaluator.__init__(self, tentacles_setup_config)

@@ -15,6 +15,7 @@
 #  License along with this library.
 import decimal
 import typing
+import enum
 
 import ccxt
 
@@ -23,10 +24,17 @@ import octobot_commons.constants as commons_constants
 import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
 import octobot_trading.errors as errors
+import octobot_trading.constants as trading_constants
 import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
 import octobot_trading.exchanges.connectors.ccxt.enums as ccxt_enums
 import octobot_trading.util as trading_util
 import octobot_trading.personal_data as personal_data
+
+
+class BinanceMarkets(enum.Enum):
+    SPOT = "spot"
+    LINEAR = "linear"
+    INVERSE = "inverse"
 
 
 class Binance(exchanges.RestExchange):
@@ -241,6 +249,12 @@ class Binance(exchanges.RestExchange):
                 "filterClosed": False,  # return empty positions as well
             }
         }
+        if self.FETCH_MIN_EXCHANGE_MARKETS:
+            config[ccxt_constants.CCXT_OPTIONS][ccxt_constants.CCXT_FETCH_MARKETS] = (
+                [
+                    BinanceMarkets.LINEAR.value, BinanceMarkets.INVERSE.value
+                ] if self.exchange_manager.is_future else [BinanceMarkets.SPOT.value]
+            )
         return config
 
     def is_authenticated_request(self, url: str, method: str, headers: dict, body) -> bool:

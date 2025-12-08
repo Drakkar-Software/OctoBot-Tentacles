@@ -1,1 +1,3 @@
-from .telegram_bot import TelegramBotInterface
+import octobot_commons.constants as commons_constants
+if not commons_constants.USE_MINIMAL_LIBS:
+    from .telegram_bot import TelegramBotInterface
