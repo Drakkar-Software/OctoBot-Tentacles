@@ -23,7 +23,7 @@ from ..hollaex.hollaex_exchange import hollaex
 class HollaexCCXTWebsocketConnector(exchanges.CCXTWebsocketConnector):
     BASE_WS_API = f"{hollaex.BASE_REST_API}/stream"
     EXCHANGE_FEEDS = {
-        Feeds.TRADES: True,
+        Feeds.TRADES: Feeds.UNSUPPORTED.value,
         Feeds.KLINE: Feeds.UNSUPPORTED.value,
         Feeds.TICKER: Feeds.UNSUPPORTED.value,
         Feeds.CANDLE: Feeds.UNSUPPORTED.value,
