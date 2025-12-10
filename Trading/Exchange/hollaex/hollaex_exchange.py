@@ -148,7 +148,8 @@ class hollaexConnector(exchanges.CCXTConnector):
         fee_pairs = list(fees_by_tier[next(iter(fees_by_tier))]) if fees_by_tier else []
         self.logger.info(
             f"Refreshed {exchange_name} fee tiers. Sample: {sample}. {len(sample)} tiers: {list(sample)} "
-            f"over {len(fee_pairs)} pairs: {fee_pairs}."
+            f"over {len(fee_pairs)} pairs: {fee_pairs}. Using fee tiers "
+            f"{self._get_fee_tiers(self.exchange_manager.exchange, not self.exchange_manager.is_backtesting).value}."
         )
 
     @classmethod
@@ -177,7 +178,7 @@ class hollaexConnector(exchanges.CCXTConnector):
     ):
         # only called in backtesting
         # overrides exchange simulator connector calculate_fees and get_fees to use fetched fees instead
-        fee_tiers = cls._get_fee_tiers(False)
+        fee_tiers = cls._get_fee_tiers(None, False)
         simulator_connector.calculate_fees = cls.simulator_connector_calculate_fees_factory(exchange_name, fee_tiers)
         simulator_connector.get_fees = cls.simulator_connector_get_fees_factory(exchange_name, fee_tiers)
 
@@ -188,8 +189,9 @@ class hollaexConnector(exchanges.CCXTConnector):
         # only called in live trading
         is_real_trading = not self.exchange_manager.is_backtesting  # consider live trading as real to use basic tier
         try:
+            fee_tiers = self._get_fee_tiers(self.exchange_manager.exchange, is_real_trading)
             return self._calculate_fetched_fees(
-                self.exchange_manager.exchange_name, self._get_fee_tiers(is_real_trading),
+                self.exchange_manager.exchange_name, fee_tiers,
                 symbol, order_type, quantity, price, taker_or_maker
             )
         except errors.MissingFeeDetailsError as err:
@@ -201,7 +203,8 @@ class hollaexConnector(exchanges.CCXTConnector):
         # only called in live trading
         try:
             is_real_trading = not self.exchange_manager.is_backtesting  # consider live trading as real to use basic tier
-            return self._get_fees(self.exchange_manager.exchange_name, self._get_fee_tiers(is_real_trading), symbol)
+            fee_tiers = self._get_fee_tiers(self.exchange_manager.exchange, is_real_trading)
+            return self._get_fees(self.exchange_manager.exchange_name, fee_tiers, symbol)
         except errors.MissingFeeDetailsError:
             self.logger.error(f"Missing fee details, using default value")
             market = self.get_market_status(symbol, with_fixer=False)
@@ -258,7 +261,14 @@ class hollaexConnector(exchanges.CCXTConnector):
         }
 
     @classmethod
-    def _get_fee_tiers(cls, is_real_trading: bool):
+    def _get_fee_tiers(cls, rest_exchange: typing.Optional[exchanges.RestExchange], is_real_trading: bool):
+        if (
+            rest_exchange
+            and isinstance(rest_exchange, hollaex)
+            and (fee_tiers := rest_exchange.get_configured_fee_tiers())
+        ):
+            return fee_tiers
+        # default to basic tier
         return FeeTiers.BASIC if is_real_trading else FeeTiers.VIP
 
     @classmethod
@@ -320,6 +330,7 @@ class hollaex(exchanges.RestExchange):
 
     BASE_REST_API = "api.hollaex.com"
     REST_KEY = "rest"
+    FEE_TIERS_KEY = "fee_tiers"
     HAS_WEBSOCKETS_KEY = "has_websockets"
     REQUIRE_ORDER_FEES_FROM_TRADES = True  # set True when get_order is not giving fees on closed orders and fees
     SUPPORT_FETCHING_CANCELLED_ORDERS = False
@@ -399,14 +410,27 @@ class hollaex(exchanges.RestExchange):
             title=f"Address of the Hollaex based exchange API (similar to https://{cls.BASE_REST_API})"
         )
         cls.CLASS_UI.user_input(
+            cls.FEE_TIERS_KEY, commons_enums.UserInputTypes.OPTIONS, FeeTiers.BASIC.value, inputs,
+            title=f"Fee tiers to use for the exchange. Used to predict fees.",
+            options=[tier.value for tier in FeeTiers]
+        )
+        cls.CLASS_UI.user_input(
             cls.HAS_WEBSOCKETS_KEY, commons_enums.UserInputTypes.BOOLEAN, True, inputs,
             title=f"Use websockets feed. To enable only when websockets are supported by the exchange."
         )
 
     def get_additional_connector_config(self):
         return {
-            ccxt_enums.ExchangeColumns.URLS.value: self.get_patched_urls(self.tentacle_config[self.REST_KEY])
+            ccxt_enums.ExchangeColumns.URLS.value: self.get_patched_urls(self.get_api_url())
         }
+
+    def get_api_url(self):
+        return self.tentacle_config[self.REST_KEY]
+
+    def get_configured_fee_tiers(self) -> typing.Optional[FeeTiers]:
+        if tiers := self.tentacle_config.get(self.FEE_TIERS_KEY):
+            return FeeTiers(tiers)
+        return None
 
     @classmethod
     def get_custom_url_config(cls, tentacle_config: dict, exchange_name: str) -> dict:
