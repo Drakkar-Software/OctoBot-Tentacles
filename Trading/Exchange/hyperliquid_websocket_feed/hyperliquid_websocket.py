@@ -19,6 +19,7 @@ import tentacles.Trading.Exchange.hyperliquid.hyperliquid_exchange as hyperliqui
 
 
 class HyperliquidCCXTWebsocketConnector(exchanges.CCXTWebsocketConnector):
+    USE_REST_CONNECTOR_ADDITIONAL_CONFIG = True
     EXCHANGE_FEEDS = {
         Feeds.TRADES: True,
         Feeds.KLINE: True,
