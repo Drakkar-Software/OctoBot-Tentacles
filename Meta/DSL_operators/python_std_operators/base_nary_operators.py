@@ -23,6 +23,9 @@ import octobot_commons.dsl_interpreter.operator as dsl_interpreter_operator
 class AndOperator(dsl_interpreter_n_ary_operator.NaryOperator):
     MIN_PARAMS = 1
     MAX_PARAMS = None
+    NAME = "and"
+    DESCRIPTION = "Logical AND operator. Returns True if all operands are truthy, otherwise returns False."
+    EXAMPLE = "True and False"
 
     @staticmethod
     def get_name() -> str:
@@ -36,6 +39,9 @@ class AndOperator(dsl_interpreter_n_ary_operator.NaryOperator):
 class OrOperator(dsl_interpreter_n_ary_operator.NaryOperator):
     MIN_PARAMS = 1
     MAX_PARAMS = None
+    NAME = "or"
+    DESCRIPTION = "Logical OR operator. Returns True if any operand is truthy, otherwise returns False."
+    EXAMPLE = "True or False"
 
     @staticmethod
     def get_name() -> str:

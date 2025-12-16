@@ -22,6 +22,9 @@ import octobot_commons.dsl_interpreter as dsl_interpreter
 
 class MinOperator(dsl_interpreter.CallOperator):
     MIN_PARAMS = 1
+    NAME = "min"
+    DESCRIPTION = "Returns the minimum value from the given operands."
+    EXAMPLE = "min(1, 2, 3)"
 
     @staticmethod
     def get_name() -> str:
@@ -34,6 +37,9 @@ class MinOperator(dsl_interpreter.CallOperator):
 
 class MaxOperator(dsl_interpreter.CallOperator):
     MIN_PARAMS = 1
+    NAME = "max"
+    DESCRIPTION = "Returns the maximum value from the given operands."
+    EXAMPLE = "max(1, 2, 3)"
 
     @staticmethod
     def get_name() -> str:
@@ -46,6 +52,9 @@ class MaxOperator(dsl_interpreter.CallOperator):
 
 class MeanOperator(dsl_interpreter.CallOperator):
     MIN_PARAMS = 1
+    NAME = "mean"
+    DESCRIPTION = "Returns the arithmetic mean (average) of the given numeric operands."
+    EXAMPLE = "mean(1, 2, 3, 4)"
 
     @staticmethod
     def get_name() -> str:
@@ -68,6 +77,9 @@ class MeanOperator(dsl_interpreter.CallOperator):
 class SqrtOperator(dsl_interpreter.CallOperator):
     MIN_PARAMS = 1
     MAX_PARAMS = 1
+    NAME = "sqrt"
+    DESCRIPTION = "Returns the square root of the given numeric operand."
+    EXAMPLE = "sqrt(16)"
 
     @staticmethod
     def get_name() -> str:
@@ -86,6 +98,9 @@ class SqrtOperator(dsl_interpreter.CallOperator):
 class AbsOperator(dsl_interpreter.CallOperator):
     MIN_PARAMS = 1
     MAX_PARAMS = 1
+    NAME = "abs"
+    DESCRIPTION = "Returns the absolute value of the given operand."
+    EXAMPLE = "abs(-5)"
 
     @staticmethod
     def get_name() -> str:
@@ -98,6 +113,10 @@ class AbsOperator(dsl_interpreter.CallOperator):
 
 
 class RoundOperator(dsl_interpreter.CallOperator):
+    NAME = "round"
+    DESCRIPTION = "Rounds the given numeric value to the specified number of decimal digits. If digits is not provided, rounds to the nearest integer."
+    EXAMPLE = "round(3.14159, 2)"
+
     @staticmethod
     def get_name() -> str:
         return "round"
@@ -123,6 +142,9 @@ class RoundOperator(dsl_interpreter.CallOperator):
 class FloorOperator(dsl_interpreter.CallOperator):
     MIN_PARAMS = 1
     MAX_PARAMS = 1
+    NAME = "floor"
+    DESCRIPTION = "Returns the floor of the given numeric operand (largest integer less than or equal to the value)."
+    EXAMPLE = "floor(3.7)"
 
     @staticmethod
     def get_name() -> str:
@@ -141,6 +163,9 @@ class FloorOperator(dsl_interpreter.CallOperator):
 class CeilOperator(dsl_interpreter.CallOperator):
     MIN_PARAMS = 1
     MAX_PARAMS = 1
+    NAME = "ceil"
+    DESCRIPTION = "Returns the ceiling of the given numeric operand (smallest integer greater than or equal to the value)."
+    EXAMPLE = "ceil(3.2)"
 
     @staticmethod
     def get_name() -> str:
