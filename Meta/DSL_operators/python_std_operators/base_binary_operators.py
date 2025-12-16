@@ -21,6 +21,10 @@ import octobot_commons.dsl_interpreter.operator as dsl_interpreter_operator
 
 
 class AddOperator(dsl_interpreter_binary_operator.BinaryOperator):
+    NAME = "+"
+    DESCRIPTION = "Addition operator. Adds two operands together."
+    EXAMPLE = "5 + 3"
+
     @staticmethod
     def get_name() -> str:
         return ast.Add.__name__
@@ -31,6 +35,10 @@ class AddOperator(dsl_interpreter_binary_operator.BinaryOperator):
 
 
 class SubOperator(dsl_interpreter_binary_operator.BinaryOperator):
+    NAME = "-"
+    DESCRIPTION = "Subtraction operator. Subtracts the right operand from the left operand."
+    EXAMPLE = "5 - 3"
+
     @staticmethod
     def get_name() -> str:
         return ast.Sub.__name__
@@ -41,6 +49,10 @@ class SubOperator(dsl_interpreter_binary_operator.BinaryOperator):
 
 
 class MultOperator(dsl_interpreter_binary_operator.BinaryOperator):
+    NAME = "*"
+    DESCRIPTION = "Multiplication operator. Multiplies two operands."
+    EXAMPLE = "5 * 3"
+
     @staticmethod
     def get_name() -> str:
         return ast.Mult.__name__
@@ -51,6 +63,10 @@ class MultOperator(dsl_interpreter_binary_operator.BinaryOperator):
 
 
 class DivOperator(dsl_interpreter_binary_operator.BinaryOperator):
+    NAME = "/"
+    DESCRIPTION = "Division operator. Divides the left operand by the right operand."
+    EXAMPLE = "10 / 2"
+
     @staticmethod
     def get_name() -> str:
         return ast.Div.__name__
@@ -61,6 +77,10 @@ class DivOperator(dsl_interpreter_binary_operator.BinaryOperator):
 
 
 class FloorDivOperator(dsl_interpreter_binary_operator.BinaryOperator):
+    NAME = "//"
+    DESCRIPTION = "Floor division operator. Divides the left operand by the right operand and returns the floor of the result."
+    EXAMPLE = "10 // 3"
+
     @staticmethod
     def get_name() -> str:
         return ast.FloorDiv.__name__
@@ -71,6 +91,10 @@ class FloorDivOperator(dsl_interpreter_binary_operator.BinaryOperator):
 
 
 class ModOperator(dsl_interpreter_binary_operator.BinaryOperator):
+    NAME = "%"
+    DESCRIPTION = "Modulo operator. Returns the remainder after dividing the left operand by the right operand."
+    EXAMPLE = "10 % 3"
+
     @staticmethod
     def get_name() -> str:
         return ast.Mod.__name__
@@ -81,6 +105,10 @@ class ModOperator(dsl_interpreter_binary_operator.BinaryOperator):
 
 
 class PowOperator(dsl_interpreter_binary_operator.BinaryOperator):
+    NAME = "**"
+    DESCRIPTION = "Exponentiation operator. Raises the left operand to the power of the right operand."
+    EXAMPLE = "2 ** 3"
+
     @staticmethod
     def get_name() -> str:
         return ast.Pow.__name__

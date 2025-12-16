@@ -15,23 +15,12 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 
-import tentacles.Meta.DSL_operators.exchange_operators.exchange_public_data_operators
-from tentacles.Meta.DSL_operators.exchange_operators.exchange_public_data_operators import (
-    OHLCVOperator,
-    ExchangeDataDependency,
-    create_ohlcv_operators,
-)
-import tentacles.Meta.DSL_operators.exchange_operators.exchange_private_data_operators
-from tentacles.Meta.DSL_operators.exchange_operators.exchange_private_data_operators import (
+import tentacles.Meta.DSL_operators.exchange_operators.exchange_private_data_operators.portfolio_operators
+from tentacles.Meta.DSL_operators.exchange_operators.exchange_private_data_operators.portfolio_operators import (
     PortfolioOperator,
     create_portfolio_operators,
 )
-
-
 __all__ = [
-    "OHLCVOperator",
-    "ExchangeDataDependency",
-    "create_ohlcv_operators",
     "PortfolioOperator",
     "create_portfolio_operators",
 ]

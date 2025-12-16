@@ -145,6 +145,9 @@ def create_ohlcv_operators(
             self.value = _get_candles_values_with_latest_kline_if_available(*self.get_symbol_and_time_frame(), self.PRICE_INDEX, -1)
     
     class _OpenPriceOperator(_LocalOHLCVOperator):
+        DESCRIPTION = "Returns the candle's open price as array of floats"
+        EXAMPLE = "open('BTC/USDT', '1h')"
+
         PRICE_INDEX = commons_enums.PriceIndexes.IND_PRICE_OPEN
 
         @staticmethod
@@ -152,6 +155,9 @@ def create_ohlcv_operators(
             return "open"
     
     class _HighPriceOperator(_LocalOHLCVOperator):
+        DESCRIPTION = "Returns the candle's high price as array of floats"
+        EXAMPLE = "high('BTC/USDT', '1h')"
+
         PRICE_INDEX = commons_enums.PriceIndexes.IND_PRICE_HIGH
 
         @staticmethod
@@ -159,6 +165,9 @@ def create_ohlcv_operators(
             return "high"
 
     class _LowPriceOperator(_LocalOHLCVOperator):
+        DESCRIPTION = "Returns the candle's low price as array of floats"
+        EXAMPLE = "low('BTC/USDT', '1h')"
+
         PRICE_INDEX = commons_enums.PriceIndexes.IND_PRICE_LOW
 
         @staticmethod
@@ -166,6 +175,9 @@ def create_ohlcv_operators(
             return "low"
 
     class _ClosePriceOperator(_LocalOHLCVOperator):
+        DESCRIPTION = "Returns the candle's close price as array of floats"
+        EXAMPLE = "close('BTC/USDT', '1h')"
+
         PRICE_INDEX = commons_enums.PriceIndexes.IND_PRICE_CLOSE
 
         @staticmethod
@@ -173,6 +185,9 @@ def create_ohlcv_operators(
             return "close"
 
     class _VolumePriceOperator(_LocalOHLCVOperator):
+        DESCRIPTION = "Returns the candle's volume as array of floats"
+        EXAMPLE = "volume('BTC/USDT', '1h')"
+
         PRICE_INDEX = commons_enums.PriceIndexes.IND_PRICE_VOL
 
         @staticmethod
@@ -180,6 +195,9 @@ def create_ohlcv_operators(
             return "volume"
     
     class _TimePriceOperator(_LocalOHLCVOperator):
+        DESCRIPTION = "Returns the candle's time as array of floats"
+        EXAMPLE = "time('BTC/USDT', '1h')"
+
         PRICE_INDEX = commons_enums.PriceIndexes.IND_PRICE_TIME
 
         @staticmethod

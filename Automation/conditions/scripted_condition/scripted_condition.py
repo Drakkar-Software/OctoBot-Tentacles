@@ -33,26 +33,29 @@ class ScriptedCondition(abstract_condition.AbstractCondition):
         self.script: str = ""
         self.exchange_name: str = ""
 
-        self._dsl_interpreter: dsl_interpreter.Interpreter = None #type: ignore
+        self._dsl_interpreter: typing.Optional[dsl_interpreter.Interpreter] = None
 
     async def evaluate(self) -> bool:
-        return bool(await self._dsl_interpreter.interprete(self.script))
+        if self._dsl_interpreter:
+            script_result = await self._dsl_interpreter.interprete(self.script)
+            return bool(script_result)
+        raise ValueError("Scripted condition is not properly configured, the script is likely invalid.")
 
     @staticmethod
     def get_description() -> str:
         return "Evaluates a scripted condition using the OctoBot DSL."
 
     def get_user_inputs(self, UI: configuration.UserInputFactory, inputs: dict, step_name: str) -> dict:
-        exchanges = trading_api.get_exchange_names()
+        exchanges = list(trading_api.get_exchange_names())
         return {
             self.SCRIPT: UI.user_input(
                 self.SCRIPT, commons_enums.UserInputTypes.TEXT, "", inputs,
-                title="Scripted condition: the script to evaluate. Its return value will be converted to a boolean using \"bool()\" to determine if the condition is met.",
+                title="Scripted condition: the OctoBot DSL expression to evaluate (more info in automation details). Its return value will be converted to a boolean using \"bool()\" to determine if the condition is met.",
                 parent_input_name=step_name,
             ),
             self.EXCHANGE: UI.user_input(
                 self.EXCHANGE, commons_enums.UserInputTypes.OPTIONS, exchanges[0], inputs,
-                options=list(exchanges),
+                options=exchanges,
                 title="Exchange: the name of the exchange to use for the condition.",
                 parent_input_name=step_name,
             )
@@ -61,8 +64,11 @@ class ScriptedCondition(abstract_condition.AbstractCondition):
     def apply_config(self, config):
         self.script = config[self.SCRIPT]
         self.exchange_name = config[self.EXCHANGE]
-        self._dsl_interpreter = self._create_dsl_interpreter()
-        self._validate_script()
+        if self.script and self.exchange_name:
+            self._dsl_interpreter = self._create_dsl_interpreter()
+            self._validate_script()
+        else:
+            self._dsl_interpreter = None
     
     def _validate_script(self):
         try:
@@ -77,12 +83,16 @@ class ScriptedCondition(abstract_condition.AbstractCondition):
     def _create_dsl_interpreter(self):
         exchange_manager = self._get_exchange_manager()
         ohlcv_operators = []
+        portfolio_operators = []
         if exchange_manager is not None:
             ohlcv_operators = dsl_operators.exchange_operators.create_ohlcv_operators(
                 exchange_manager, None, None
             )
+            portfolio_operators = dsl_operators.exchange_operators.create_portfolio_operators(
+                exchange_manager
+            )
         return dsl_interpreter.Interpreter(
-            dsl_interpreter.get_all_operators() + ohlcv_operators
+            dsl_interpreter.get_all_operators() + ohlcv_operators + portfolio_operators
         )
     
     def _get_exchange_manager(self):
