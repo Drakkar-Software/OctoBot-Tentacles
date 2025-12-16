@@ -77,8 +77,8 @@ class OHLCVOperator(exchange_operator.ExchangeOperator):
 
 def create_ohlcv_operators(
     exchange_manager: typing.Optional[octobot_trading.exchanges.ExchangeManager],
-    symbol: str,
-    time_frame: str,
+    symbol: typing.Optional[str],
+    time_frame: typing.Optional[str],
     candle_manager_by_time_frame_by_symbol: typing.Optional[
         typing.Dict[str, typing.Dict[str, octobot_trading.exchange_data.CandlesManager]]
     ] = None
@@ -120,7 +120,7 @@ def create_ohlcv_operators(
                 else:
                     octobot_commons.logging.get_logger(OHLCVOperator.__name__).error(
                         f"{exchange_manager.exchange_name + '' if exchange_manager is not None else ''}{_symbol} {_time_frame} "
-                        f"kline time ({kline_time}) is not equal to last candle time not the last time + {time_frame} "
+                        f"kline time ({kline_time}) is not equal to last candle time not the last time + {_time_frame} "
                         f"({last_candle_time} + {tf_seconds}) seconds. Kline has been ignored."
                     )
         return candles_values
