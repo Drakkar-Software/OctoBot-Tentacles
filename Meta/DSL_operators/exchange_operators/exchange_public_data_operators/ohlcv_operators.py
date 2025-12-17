@@ -77,8 +77,8 @@ class OHLCVOperator(exchange_operator.ExchangeOperator):
 
 def create_ohlcv_operators(
     exchange_manager: typing.Optional[octobot_trading.exchanges.ExchangeManager],
-    symbol: str,
-    time_frame: str,
+    symbol: typing.Optional[str],
+    time_frame: typing.Optional[str],
     candle_manager_by_time_frame_by_symbol: typing.Optional[
         typing.Dict[str, typing.Dict[str, octobot_trading.exchange_data.CandlesManager]]
     ] = None
@@ -120,7 +120,7 @@ def create_ohlcv_operators(
                 else:
                     octobot_commons.logging.get_logger(OHLCVOperator.__name__).error(
                         f"{exchange_manager.exchange_name + '' if exchange_manager is not None else ''}{_symbol} {_time_frame} "
-                        f"kline time ({kline_time}) is not equal to last candle time not the last time + {time_frame} "
+                        f"kline time ({kline_time}) is not equal to last candle time not the last time + {_time_frame} "
                         f"({last_candle_time} + {tf_seconds}) seconds. Kline has been ignored."
                     )
         return candles_values
@@ -145,6 +145,9 @@ def create_ohlcv_operators(
             self.value = _get_candles_values_with_latest_kline_if_available(*self.get_symbol_and_time_frame(), self.PRICE_INDEX, -1)
     
     class _OpenPriceOperator(_LocalOHLCVOperator):
+        DESCRIPTION = "Returns the candle's open price as array of floats"
+        EXAMPLE = "open('BTC/USDT', '1h')"
+
         PRICE_INDEX = commons_enums.PriceIndexes.IND_PRICE_OPEN
 
         @staticmethod
@@ -152,6 +155,9 @@ def create_ohlcv_operators(
             return "open"
     
     class _HighPriceOperator(_LocalOHLCVOperator):
+        DESCRIPTION = "Returns the candle's high price as array of floats"
+        EXAMPLE = "high('BTC/USDT', '1h')"
+
         PRICE_INDEX = commons_enums.PriceIndexes.IND_PRICE_HIGH
 
         @staticmethod
@@ -159,6 +165,9 @@ def create_ohlcv_operators(
             return "high"
 
     class _LowPriceOperator(_LocalOHLCVOperator):
+        DESCRIPTION = "Returns the candle's low price as array of floats"
+        EXAMPLE = "low('BTC/USDT', '1h')"
+
         PRICE_INDEX = commons_enums.PriceIndexes.IND_PRICE_LOW
 
         @staticmethod
@@ -166,6 +175,9 @@ def create_ohlcv_operators(
             return "low"
 
     class _ClosePriceOperator(_LocalOHLCVOperator):
+        DESCRIPTION = "Returns the candle's close price as array of floats"
+        EXAMPLE = "close('BTC/USDT', '1h')"
+
         PRICE_INDEX = commons_enums.PriceIndexes.IND_PRICE_CLOSE
 
         @staticmethod
@@ -173,6 +185,9 @@ def create_ohlcv_operators(
             return "close"
 
     class _VolumePriceOperator(_LocalOHLCVOperator):
+        DESCRIPTION = "Returns the candle's volume as array of floats"
+        EXAMPLE = "volume('BTC/USDT', '1h')"
+
         PRICE_INDEX = commons_enums.PriceIndexes.IND_PRICE_VOL
 
         @staticmethod
@@ -180,6 +195,9 @@ def create_ohlcv_operators(
             return "volume"
     
     class _TimePriceOperator(_LocalOHLCVOperator):
+        DESCRIPTION = "Returns the candle's time as array of floats"
+        EXAMPLE = "time('BTC/USDT', '1h')"
+
         PRICE_INDEX = commons_enums.PriceIndexes.IND_PRICE_TIME
 
         @staticmethod

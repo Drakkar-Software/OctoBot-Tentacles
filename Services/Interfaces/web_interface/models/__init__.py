@@ -30,7 +30,11 @@ from tentacles.Services.Interfaces.web_interface.models import trading
 from tentacles.Services.Interfaces.web_interface.models import web_interface_tab
 from tentacles.Services.Interfaces.web_interface.models import json_schemas
 from tentacles.Services.Interfaces.web_interface.models import distributions
+from tentacles.Services.Interfaces.web_interface.models import dsl
 
+from tentacles.Services.Interfaces.web_interface.models.dsl import (
+    get_dsl_keywords_docs,
+)
 
 from tentacles.Services.Interfaces.web_interface.models.backtesting import (
     CURRENT_BOT_DATA,
@@ -500,4 +504,5 @@ __all__ = [
     "WebInterfaceTab",
     "save_market_making_configuration",
     "get_market_making_services",
+    "get_dsl_keywords_docs",
 ]

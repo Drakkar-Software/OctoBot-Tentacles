@@ -21,6 +21,10 @@ import octobot_commons.dsl_interpreter.operator as dsl_interpreter_operator
 
 
 class UAddOperator(dsl_interpreter_unary_operator.UnaryOperator):
+    NAME = "+"
+    DESCRIPTION = "Unary plus operator. Returns the operand unchanged (mainly for symmetry with unary minus)."
+    EXAMPLE = "+5"
+
     @staticmethod
     def get_name() -> str:
         return ast.UAdd.__name__
@@ -31,6 +35,10 @@ class UAddOperator(dsl_interpreter_unary_operator.UnaryOperator):
 
 
 class USubOperator(dsl_interpreter_unary_operator.UnaryOperator):
+    NAME = "-"
+    DESCRIPTION = "Unary minus operator. Negates the operand (multiplies by -1)."
+    EXAMPLE = "-5"
+
     @staticmethod
     def get_name() -> str:
         return ast.USub.__name__
@@ -41,6 +49,10 @@ class USubOperator(dsl_interpreter_unary_operator.UnaryOperator):
 
 
 class NotOperator(dsl_interpreter_unary_operator.UnaryOperator):
+    NAME = "not"
+    DESCRIPTION = "Logical NOT operator. Returns True if the operand is falsy, False if it is truthy."
+    EXAMPLE = "not True"
+
     @staticmethod
     def get_name() -> str:
         return ast.Not.__name__
@@ -51,6 +63,10 @@ class NotOperator(dsl_interpreter_unary_operator.UnaryOperator):
 
 
 class InvertOperator(dsl_interpreter_unary_operator.UnaryOperator):
+    NAME = "~"
+    DESCRIPTION = "Bitwise NOT operator. Inverts all bits of the operand. In this implementation, it behaves as logical NOT."
+    EXAMPLE = "~True"
+
     @staticmethod
     def get_name() -> str:
         return ast.Invert.__name__

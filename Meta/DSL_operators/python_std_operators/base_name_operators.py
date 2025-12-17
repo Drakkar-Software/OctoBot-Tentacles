@@ -22,6 +22,9 @@ import octobot_commons.dsl_interpreter.operator as dsl_interpreter_operator
 
 class PiOperator(dsl_interpreter_name_operator.NameOperator):
     MAX_PARAMS = 0
+    NAME = "pi"
+    DESCRIPTION = "Mathematical constant pi (π), approximately 3.14159."
+    EXAMPLE = "pi"
 
     @staticmethod
     def get_name() -> str:
@@ -33,6 +36,9 @@ class PiOperator(dsl_interpreter_name_operator.NameOperator):
 
 class NaNOperator(dsl_interpreter_name_operator.NameOperator):
     MAX_PARAMS = 0
+    NAME = "nan"
+    DESCRIPTION = "Not a Number constant. Represents an undefined or unrepresentable numeric value."
+    EXAMPLE = "nan"
 
     @staticmethod
     def get_name() -> str:

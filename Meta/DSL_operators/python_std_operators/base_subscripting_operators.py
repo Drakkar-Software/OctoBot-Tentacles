@@ -28,6 +28,9 @@ class SubscriptOperator(dsl_interpreter_subscripting_operator.SubscriptingOperat
     Base class for subscripting operators: array[index]
     Subscripting operators have three operands: the array/list, the index or slice and the context.
     """
+    NAME = "[...]"
+    DESCRIPTION = "Subscripting operator. Accesses an element from a list or array using an index."
+    EXAMPLE = "my_list[0]"
 
     def __init__(
         self,
@@ -75,6 +78,9 @@ class SliceOperator(dsl_interpreter_subscripting_operator.SubscriptingOperator):
     Operator for creating slice objects: slice(lower, upper, step)
     Used for array slicing like array[start:stop:step]
     """
+    NAME = "[start:stop:step]"
+    DESCRIPTION = "Slice operator. Creates a slice object for array/list slicing with optional start, stop, and step parameters."
+    EXAMPLE = "my_list[1:5:2]"
 
     @staticmethod
     def get_name() -> str:

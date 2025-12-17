@@ -25,6 +25,9 @@ class ListOperator(dsl_interpreter_iterable_operator.IterableOperator):
     List operator: [1, 2, 3]
     List operator have one or more operands.
     """
+    NAME = "[...]"
+    DESCRIPTION = "List constructor operator. Creates a list from the given operands."
+    EXAMPLE = "[1, 2, 3]"
 
     @staticmethod
     def get_name() -> str:

@@ -25,6 +25,9 @@ class IfExpOperator(dsl_interpreter_expression_operator.ExpressionOperator):
     Base class for if expression operators: a if b else c
     If expression operators have three operands: condition, true expression, false expression.
     """
+    NAME = "if ... else"
+    DESCRIPTION = "Conditional expression operator. Returns the body expression if the test condition is True, otherwise returns the orelse expression."
+    EXAMPLE = "5 if True else 3"
 
     def __init__(
         self,

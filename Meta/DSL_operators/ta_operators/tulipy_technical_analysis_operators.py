@@ -56,6 +56,9 @@ def converted_tulipy_error(f):
 
 
 class RSIOperator(ta_operator.TAOperator):
+    DESCRIPTION = "Returns the Relative Strength Index (RSI) of the given array of numbers"
+    EXAMPLE = "rsi([100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110], 14)"
+
     @staticmethod
     def get_name() -> str:
         return "rsi"
@@ -74,6 +77,9 @@ class RSIOperator(ta_operator.TAOperator):
 
 
 class MACDOperator(ta_operator.TAOperator):
+    DESCRIPTION = "Returns the Moving Average Convergence Divergence (MACD) of the given array of numbers"
+    EXAMPLE = "macd(close('BTC/USDT', '1h'), 12, 26, 9)"
+
     @staticmethod
     def get_name() -> str:
         return "macd"
@@ -97,6 +103,9 @@ class MACDOperator(ta_operator.TAOperator):
 
 
 class MAOperator(ta_operator.TAOperator):
+    DESCRIPTION = "Returns the moving average of the given array of numbers"
+    EXAMPLE = "ma(close('BTC/USDT', '1h'), 14)"
+
     @staticmethod
     def get_name() -> str:
         return "ma"
@@ -115,6 +124,9 @@ class MAOperator(ta_operator.TAOperator):
 
 
 class EMAOperator(ta_operator.TAOperator):
+    DESCRIPTION = "Returns the exponential moving average of the given array of numbers"
+    EXAMPLE = "ema(close('BTC/USDT', '1h'), 14)"
+
     @staticmethod
     def get_name() -> str:
         return "ema"
@@ -133,6 +145,9 @@ class EMAOperator(ta_operator.TAOperator):
 
 
 class VWMAOperator(ta_operator.TAOperator):
+    DESCRIPTION = "Returns the volume weighted moving average of the given array of numbers"
+    EXAMPLE = "vwma(close('BTC/USDT', '1h'), volume('BTC/USDT', '1h'), 14)"
+
     @staticmethod
     def get_name() -> str:
         return "vwma"
