@@ -66,12 +66,20 @@ class hollaexConnector(exchanges.CCXTConnector):
         # on hollaex exchanges, a market can be "quick trade only" or "spot order book trade" as well.
         # a quick trade only market can't be traded like a spot market, disable it.
         exchange_constants = await self.client.publicGetConstants()
-        for quick_trade_only_pairs in self._parse_quick_trades_only_pairs(exchange_constants):
-            self._disable_pair(quick_trade_only_pairs)
+        quick_trade_only_pairs = self._parse_quick_trades_only_pairs(exchange_constants)
+        if disabled_pairs := [
+            pair 
+            for pair in quick_trade_only_pairs
+            if pair in self.client.markets
+        ]:
+            self.logger.info(
+                f"Disabling [{self.exchange_manager.exchange_name}] {len(disabled_pairs)} quick trade only pairs: {disabled_pairs}"
+            )
+            for disabled_pair in disabled_pairs:
+                self._disable_pair(disabled_pair)
 
     def _disable_pair(self, symbol: str):
         if symbol in self.client.markets:
-            self.logger.info(f"Disabling [{self.exchange_manager.exchange_name}] quick trade only pair: {symbol}")
             self.client.markets[symbol][trading_enums.ExchangeConstantsMarketStatusColumns.ACTIVE.value] = False
 
     def _parse_quick_trades_only_pairs(self, exchange_constants: dict) -> list[str]:
