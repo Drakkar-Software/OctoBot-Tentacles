@@ -214,7 +214,10 @@ class hollaexConnector(exchanges.CCXTConnector):
             fee_tiers = self._get_fee_tiers(self.exchange_manager.exchange, is_real_trading)
             return self._get_fees(self.exchange_manager.exchange_name, fee_tiers, symbol)
         except errors.MissingFeeDetailsError:
-            self.logger.error(f"Missing fee details, using default value")
+            if _EXCHANGE_FEE_TIERS_BY_EXCHANGE_NAME.get(self.exchange_manager.exchange_name):
+                self.logger.error(f"Missing {self.exchange_manager.exchange_name} {symbol} fee details, using default value")
+            else:
+                self.logger.warning(f"Missing all {self.exchange_manager.exchange_name} fee details, using ccxt default values")
             market = self.get_market_status(symbol, with_fixer=False)
             # use default ccxt values
             return {
@@ -309,6 +312,11 @@ class hollaexConnector(exchanges.CCXTConnector):
         try:
             return exchange_fees[tier_to_use.value][symbol]
         except KeyError as err:
+            if not exchange_fees:
+                # mssing exchange fees, should not happen
+                raise errors.MissingFeeDetailsError(
+                    f"Unexpected: missing {exchange} fee details"
+                ) from err
             if symbol not in exchange_fees[FeeTiers.BASIC.value]:
                 default_fee_symbol = cls._get_default_fee_symbol(exchange)
                 if symbol == default_fee_symbol:
