@@ -14,6 +14,8 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import typing
+import ccxt.async_support
+
 import octobot_trading.exchanges as exchanges
 import octobot_trading.exchanges.connectors.ccxt.constants as ccxt_constants
 import octobot_trading.enums as trading_enums
@@ -27,7 +29,43 @@ class BitMartConnector(exchanges.CCXTConnector):
         force_unauth,
         keys_adapter: typing.Callable[[exchanges.ExchangeCredentialsData], exchanges.ExchangeCredentialsData]=None
     ) -> tuple:
-        return super()._client_factory(force_unauth, keys_adapter=self._keys_adapter)
+        client, is_authenticated = super()._client_factory(force_unauth, keys_adapter=self._keys_adapter)
+        if client:
+            client.handle_errors = self._patched_handle_errors_factory(client)
+        return client, is_authenticated
+
+    def _patched_handle_errors_factory(self, client: ccxt.async_support.Exchange):
+        self = client # set self to the client to use the client methods
+        def _patched_handle_errors(code: int, reason: str, url: str, method: str, headers: dict, body: str, response, requestHeaders, requestBody):
+            # temporary patch waiting for CCXT fix (issue in ccxt 4.5.28)
+            if response is None:
+                return None
+            #
+            # spot
+            #
+            #     {"message":"Bad Request [to is empty]","code":50000,"trace":"f9d46e1b-4edb-4d07-a06e-4895fb2fc8fc","data":{}}
+            #     {"message":"Bad Request [from is empty]","code":50000,"trace":"579986f7-c93a-4559-926b-06ba9fa79d76","data":{}}
+            #     {"message":"Kline size over 500","code":50004,"trace":"d625caa8-e8ca-4bd2-b77c-958776965819","data":{}}
+            #     {"message":"Balance not enough","code":50020,"trace":"7c709d6a-3292-462c-98c5-32362540aeef","data":{}}
+            #     {"code":40012,"message":"You contract account available balance not enough.","trace":"..."}
+            #
+            # contract
+            #
+            #     {"errno":"OK","message":"INVALID_PARAMETER","code":49998,"trace":"eb5ebb54-23cd-4de2-9064-e090b6c3b2e3","data":null}
+            #
+            message = self.safe_string_lower(response, 'message') # PATCH
+            isErrorMessage = (message is not None) and (message != 'ok') and (message != 'success')
+            errorCode = self.safe_string(response, 'code')
+            isErrorCode = (errorCode is not None) and (errorCode != '1000')
+            if isErrorCode or isErrorMessage:
+                feedback = self.id + ' ' + body
+                self.throw_exactly_matched_exception(self.exceptions['exact'], message, feedback)
+                self.throw_broadly_matched_exception(self.exceptions['broad'], message, feedback)
+                self.throw_exactly_matched_exception(self.exceptions['exact'], errorCode, feedback)
+                self.throw_broadly_matched_exception(self.exceptions['broad'], errorCode, feedback)
+                raise ccxt.ExchangeError(feedback)  # unknown message
+            return None
+        return _patched_handle_errors
 
     def _keys_adapter(self, creds: exchanges.ExchangeCredentialsData) -> exchanges.ExchangeCredentialsData:
         # use password as uid

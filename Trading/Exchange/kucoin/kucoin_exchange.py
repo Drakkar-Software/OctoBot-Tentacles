@@ -408,8 +408,14 @@ class Kucoin(exchanges.RestExchange):
         return regular_orders + stop_orders
 
     @_kucoin_retrier
-    async def get_order(self, exchange_order_id: str, symbol: str = None, **kwargs: dict) -> dict:
-        return await super().get_order(exchange_order_id, symbol=symbol, **kwargs)
+    async def get_order(
+        self,
+        exchange_order_id: str,
+        symbol: typing.Optional[str] = None,
+        order_type: typing.Optional[trading_enums.TraderOrderType] = None,
+        **kwargs: dict
+    ) -> dict:
+        return await super().get_order(exchange_order_id, symbol=symbol, order_type=order_type, **kwargs)
 
     async def create_order(self, order_type: trading_enums.TraderOrderType, symbol: str, quantity: decimal.Decimal,
                            price: decimal.Decimal = None, stop_price: decimal.Decimal = None,
