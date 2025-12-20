@@ -496,9 +496,15 @@ class Coinbase(exchanges.RestExchange):
         return await super().get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
 
     @_coinbase_retrier
-    async def get_order(self, exchange_order_id: str, symbol: str = None, **kwargs: dict) -> dict:
+    async def get_order(
+        self,
+        exchange_order_id: str,
+        symbol: typing.Optional[str] = None,
+        order_type: typing.Optional[trading_enums.TraderOrderType] = None,
+        **kwargs: dict
+    ) -> dict:
         # override for retrier
-        return await super().get_order(exchange_order_id, symbol=symbol, **kwargs)
+        return await super().get_order(exchange_order_id, symbol=symbol, order_type=order_type, **kwargs)
 
     async def _create_market_stop_loss_order(self, symbol, quantity, price, side, current_price, params=None) -> dict:
         # warning coinbase only supports stop limit orders, stop markets are not available

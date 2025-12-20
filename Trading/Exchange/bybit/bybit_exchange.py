@@ -168,7 +168,13 @@ class Bybit(exchanges.RestExchange):
             orders += await super().get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
         return orders
 
-    async def get_order(self, exchange_order_id: str, symbol: str = None, **kwargs: dict) -> dict:
+    async def get_order(
+        self,
+        exchange_order_id: str,
+        symbol: typing.Optional[str] = None,
+        order_type: typing.Optional[trading_enums.TraderOrderType] = None,
+        **kwargs: dict
+    ) -> dict:
         # regular get order is not supported
         return await self.get_order_from_open_and_closed_orders(exchange_order_id, symbol=symbol, **kwargs)
 
