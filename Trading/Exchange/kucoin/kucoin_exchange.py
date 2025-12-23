@@ -393,19 +393,18 @@ class Kucoin(exchanges.RestExchange):
             return balance
         return await super().get_balance(**kwargs)
 
+    def fetch_stop_order_in_different_request(self, symbol: str) -> bool:
+        # Override in tentacles when stop orders need to be fetched in a separate request from CCXT
+        # Kucoin uses the algo orders endpoint for all stop orders
+        return True
+
     @_kucoin_retrier
     async def get_open_orders(self, symbol=None, since=None, limit=None, **kwargs) -> list:
         if limit is None:
             # default is 50, The maximum cannot exceed 1000
             # https://www.kucoin.com/docs/rest/futures-trading/orders/get-order-list
             limit = 200
-        regular_orders = await super().get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
-        stop_orders = []
-        if "stop" not in kwargs:
-            # add untriggered stop orders (different api endpoint)
-            kwargs["stop"] = True
-            stop_orders = await super().get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
-        return regular_orders + stop_orders
+        return await super().get_open_orders(symbol=symbol, since=since, limit=limit, **kwargs)
 
     @_kucoin_retrier
     async def get_order(

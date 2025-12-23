@@ -20,6 +20,7 @@ import enum
 import ccxt
 
 import octobot_commons.constants as commons_constants
+import octobot_commons.symbols as symbols
 
 import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
@@ -145,7 +146,6 @@ class Binance(exchanges.RestExchange):
         if self.exchange_manager.is_future:
             # replace not supported in futures stop orders
             return not is_stop
-        return True
 
     async def get_account_id(self, **kwargs: dict) -> str:
         try:
@@ -286,7 +286,7 @@ class Binance(exchanges.RestExchange):
             params["reduceOnly"] = order.reduce_only
         return params
 
-    def _order_request_kwargs_factory(
+    def order_request_kwargs_factory(
         self, 
         exchange_order_id: str, 
         order_type: typing.Optional[trading_enums.TraderOrderType] = None, 
@@ -310,6 +310,11 @@ class Binance(exchanges.RestExchange):
                 f"Order {exchange_order_id} not found in order manager: considering it a regular (no stop/take profit) order {err}"
             )
         return params
+
+    def fetch_stop_order_in_different_request(self, symbol: str) -> bool:
+        # Override in tentacles when stop orders need to be fetched in a separate request from CCXT
+        # Binance futures uses the algo orders endpoint for stop orders (but not for inverse orders)
+        return self.exchange_manager.is_future and not symbols.parse_symbol(symbol).is_inverse()
 
     async def _create_market_sell_order(
         self, symbol, quantity, price=None, reduce_only: bool = False, params=None
