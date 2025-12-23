@@ -267,6 +267,7 @@ class Okx(exchanges.RestExchange):
         return params
 
     async def _get_all_typed_orders(self, method, symbol=None, since=None, limit=None, **kwargs) -> list:
+        # todo replace by settings fetch_stop_order_in_different_request method when OKX will be stable again
         limit = self._fix_limit(limit)
         is_stop_order = kwargs.get("stop", False)
         if is_stop_order and self.connector.adapter.OKX_ORDER_TYPE not in kwargs:
@@ -313,7 +314,7 @@ class Okx(exchanges.RestExchange):
                 return await self.get_order_from_open_and_closed_orders(exchange_order_id, symbol=symbol, **kwargs)
             raise
 
-    def _order_request_kwargs_factory(
+    def order_request_kwargs_factory(
         self, 
         exchange_order_id: str, 
         order_type: typing.Optional[trading_enums.TraderOrderType] = None, 
