@@ -460,13 +460,12 @@ async def test_signal_callback(tools):
 
         # future exchange: call set_leverage
         exchange_manager.is_future = True
-        trading_api.load_pair_contract(
-            exchange_manager,
-            trading_api.create_default_future_contract(
-                "BTC/USDT", decimal.Decimal(4), trading_enums.FutureContractType.LINEAR_PERPETUAL,
-                trading_constants.DEFAULT_SYMBOL_POSITION_MODE
-            ).to_dict()
+        symbol_contract = trading_api.create_default_future_contract(
+            "BTC/USDT", decimal.Decimal(4), trading_enums.FutureContractType.LINEAR_PERPETUAL,
+            trading_constants.DEFAULT_SYMBOL_POSITION_MODE
         )
+        # We have to hardcode the symbol contract as it's not a futures symbol so we can't use load_pair_contract
+        exchange_manager.exchange.pair_contracts[symbol] = symbol_contract
         await producer.signal_callback({
             mode.EXCHANGE_KEY: exchange_manager.exchange_name,
             mode.SYMBOL_KEY: "unused",

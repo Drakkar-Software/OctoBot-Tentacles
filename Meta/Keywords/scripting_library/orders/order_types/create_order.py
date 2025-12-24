@@ -272,7 +272,7 @@ async def _create_order(context, symbol, order_quantity, order_price, tag, order
     try:
         fees_currency_side = None
         if context.exchange_manager.is_future:
-            fees_currency_side = context.exchange_manager.exchange.get_pair_future_contract(symbol).\
+            fees_currency_side = context.exchange_manager.exchange.get_pair_contract(symbol).\
                 get_fees_currency_side()
         _, _, _, current_price, symbol_market = \
             await trading_personal_data.get_pre_order_data(context.exchange_manager,

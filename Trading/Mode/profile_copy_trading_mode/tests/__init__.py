@@ -13,20 +13,3 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-import octobot_trading.exchanges as exchanges
-from octobot_trading.enums import WebsocketFeeds as Feeds
-import tentacles.Trading.Exchange.polymarket.polymarket_exchange as polymarket_exchange
-
-
-class PolymarketWebsocketConnector(exchanges.CCXTWebsocketConnector):
-    EXCHANGE_FEEDS = {
-        Feeds.TRADES: True,
-        Feeds.KLINE: Feeds.UNSUPPORTED.value,
-        Feeds.TICKER: True,
-        Feeds.CANDLE: Feeds.UNSUPPORTED.value,
-        # Feeds.MARKETS: True,
-    }
-
-    @classmethod
-    def get_name(cls):
-        return polymarket_exchange.Polymarket.get_name()

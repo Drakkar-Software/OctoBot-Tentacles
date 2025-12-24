@@ -489,7 +489,7 @@ class RemoteTradingSignalsModeConsumer(trading_modes.AbstractTradingModeConsumer
         }
         fees_currency_side = None
         if self.exchange_manager.is_future:
-            fees_currency_side = self.exchange_manager.exchange.get_pair_future_contract(symbol)\
+            fees_currency_side = self.exchange_manager.exchange.get_pair_contract(symbol)\
                 .get_fees_currency_side()
         for order_description in orders_descriptions:
             if group_id := order_description[trading_enums.TradingSignalOrdersAttrs.GROUP_ID.value]:

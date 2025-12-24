@@ -47,6 +47,7 @@ async def backtesting_exchange_manager(request, backtesting_config, fake_backtes
     is_spot = True
     is_margin = False
     is_future = False
+    is_option = False
     if hasattr(request, "param"):
         config, exchange_name, is_spot, is_margin, is_future = request.param
 
@@ -57,6 +58,7 @@ async def backtesting_exchange_manager(request, backtesting_config, fake_backtes
     exchange_manager_instance.is_spot_only = is_spot
     exchange_manager_instance.is_margin = is_margin
     exchange_manager_instance.is_future = is_future
+    exchange_manager_instance.is_option = is_option
     exchange_manager_instance.use_cached_markets = False
     exchange_manager_instance.backtesting = fake_backtesting
     exchange_manager_instance.backtesting.time_manager = backtesting_time.TimeManager(config)
