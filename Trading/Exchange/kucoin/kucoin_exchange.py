@@ -366,7 +366,7 @@ class Kucoin(exchanges.RestExchange):
     def get_order_additional_params(self, order) -> dict:
         params = {}
         if self.exchange_manager.is_future:
-            contract = self.exchange_manager.exchange.get_pair_future_contract(order.symbol)
+            contract = self.exchange_manager.exchange.get_pair_contract(order.symbol)
             params["leverage"] = float(contract.current_leverage)
             params["reduceOnly"] = order.reduce_only
             params["closeOrder"] = order.close_position
@@ -695,9 +695,9 @@ class KucoinCCXTAdapter(exchanges.CCXTAdapter):
             # on kucoin, fetched empty position don't have a leverage value. Since it's required within OctoBot,
             # add it manually
             symbol = parsed[trading_enums.ExchangeConstantsPositionColumns.SYMBOL.value]
-            if self.connector.exchange_manager.exchange.has_pair_future_contract(symbol):
+            if self.connector.exchange_manager.exchange.has_pair_contract(symbol):
                 parsed[trading_enums.ExchangeConstantsPositionColumns.LEVERAGE.value] = \
-                    self.connector.exchange_manager.exchange.get_pair_future_contract(symbol).current_leverage
+                    self.connector.exchange_manager.exchange.get_pair_contract(symbol).current_leverage
             else:
                 parsed[trading_enums.ExchangeConstantsPositionColumns.LEVERAGE.value] = \
                     constants.DEFAULT_SYMBOL_LEVERAGE

@@ -646,7 +646,7 @@ class DCATradingModeProducer(trading_modes.AbstractTradingModeProducer):
                 )
                 if config_leverage:
                     parsed_leverage = decimal.Decimal(str(config_leverage))
-                    current_leverage = self.exchange_manager.exchange.get_pair_future_contract(symbol).current_leverage
+                    current_leverage = self.exchange_manager.exchange.get_pair_contract(symbol).current_leverage
                     if parsed_leverage != current_leverage:
                         self.logger.info(f"Updating leverage of {symbol} from {current_leverage} to {parsed_leverage}")
                         await self.trading_mode.set_leverage(symbol, side, parsed_leverage)

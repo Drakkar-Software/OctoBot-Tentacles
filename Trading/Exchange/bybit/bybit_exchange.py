@@ -268,16 +268,16 @@ class Bybit(exchanges.RestExchange):
     def get_order_additional_params(self, order) -> dict:
         params = {}
         if self.exchange_manager.is_future:
-            contract = self.exchange_manager.exchange.get_pair_future_contract(order.symbol)
+            contract = self.exchange_manager.exchange.get_pair_contract(order.symbol)
             params["positionIdx"] = self._get_position_idx(contract)
             params["reduceOnly"] = order.reduce_only
         return params
 
     def _get_margin_type_query_params(self, symbol, **kwargs):
-        if not self.exchange_manager.exchange.has_pair_future_contract(symbol):
+        if not self.exchange_manager.exchange.has_pair_contract(symbol):
             raise KeyError(f"{symbol} contract unavailable")
         else:
-            contract = self.exchange_manager.exchange.get_pair_future_contract(symbol)
+            contract = self.exchange_manager.exchange.get_pair_contract(symbol)
             kwargs = kwargs or {}
             kwargs[ccxt_enums.ExchangePositionCCXTColumns.LEVERAGE.value] = float(contract.current_leverage)
         return kwargs

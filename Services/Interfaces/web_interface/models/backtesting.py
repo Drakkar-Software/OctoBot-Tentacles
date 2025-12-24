@@ -143,6 +143,8 @@ def _parse_trading_type(trading_type):
         return commons_constants.CONFIG_EXCHANGE_FUTURE, trading_enums.FutureContractType.INVERSE_PERPETUAL
     if trading_type == trading_enums.FutureContractType.LINEAR_PERPETUAL.value:
         return commons_constants.CONFIG_EXCHANGE_FUTURE, trading_enums.FutureContractType.LINEAR_PERPETUAL
+    if trading_type == trading_enums.ExchangeTypes.OPTION.value:
+        return commons_constants.CONFIG_EXCHANGE_OPTION, trading_enums.OptionContractType.LINEAR_PERPETUAL
     if trading_type == trading_enums.ExchangeTypes.MARGIN.value:
         return commons_constants.CONFIG_EXCHANGE_MARGIN, commons_constants.USE_CURRENT_PROFILE
     raise RuntimeError(f"Unsupported trading type: {trading_type}")

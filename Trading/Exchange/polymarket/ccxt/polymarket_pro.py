@@ -8,7 +8,7 @@ from ccxt.async_support.base.ws.cache import ArrayCache, ArrayCacheBySymbolById
 from ccxt.base.types import Any, Int, Order, OrderBook, Str, Ticker, Trade
 from ccxt.async_support.base.ws.client import Client
 from typing import List
-from ccxt.base.errors import ArgumentsRequired
+from ccxt.base.errors import ArgumentsRequired, ExchangeError
 
 
 class polymarket(polymarket):
@@ -37,9 +37,8 @@ class polymarket(polymarket):
                 },
             },
             'options': {
-                'watchOrderBook': {
-                    'channel': 'book',
-                },
+                'wsMarketChannelType': 'market',
+                'wsUserChannelType': 'user',
             },
             'streaming': {
             },
@@ -68,7 +67,7 @@ class polymarket(polymarket):
         url = self.urls['api']['ws']['market']
         messageHash = 'orderbook:' + symbol + ':' + assetId
         request: dict = {
-            'type': 'MARKET',
+            'type': self.options['wsMarketChannelType'],
             'assets_ids': [assetId],
         }
         subscription: dict = {
@@ -102,7 +101,7 @@ class polymarket(polymarket):
         url = self.urls['api']['ws']['market']
         messageHash = 'trades:' + symbol + ':' + assetId
         request: dict = {
-            'type': 'MARKET',
+            'type': self.options['wsMarketChannelType'],
             'assets_ids': [assetId],
         }
         subscription: dict = {
@@ -136,7 +135,7 @@ class polymarket(polymarket):
         url = self.urls['api']['ws']['market']
         messageHash = 'ticker:' + symbol + ':' + assetId
         request: dict = {
-            'type': 'MARKET',
+            'type': self.options['wsMarketChannelType'],
             'assets_ids': [assetId],
         }
         subscription: dict = {
@@ -158,7 +157,7 @@ class polymarket(polymarket):
         messageHash = 'orders'
         url = self.urls['api']['ws']['user']
         request: dict = {
-            'type': 'USER',
+            'type': self.options['wsUserChannelType'],
         }
         if symbol is not None:
             symbol = self.safe_symbol(symbol)
@@ -186,7 +185,7 @@ class polymarket(polymarket):
         messageHash = 'myTrades'
         url = self.urls['api']['ws']['user']
         request: dict = {
-            'type': 'USER',
+            'type': self.options['wsUserChannelType'],
         }
         if symbol is not None:
             symbol = self.safe_symbol(symbol)
@@ -289,6 +288,109 @@ class polymarket(polymarket):
             orderbook['timestamp'] = timestamp
             orderbook['datetime'] = datetime
             client.resolve(orderbook, messageHash)
+
+    def handle_price_change_orderbook(self, client: Client, message):
+        #
+        # Market websocket price_change event for orderbook updates:
+        #     {
+        #         "event_type": "price_change",
+        #         "market": "0x...",
+        #         "price_changes": [
+        #             {
+        #                 "asset_id": "0x...",
+        #                 "price": "0.5",
+        #                 "size": "200",
+        #                 "side": "BUY",
+        #                 "hash": "0x...",
+        #                 "best_bid": "0.5",
+        #                 "best_ask": "1"
+        #             }
+        #         ],
+        #         "timestamp": "1757908892351"
+        #     }
+        #
+        # Docs: https://docs.polymarket.com/developers/CLOB/websocket/market-channel#price-change-message
+        #
+        messages = []
+        if isinstance(message, list):
+            messages = message
+        else:
+            messages = [message]
+        for i in range(0, len(messages)):
+            msg = messages[i]
+            eventType = self.safe_string(msg, 'event_type')
+            if eventType != 'price_change':
+                continue
+            priceChanges = self.safe_value(msg, 'price_changes', [])
+            if not isinstance(priceChanges, list) or len(priceChanges) == 0:
+                continue
+            rawTimestamp = self.safe_integer(msg, 'timestamp')
+            timestamp = None
+            if rawTimestamp is not None:
+                if rawTimestamp > 1000000000000:
+                    timestamp = rawTimestamp
+                else:
+                    timestamp = rawTimestamp * 1000
+            # Process each price change
+            for k in range(0, len(priceChanges)):
+                priceChange = priceChanges[k]
+                assetId = self.safe_string(priceChange, 'asset_id')
+                if assetId is None:
+                    continue
+                # Find symbol and asset_id from subscriptions
+                symbol = None
+                subscriptionAssetId = None
+                subscriptionKeys = list(client.subscriptions.keys())
+                for j in range(0, len(subscriptionKeys)):
+                    subscribeHash = subscriptionKeys[j]
+                    subscription = client.subscriptions[subscribeHash]
+                    if subscription != None:
+                        subAssetId = self.safe_string_2(subscription, 'asset_id', 'token_id')
+                        if subAssetId == assetId:
+                            symbol = self.safe_string(subscription, 'symbol')
+                            subscriptionAssetId = subAssetId
+                            break
+                if symbol is None:
+                    # Try to resolve from asset_id
+                    market = self.safe_market(assetId)
+                    symbol = market['symbol']
+                    subscriptionAssetId = assetId
+                messageHash = 'orderbook:' + symbol + ':' + subscriptionAssetId
+                # Get or create orderbook
+                if not (symbol in self.orderbooks):
+                    self.orderbooks[symbol] = self.order_book({})
+                orderbook = self.orderbooks[symbol]
+                # Get price and size from price change
+                price = self.safe_string(priceChange, 'price')
+                size = self.safe_string(priceChange, 'size')
+                side = self.safe_string(priceChange, 'side', '').upper()
+                if price is None:
+                    continue
+                # Convert size to number for comparison
+                sizeNum = self.safe_number(priceChange, 'size', 0)
+                # Update orderbook side based on side field
+                if side == 'BUY':
+                    # Update bids side
+                    if sizeNum == 0:
+                        # Remove price level if size is 0
+                        orderbook['bids'].storeArray([price, '0'])
+                    else:
+                        # Update or add price level
+                        orderbook['bids'].storeArray([price, size])
+                elif side == 'SELL':
+                    # Update asks side
+                    if sizeNum == 0:
+                        # Remove price level if size is 0
+                        orderbook['asks'].storeArray([price, '0'])
+                    else:
+                        # Update or add price level
+                        orderbook['asks'].storeArray([price, size])
+                # Update timestamp
+                if timestamp is not None:
+                    orderbook['timestamp'] = timestamp
+                    orderbook['datetime'] = self.iso8601(timestamp)
+                orderbook['symbol'] = symbol
+                client.resolve(orderbook, messageHash)
 
     def handle_trades(self, client: Client, message):
         #
@@ -592,7 +694,11 @@ class polymarket(polymarket):
             self.handle_order_book(client, message)
         elif eventType == 'trade':
             self.handle_trades(client, message)
-        elif eventType == 'price_change' or eventType == 'last_trade_price':
+        elif eventType == 'price_change':
+            # price_change updates both orderbook and ticker
+            self.handle_price_change_orderbook(client, message)
+            self.handle_ticker(client, message)
+        elif eventType == 'last_trade_price':
             self.handle_ticker(client, message)
         elif eventType == 'tick_size_change':
             # Tick size change - can be used to update ticker
@@ -630,7 +736,7 @@ class polymarket(polymarket):
             }
             request: dict = {
                 'auth': auth,
-                'type': 'USER',
+                'type': self.options['wsUserChannelType'],
             }
             future = await self.watch(url, messageHash, request, messageHash)
             client.subscriptions[messageHash] = future
@@ -640,16 +746,122 @@ class polymarket(polymarket):
         client = self.client(url)
         if subscribeHash is None:
             subscribeHash = messageHash
-        # Store subscription info for market websocket to use in handleMessage
+        
+        # Handle market channel subscriptions with dynamic subscribe/unsubscribe (following onetrading pattern)
         if subscription is not None and url.find('/ws/market') >= 0:
-            # Store subscription separately so we can look it up by asset_id
-            if not (subscribeHash in client.subscriptions):
-                client.subscriptions[subscribeHash] = subscription
+            # Use wsMarketChannelType for subscription hash
+            channelSubscriptionHash = self.options['wsMarketChannelType']
+            
+            # Extract asset_id from message or subscription
+            assetId = None
+            if message and isinstance(message, dict):
+                assets_ids = self.safe_value(message, 'assets_ids', [])
+                if isinstance(assets_ids, list) and len(assets_ids) > 0:
+                    assetId = assets_ids[0]
+            if assetId is None:
+                assetId = self.safe_string_2(subscription, 'asset_id', 'token_id')
+            
+            if assetId:
+                # Get existing subscription or create new one
+                channelSubscription = self.safe_value(client.subscriptions, channelSubscriptionHash, {})
+                if not isinstance(channelSubscription, dict):
+                    channelSubscription = {}
+                
+                # Check if we're already connected
+                is_connected = client.connected.done()
+                
+                # Check if asset_id needs to be added
+                needs_subscribe = assetId not in channelSubscription
+                
+                if is_connected and needs_subscribe:
+                    # Connection exists and asset_id not subscribed - use dynamic subscribe
+                    await self.subscribe_to_asset_ids([assetId])
+                
+                # Add asset_id to subscription tracking
+                channelSubscription[assetId] = True
+                client.subscriptions[channelSubscriptionHash] = channelSubscription
+                
+                # Build message with all subscribed asset_ids (following onetrading pattern)
+                all_asset_ids = list(channelSubscription.keys())
+                if message and isinstance(message, dict):
+                    message['assets_ids'] = all_asset_ids
+                    message['type'] = self.options['wsMarketChannelType']
+                
+                # Store individual subscription info for message routing
+                if not (subscribeHash in client.subscriptions):
+                    client.subscriptions[subscribeHash] = subscription
+        
         return await super(polymarket, self).watch(url, messageHash, message, subscribeHash, subscription)
+
+    async def subscribe_to_asset_ids(self, asset_ids: List[str], params={}):
+        """
+        Dynamically subscribe to additional asset IDs on an existing market channel connection
+        :param List[str] asset_ids: list of asset IDs to subscribe to
+        :param dict [params]: extra parameters
+        :returns: None
+        """
+        url = self.urls['api']['ws']['market']
+        client = self.client(url)
+        if not client.connected.done():
+            raise ExchangeError(self.id + ' subscribe_to_asset_ids() requires an active WebSocket connection')
+        
+        channelSubscriptionHash = self.options['wsMarketChannelType']
+        channelSubscription = self.safe_value(client.subscriptions, channelSubscriptionHash, {})
+        if not isinstance(channelSubscription, dict):
+            channelSubscription = {}
+        
+        # Filter out already subscribed asset_ids
+        new_asset_ids = [aid for aid in asset_ids if aid not in channelSubscription]
+        if len(new_asset_ids) == 0:
+            return  # All already subscribed
+        
+        request: dict = {
+            'assets_ids': new_asset_ids,
+            'operation': 'subscribe',
+        }
+        await client.send(request)
+        
+        # Track newly subscribed asset_ids
+        for aid in new_asset_ids:
+            channelSubscription[aid] = True
+        client.subscriptions[channelSubscriptionHash] = channelSubscription
+
+    async def unsubscribe_from_asset_ids(self, asset_ids: List[str], params={}):
+        """
+        Dynamically unsubscribe from asset IDs on an existing market channel connection
+        :param List[str] asset_ids: list of asset IDs to unsubscribe from
+        :param dict [params]: extra parameters
+        :returns: None
+        """
+        url = self.urls['api']['ws']['market']
+        client = self.client(url)
+        if not client.connected.done():
+            raise ExchangeError(self.id + ' unsubscribe_from_asset_ids() requires an active WebSocket connection')
+        
+        channelSubscriptionHash = self.options['wsMarketChannelType']
+        channelSubscription = self.safe_value(client.subscriptions, channelSubscriptionHash, {})
+        if not isinstance(channelSubscription, dict):
+            channelSubscription = {}
+        
+        # Filter to only unsubscribe from actually subscribed asset_ids
+        subscribed_asset_ids = [aid for aid in asset_ids if aid in channelSubscription]
+        if len(subscribed_asset_ids) == 0:
+            return  # None are subscribed
+        
+        request: dict = {
+            'assets_ids': subscribed_asset_ids,
+            'operation': 'unsubscribe',
+        }
+        await client.send(request)
+        
+        # Remove from tracking
+        for aid in subscribed_asset_ids:
+            del channelSubscription[aid]
+        client.subscriptions[channelSubscriptionHash] = channelSubscription
 
     def on_connected(self, client: Client):
         # Called when websocket connection is established
         # The base watch() method will send the message automatically
-        # But for Polymarket, we may need to wait for a "ready" event
-        # For now, the base class handle it
+        # The message parameter passed to watch() is sent when the connection opens
+        # This is equivalent to the on_open handler in the example code
         super(polymarket, self).on_connected(client)

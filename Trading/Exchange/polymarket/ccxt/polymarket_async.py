@@ -9,7 +9,7 @@ import hashlib
 import math
 import json
 import numbers
-from ccxt.base.types import Any, Int, Market, MarketType, Num, Order, OrderBook, OrderRequest, OrderSide, OrderType, Str, Strings, Ticker, Tickers, OrderBooks, Trade, TradingFeeInterface
+from ccxt.base.types import Any, Int, Market, MarketType, Num, Order, OrderBook, OrderRequest, OrderSide, OrderType, Position, Str, Strings, Ticker, Tickers, OrderBooks, Trade, TradingFeeInterface
 from typing import List
 from ccxt.base.errors import ExchangeError
 from ccxt.base.errors import AuthenticationError
@@ -83,6 +83,7 @@ class polymarket(Exchange, ImplicitAPI):
                 'fetchBorrowRateHistories': False,
                 'fetchBorrowRateHistory': False,
                 'fetchClosedOrders': False,
+                'fetchClosedPositions': True,
                 'fetchCrossBorrowRate': False,
                 'fetchCrossBorrowRates': False,
                 'fetchCurrencies': False,
@@ -111,7 +112,9 @@ class polymarket(Exchange, ImplicitAPI):
                 'fetchOrderBook': True,
                 'fetchOrderBooks': True,
                 'fetchOrders': True,
+                'fetchPosition': False,
                 'fetchPositionMode': False,
+                'fetchPositions': True,
                 'fetchPremiumIndexOHLCV': False,
                 'fetchStatus': True,
                 'fetchTicker': True,
@@ -120,6 +123,8 @@ class polymarket(Exchange, ImplicitAPI):
                 'fetchTrades': True,
                 'fetchTradingFee': True,
                 'fetchTradingFees': False,
+                'fetchUserClosedPositions': True,
+                'fetchUserPositions': True,
                 'fetchWithdrawals': False,
                 'setLeverage': False,
                 'setMarginMode': False,
@@ -379,6 +384,8 @@ class polymarket(Exchange, ImplicitAPI):
                 'marketOrderQuoteDecimals': 2,  # Max decimal places for quote currency(USDC) in market orders(default: 2)
                 'marketOrderBaseDecimals': 4,  # Max decimal places for base currency(tokens) in market orders(default: 4)
                 'roundingBufferDecimals': 4,  # Additional decimal places buffer for rounding up before final rounding down(default: 4)
+                'defaultEndDateIso': '2099-01-01T00:00:00Z',  # Default end date ISO string used when endDateIso is None
+                'defaultOptionType': 'custom',  # Default option type for prediction markets
                 # Constants matching clob-client
                 # See https://github.com/Polymarket/clob-client/blob/main/src/signing/constants.ts
                 # See https://github.com/Polymarket/clob-client/blob/main/src/constants.ts
@@ -502,6 +509,9 @@ class polymarket(Exchange, ImplicitAPI):
             sideValue = buySide
         return sideValue
 
+    def parse_option_type(self, optionType: str) -> str:
+        return self.strip(optionType).replace(' ', '_').upper()
+
     async def fetch_markets(self, params={}) -> List[Market]:
         """
         retrieves data on all markets for polymarket
@@ -541,10 +551,51 @@ class polymarket(Exchange, ImplicitAPI):
             conditionId = self.safe_string(market, 'conditionId') or self.safe_string(market, 'condition_id')
             if id is None and conditionId is None:
                 continue
-            filtered.append(market)
+            outcomes = []
+            outcomesStr = self.safe_string(market, 'outcomes')
+            if outcomesStr is not None:
+                parsedOutcomes = None
+                try:
+                    parsedOutcomes = json.loads(outcomesStr)
+                except Exception as e:
+                    parsedOutcomes = None
+                if parsedOutcomes is not None and len(parsedOutcomes) is not None:
+                    for j in range(0, len(parsedOutcomes)):
+                        outcomes.append(parsedOutcomes[j])
+                else:
+                    outcomesArray = outcomesStr.split(',')
+                    for j in range(0, len(outcomesArray)):
+                        v = outcomesArray[j].strip()
+                        if v != '':
+                            outcomes.append(v)
+            clobTokenIds = self.parse_clob_token_ids(self.safe_value(market, 'clobTokenIds'))
+            if len(outcomes) > 0:
+                for j in range(0, len(outcomes)):
+                    outcome = outcomes[j]
+                    clobTokenId = None
+                    if j < len(clobTokenIds):
+                        clobTokenId = clobTokenIds[j]
+                    # Create a copy of the market with the outcome and clobTokenId
+                    marketWithOutcome = self.extend({}, market, {'optionType': outcome, 'id': clobTokenId})
+                    filtered.append(marketWithOutcome)
+            else:
+                # If no outcomes, push the market as-is
+                filtered.append(market)
         return self.parse_markets(filtered)
 
+    def parse_clob_token_ids(self, clobTokenIds: Any) -> List[str]:
+        if clobTokenIds is None:
+            return []
+        if isinstance(clobTokenIds, list):
+            return clobTokenIds
+        try:
+            return json.loads(clobTokenIds)
+        except Exception as e:
+            return []
+
     def parse_market(self, market: dict) -> Market:
+        # Check if id is provided(e.g., from clobTokenId in fetchMarkets)
+        providedId = self.safe_string(market, 'id')
         # Schema uses 'conditionId'(camelCase)
         conditionId = self.safe_string(market, 'conditionId')
         question = self.safe_string(market, 'question')
@@ -601,29 +652,7 @@ class polymarket(Exchange, ImplicitAPI):
         category = self.safe_string(market, 'category')
         description = self.safe_string(market, 'description')
         tags = self.safe_value(market, 'tags', [])
-        # Schema uses 'clobTokenIds'(camelCase) - can be string or array
-        clobTokenIds = self.safe_value(market, 'clobTokenIds')
-        if clobTokenIds is None:
-            clobTokenIds = []
-        if isinstance(clobTokenIds, str):
-            parsed = None
-            try:
-                parsed = json.loads(clobTokenIds)
-            except Exception as e:
-                parsed = None
-            if parsed is not None and parsed != None and len(parsed) is not None:
-                clobTokenIds = []
-                for i in range(0, len(parsed)):
-                    clobTokenIds.append(parsed[i])
-            else:
-                cleaned = clobTokenIds
-                cleaned = cleaned.replace('[', '').replace(']', '').replace('"', '')
-                clobTokenIdsArray = cleaned.split(',')
-                clobTokenIds = []
-                for i in range(0, len(clobTokenIdsArray)):
-                    v = clobTokenIdsArray[i].strip()
-                    if v != '':
-                        clobTokenIds.append(v)
+        clobTokenIds = self.parse_clob_token_ids(self.safe_value(market, 'clobTokenIds'))
         outcomesInfo = []
         length = len(outcomes)
         if len(outcomePrices) > length:
@@ -652,6 +681,9 @@ class polymarket(Exchange, ImplicitAPI):
             })
         # Parse dates - Schema uses 'endDateIso'(preferred) or 'endDate'(fallback)
         endDateIso = self.safe_string(market, 'endDateIso') or self.safe_string(market, 'endDate')
+        if endDateIso is None:
+            # When endDateIso is None use a very far future date
+            endDateIso = self.safe_string(self.options, 'defaultEndDateIso')
         # Schema uses 'createdAt'(camelCase)
         createdAt = self.safe_string(market, 'createdAt')
         createdTimestamp = None
@@ -679,16 +711,21 @@ class polymarket(Exchange, ImplicitAPI):
                 # Append time to make it a valid ISO8601 datetime
                 dateString = dateString + 'T00:00:00Z'
             expiry = self.parse8601(dateString)
-        # Format symbol with expiry date(similar to binance/okx option format)
-        # Format: base/quote:settle-YYMMDD
-        symbol = base + '/' + quote
-        if expiry is not None:
-            ymd = self.yymmdd(expiry)
-            symbol = symbol + ':' + settle + '-' + ymd
-        # Prediction markets don't have strike prices or option types in the schema
-        # These fields are kept
+        # Use outcome from market dict if available(set in fetchMarkets), otherwise use default
+        optionType = self.safe_string(market, 'optionType') or self.safe_string(self.options, 'defaultOptionType')
+        # Format symbol with expiry date following CCXT option format
+        # Format: base/quote:settle-YYMMDD-strike-type
+        ymd = self.yymmdd(expiry)
+        strikePlaceholder = '0'  # Use 0 for strike price while not provided by the exchange
+        optionTypeValue = None
+        if optionType == 'call':
+            optionTypeValue = 'C'
+        elif optionType == 'put':
+            optionTypeValue = 'P'
+        elif optionType is not None:
+            optionTypeValue = self.parse_option_type(optionType)
+        symbol = base + '/' + quote + ':' + settle + '-' + ymd + '-' + strikePlaceholder + '-' + optionTypeValue
         strike = None
-        optionType = None
         contractSize = self.parse_number('1')
         # Calculate fees based on feesEnabled flag
         takerFee = self.parse_number('0')
@@ -713,8 +750,11 @@ class polymarket(Exchange, ImplicitAPI):
             liquidityValue = liquidityNum
         elif liquidity is not None:
             liquidityValue = self.parse_number(liquidity)
+        marketId = providedId
+        if marketId is None:
+            marketId = conditionId
         return {
-            'id': conditionId,
+            'id': marketId,
             'symbol': symbol,
             'base': base,
             'quote': quote,
@@ -730,7 +770,7 @@ class polymarket(Exchange, ImplicitAPI):
             'option': True,  # Prediction markets are treated
             'active': enableOrderBook and active and not closed and not archived,
             'contract': True,
-            'linear': None,
+            'linear': True,
             'inverse': None,
             'contractSize': contractSize,
             'expiry': expiry,
@@ -2263,7 +2303,7 @@ class polymarket(Exchange, ImplicitAPI):
         await self.load_markets()
         # Ensure API credentials are generated(lazy generation)
         await self.ensure_api_credentials(params)
-        response
+        response = None
         if symbol is not None:
             # Use cancel-market-orders endpoint when symbol is provided
             # See https://docs.polymarket.com/developers/CLOB/orders/cancel-market-orders
@@ -2554,6 +2594,245 @@ class polymarket(Exchange, ImplicitAPI):
         mapped = self.safe_string(timeInForces, normalized)
         return mapped is not mapped if None else timeInForce.upper()
 
+    async def fetch_positions(self, symbols: Strings = None, params={}) -> List[Position]:
+        """
+        fetches the current user positions
+        :param str[] [symbols]: list of unified market symbols
+        :param dict [params]: extra parameters specific to the exchange API endpoint
+        :param str [params.userAddress]: user wallet address(defaults to getProxyWalletAddress())
+        :returns dict[]: a list of `position structures <https://docs.ccxt.com/#/?id=position-structure>`
+        """
+        await self.load_markets()
+        userAddress = self.safe_string(params, 'userAddress')
+        response = await self.get_user_positions(userAddress, params)
+        # Response format: array of position objects
+        # {
+        #   "proxyWallet": "0x...",
+        #   "asset": "0x...",
+        #   "conditionId": "0x...",
+        #   "size": "123.45",
+        #   "avgPrice": "0.65",
+        #   "initialValue": "80.24",
+        #   "currentValue": "85.50",
+        #   "cashPnl": "5.26",
+        #   "percentPnl": "6.55",
+        #   ...
+        # }
+        positions = response if isinstance(response, list) else []
+        return self.parse_positions(positions, symbols)
+
+    async def fetch_user_positions(self, userId: str, symbols: Strings = None, params={}) -> List[Position]:
+        """
+        fetches the current user positions
+        :param str userId: user ID
+        :param str[] [symbols]: list of unified market symbols
+        :param dict [params]: extra parameters specific to the exchange API endpoint
+        :param str [params.userAddress]: user wallet address(defaults to getProxyWalletAddress())
+        :returns dict[]: a list of `position structures <https://docs.ccxt.com/#/?id=position-structure>`
+        """
+        await self.load_markets()
+        response = await self.get_user_positions(userId, params)
+        # Response format: array of position objects
+        # {
+        #   "proxyWallet": "0x...",
+        #   "asset": "0x...",
+        #   "conditionId": "0x...",
+        #   "size": "123.45",
+        #   "avgPrice": "0.65",
+        #   "initialValue": "80.24",
+        #   "currentValue": "85.50",
+        #   "cashPnl": "5.26",
+        #   "percentPnl": "6.55",
+        #   ...
+        # }
+        positions = response if isinstance(response, list) else []
+        return self.parse_positions(positions, symbols)
+
+    async def fetch_closed_positions(self, symbols: Strings = None, params={}) -> List[Position]:
+        """
+        fetches the closed user positions
+        :param str[] [symbols]: list of unified market symbols
+        :param dict [params]: extra parameters specific to the exchange API endpoint
+        :param str [params.userAddress]: user wallet address(defaults to getProxyWalletAddress())
+        :returns dict[]: a list of `position structures <https://docs.ccxt.com/#/?id=position-structure>`
+        """
+        await self.load_markets()
+        userAddress = self.safe_string(params, 'userAddress')
+        response = await self.get_user_closed_positions(userAddress, params)
+        # Response format: array of position objects
+        # {
+        #   "proxyWallet": "0x...",
+        #   "asset": "0x...",
+        #   "conditionId": "0x...",
+        #   "size": "123.45",
+        #   "avgPrice": "0.65",
+        #   "initialValue": "80.24",
+        #   "currentValue": "85.50",
+        #   "cashPnl": "5.26",
+        #   "percentPnl": "6.55",
+        #   ...
+        # }
+        positions = response if isinstance(response, list) else []
+        return self.parse_positions(positions, symbols)
+
+    async def fetch_user_closed_positions(self, userId: str, symbols: Strings = None, params={}) -> List[Position]:
+        """
+        fetches the closed user positions
+        :param str userId: user ID
+        :param str[] [symbols]: list of unified market symbols
+        :param dict [params]: extra parameters specific to the exchange API endpoint
+        :param str [params.userAddress]: user wallet address(defaults to getProxyWalletAddress())
+        :returns dict[]: a list of `position structures <https://docs.ccxt.com/#/?id=position-structure>`
+        """
+        await self.load_markets()
+        response = await self.get_user_closed_positions(userId, params)
+        # Response format: array of position objects
+        # {
+        #   "proxyWallet": "0x...",
+        #   "asset": "0x...",
+        #   "conditionId": "0x...",
+        #   "size": "123.45",
+        #   "avgPrice": "0.65",
+        #   "initialValue": "80.24",
+        #   "currentValue": "85.50",
+        #   "cashPnl": "5.26",
+        #   "percentPnl": "6.55",
+        #   ...
+        # }
+        positions = response if isinstance(response, list) else []
+        return self.parse_positions(positions, symbols)
+
+    def parse_position(self, position: dict, market: Market = None) -> Position:
+        """
+        parses a position from the exchange response format
+        :param dict position: position response from the exchange
+        :param dict [market]: market structure
+        :returns dict: a `position structure <https://docs.ccxt.com/#/?id=position-structure>`
+        """
+        # Response format from getUserPositions:
+        # {
+        #   "proxyWallet": "0x56687bf447db6ffa42ffe2204a05edaa20f55839",
+        #   "asset": "<string>",
+        #   "conditionId": "0xdd22472e552920b8438158ea7238bfadfa4f736aa4cee91a6b86c39ead110917",
+        #   "size": 123,
+        #   "avgPrice": 123,
+        #   "initialValue": 123,
+        #   "currentValue": 123,
+        #   "cashPnl": 123,
+        #   "percentPnl": 123,
+        #   "totalBought": 123,
+        #   "realizedPnl": 123,
+        #   "percentRealizedPnl": 123,
+        #   "curPrice": 123,
+        #   "redeemable": True,
+        #   "mergeable": True,
+        #   "title": "<string>",
+        #   "slug": "<string>",
+        #   "icon": "<string>",
+        #   "eventSlug": "<string>",
+        #   "outcome": "<string>",
+        #   "outcomeIndex": 123,
+        #   "oppositeOutcome": "<string>",
+        #   "oppositeAsset": "<string>",
+        #   "endDate": "<string>",
+        #   "negativeRisk": True,
+        #   "timestamp": 123
+        # }
+        conditionId = self.safe_string(position, 'conditionId')
+        asset = self.safe_string(position, 'asset')
+        proxyWallet = self.safe_string(position, 'proxyWallet')
+        totalBought = self.safe_number(position, 'totalBought')
+        realizedPnl = self.safe_number(position, 'realizedPnl')
+        percentRealizedPnl = self.safe_number(position, 'percentRealizedPnl')
+        curPrice = self.safe_number(position, 'curPrice')
+        redeemable = self.safe_bool(position, 'redeemable')
+        mergeable = self.safe_bool(position, 'mergeable')
+        title = self.safe_string(position, 'title')
+        slug = self.safe_string(position, 'slug')
+        icon = self.safe_string(position, 'icon')
+        eventSlug = self.safe_string(position, 'eventSlug')
+        outcome = self.safe_string(position, 'outcome')
+        outcomeIndex = self.safe_integer(position, 'outcomeIndex')
+        oppositeOutcome = self.safe_string(position, 'oppositeOutcome')
+        oppositeAsset = self.safe_string(position, 'oppositeAsset')
+        endDate = self.safe_string(position, 'endDate')
+        negativeRisk = self.safe_bool(position, 'negativeRisk')
+        timestamp = self.safe_integer(position, 'timestamp')
+        market = self.safe_market(asset, market)
+        symbol = market['symbol']
+        sizeString = self.safe_string(position, 'size', '0')
+        contracts = self.parse_number(sizeString)
+        side: Str = None
+        if contracts is not None:
+            if contracts > 0:
+                side = 'long'
+            elif contracts < 0:
+                side = 'short'
+        avgPrice = self.safe_number(position, 'avgPrice')
+        currentValue = self.safe_number(position, 'currentValue')
+        initialValue = self.safe_number(position, 'initialValue')
+        cashPnl = self.safe_number(position, 'cashPnl')
+        percentPnl = self.safe_number(position, 'percentPnl')
+        # Calculate unrealized PnL(cashPnl is already the unrealized PnL)
+        unrealizedPnl = cashPnl
+        # Calculate notional value(current value of the position)
+        notional = currentValue
+        # Calculate collateral(initial value invested)
+        collateral = initialValue
+        # Extract margin mode, default to 'cross' if not available
+        marginMode = self.safe_string(position, 'marginMode', 'cross')
+        isIsolated = (marginMode == 'isolated')
+        # For now leverage is not supported by Polymarket
+        leverage = self.safe_number(position, 'leverage', 1)
+        # Build extended info object with parsed values
+        extendedInfo = self.extend(position, {
+            'conditionId': conditionId,
+            'proxyWallet': proxyWallet,
+            'totalBought': totalBought,
+            'realizedPnl': realizedPnl,
+            'percentRealizedPnl': percentRealizedPnl,
+            'curPrice': curPrice,
+            'redeemable': redeemable,
+            'mergeable': mergeable,
+            'title': title,
+            'slug': slug,
+            'icon': icon,
+            'eventSlug': eventSlug,
+            'outcome': outcome,
+            'outcomeIndex': outcomeIndex,
+            'oppositeOutcome': oppositeOutcome,
+            'oppositeAsset': oppositeAsset,
+            'endDate': endDate,
+            'negativeRisk': negativeRisk,
+            'timestamp': timestamp,
+        })
+        return self.safe_position({
+            'info': extendedInfo,
+            'id': asset,
+            'symbol': symbol,
+            'notional': notional,
+            'marginMode': marginMode,
+            'isolated': isIsolated,
+            'liquidationPrice': None,
+            'entryPrice': avgPrice,
+            'unrealizedPnl': unrealizedPnl,
+            'percentage': percentPnl,
+            'contracts': contracts,
+            'contractSize': None,
+            'markPrice': curPrice,
+            'side': side,
+            'hedged': None,
+            'timestamp': timestamp,
+            'datetime': self.iso8601(timestamp),
+            'initialMarginPercentage': None,
+            'maintenanceMargin': None,
+            'maintenanceMarginPercentage': None,
+            'collateral': collateral,
+            'initialMargin': initialValue,
+            'leverage': leverage,
+            'realizedPnl': realizedPnl,
+        })
+
     async def fetch_time(self, params={}) -> Int:
         """
         fetches the current integer timestamp in milliseconds from the exchange server
@@ -2753,7 +3032,6 @@ class polymarket(Exchange, ImplicitAPI):
             conditionId = self.safe_string(marketInfo, 'condition_id', self.safe_string(market, 'id'))
             if conditionId is not None:
                 request['market'] = conditionId
-        # Backward compatibility: token_id alias to asset_id
         tokenId = self.safe_string(params, 'token_id')
         if tokenId is not None:
             request['asset_id'] = tokenId
@@ -4322,6 +4600,31 @@ class polymarket(Exchange, ImplicitAPI):
                 # If wallet is not configured, require userAddress parameter for public calls
                 raise ArgumentsRequired(self.id + ' getUserPositions() requires a userAddress parameter when wallet is not configured. This is a public endpoint that can query any user address.')
         return await self.data_public_get_positions(self.extend({'user': address}, params))
+
+    async def get_user_closed_positions(self, userAddress: str = None, params={}) -> dict:
+        """
+        fetches closed positions for a user from Data-API(defaults to proxy wallet)
+
+        https://docs.polymarket.com/api-reference/core/get-closed-positions-for-a-user
+
+        :param str [userAddress]: user wallet address(defaults to getProxyWalletAddress())
+        :param dict [params]: extra parameters specific to the exchange API endpoint
+        :returns dict: response from the exchange
+        """
+        # TODO add pagination, sort, limit etc https://docs.polymarket.com/api-reference/core/get-closed-positions-for-a-user
+        address: str = None
+        if userAddress is not None:
+            # Use provided address directly(public endpoint, no wallet setup needed)
+            address = userAddress
+        else:
+            # Try to get proxy wallet address, but handle case where wallet is not configured
+            # This allows public calls without requiring wallet setup
+            try:
+                address = self.get_proxy_wallet_address()
+            except Exception as e:
+                # If wallet is not configured, require userAddress parameter for public calls
+                raise ArgumentsRequired(self.id + ' getUserClosedPositions() requires a userAddress parameter when wallet is not configured. This is a public endpoint that can query any user address.')
+        return await self.data_public_get_closed_positions(self.extend({'user': address}, params))
 
     async def get_user_activity(self, userAddress: str = None, params={}) -> dict:
         """

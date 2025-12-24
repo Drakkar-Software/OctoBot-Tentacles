@@ -104,13 +104,12 @@ async def test_orders_with_invalid_values(mock_context, skip_if_octobot_trading_
 async def test_orders_amount_then_position_sequence(mock_context):
     initial_usdt_holdings, btc_price = await _usdt_trading_context(mock_context)
     mock_context.exchange_manager.is_future = True
-    api.load_pair_contract(
-        mock_context.exchange_manager,
-        api.create_default_future_contract(
-            mock_context.symbol, decimal.Decimal(1), trading_enums.FutureContractType.LINEAR_PERPETUAL,
+    symbol_contract = api.create_default_future_contract(
+            "BTC/USDT", decimal.Decimal(1), trading_enums.FutureContractType.LINEAR_PERPETUAL,
             trading_constants.DEFAULT_SYMBOL_POSITION_MODE
-        ).to_dict()
-    )
+        )
+        # We have to hardcode the symbol contract as it's not a futures symbol so we can't use load_pair_contract
+    mock_context.exchange_manager.exchange.pair_contracts[mock_context.symbol] = symbol_contract
 
     if os.getenv('CYTHON_IGNORE'):
         return

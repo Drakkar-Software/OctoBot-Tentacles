@@ -745,7 +745,7 @@ async def _reset_profile_portfolio_history(current_edited_config):
                         == trading_enums.ExchangeTypes.FUTURE) != is_future):
                 metadb = commons_databases.MetaDatabase(run_dbs_identifier)
                 portfolio_db = metadb.get_historical_portfolio_value_db(
-                    trading_api.get_account_type(is_future, False, False, True), exchange
+                    trading_api.get_account_type(is_future, False, False, False, True), exchange
                 )
                 await trading_api.clear_database_storage_history(
                     trading_storage.PortfolioStorage, portfolio_db, False
