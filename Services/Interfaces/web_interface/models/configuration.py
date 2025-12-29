@@ -21,6 +21,7 @@ import ccxt.async_support
 import copy
 import requests.adapters
 import urllib3.util.retry
+import typing
 
 import gc
 
@@ -115,11 +116,7 @@ MERGED_CCXT_EXCHANGES = {
     )
 }
 REMOVED_CCXT_EXCHANGES = set().union(*(set(v) for v in MERGED_CCXT_EXCHANGES.values()))
-FULL_EXCHANGE_LIST = [
-    exchange
-    for exchange in set(ccxt.async_support.exchanges)
-    if exchange not in REMOVED_CCXT_EXCHANGES
-]
+_FULL_EXCHANGE_LIST: typing.List[str] = None # type: ignore # should be accessed through get_or_init_FULL_EXCHANGE_LIST
 AUTO_FILLED_EXCHANGES = None
 
 
@@ -1166,32 +1163,44 @@ def get_traded_time_frames(exchange_manager, strategies=None, tentacles_setup_co
     ]
 
 
+def get_or_init_FULL_EXCHANGE_LIST():
+    global _FULL_EXCHANGE_LIST
+    if _FULL_EXCHANGE_LIST is None:
+        _FULL_EXCHANGE_LIST = [
+            exchange
+            for exchange in set(ccxt.async_support.exchanges)
+            if exchange not in REMOVED_CCXT_EXCHANGES
+        ]
+    return _FULL_EXCHANGE_LIST
+
+
 def auto_filled_exchanges(tentacles_setup_config=None):
     global AUTO_FILLED_EXCHANGES
     if AUTO_FILLED_EXCHANGES is None:
         tentacles_setup_config = tentacles_setup_config or interfaces_util.get_edited_tentacles_config()
-        global FULL_EXCHANGE_LIST
+        full_exchange_list = get_or_init_FULL_EXCHANGE_LIST()
         AUTO_FILLED_EXCHANGES = [
             exchange_name
             for exchange_name in trading_api.get_auto_filled_exchange_names(tentacles_setup_config)
-            if exchange_name not in FULL_EXCHANGE_LIST
+            if exchange_name not in full_exchange_list
         ]
-        FULL_EXCHANGE_LIST = FULL_EXCHANGE_LIST + AUTO_FILLED_EXCHANGES
+        full_exchange_list.extend(AUTO_FILLED_EXCHANGES)
     return AUTO_FILLED_EXCHANGES
 
 
 def get_full_exchange_list(tentacles_setup_config=None):
     auto_filled_exchanges(tentacles_setup_config)
-    return FULL_EXCHANGE_LIST
+    return get_or_init_FULL_EXCHANGE_LIST()
 
 
 def get_full_configurable_exchange_list(remove_config_exchanges=False):
     g_config = interfaces_util.get_global_config()
+    full_exchange_list = get_or_init_FULL_EXCHANGE_LIST()
     if remove_config_exchanges:
         user_exchanges = [e for e in g_config[commons_constants.CONFIG_EXCHANGES]]
-        full_exchange_list = list(set(get_full_exchange_list()) - set(user_exchanges))
+        full_exchange_list = list(set(full_exchange_list) - set(user_exchanges))
     else:
-        full_exchange_list = get_full_exchange_list()
+        full_exchange_list = full_exchange_list
     # can't handle exchanges containing UPDATED_CONFIG_SEPARATOR character in their name
     return [
         exchange
