@@ -20,6 +20,7 @@ import enum
 import ccxt
 
 import octobot_commons.constants as commons_constants
+import octobot_commons.symbols as symbols
 
 import octobot_trading.enums as trading_enums
 import octobot_trading.exchanges as exchanges
@@ -145,7 +146,6 @@ class Binance(exchanges.RestExchange):
         if self.exchange_manager.is_future:
             # replace not supported in futures stop orders
             return not is_stop
-        return True
 
     async def get_account_id(self, **kwargs: dict) -> str:
         try:
@@ -286,6 +286,36 @@ class Binance(exchanges.RestExchange):
             params["reduceOnly"] = order.reduce_only
         return params
 
+    def order_request_kwargs_factory(
+        self, 
+        exchange_order_id: str, 
+        order_type: typing.Optional[trading_enums.TraderOrderType] = None, 
+        **kwargs
+    ) -> dict:
+        params = kwargs or {}
+        try:
+            if "stop" not in params:
+                order_type = (
+                    order_type or 
+                    self.exchange_manager.exchange_personal_data.orders_manager.get_order(
+                        None, exchange_order_id=exchange_order_id
+                    ).order_type
+                )
+                params["stop"] = (
+                    personal_data.is_stop_order(order_type)
+                    or personal_data.is_take_profit_order(order_type)
+                )
+        except KeyError as err:
+            self.logger.warning(
+                f"Order {exchange_order_id} not found in order manager: considering it a regular (no stop/take profit) order {err}"
+            )
+        return params
+
+    def fetch_stop_order_in_different_request(self, symbol: str) -> bool:
+        # Override in tentacles when stop orders need to be fetched in a separate request from CCXT
+        # Binance futures uses the algo orders endpoint for stop orders (but not for inverse orders)
+        return self.exchange_manager.is_future and not symbols.parse_symbol(symbol).is_inverse()
+
     async def _create_market_sell_order(
         self, symbol, quantity, price=None, reduce_only: bool = False, params=None
         ) -> dict:
@@ -365,11 +395,12 @@ class BinanceCCXTAdapter(exchanges.CCXTAdapter):
         return fixed
 
     def _adapt_order_type(self, fixed):
-        if order_type := fixed.get(ccxt_enums.ExchangeOrderCCXTColumns.TYPE.value, None):
-            is_stop = order_type.lower() in self.STOP_ORDERS
-            is_tp = order_type.lower() in self.TAKE_PROFITS_ORDERS
-            if is_stop or is_tp:
-                stop_price = fixed.get(ccxt_enums.ExchangeOrderCCXTColumns.STOP_PRICE.value, None)
+        order_info = fixed.get(ccxt_enums.ExchangeOrderCCXTColumns.INFO.value, {})
+        info_order_type = (order_info.get("type", {}) or order_info.get("orderType", None) or "").lower()
+        is_stop = info_order_type in self.STOP_ORDERS
+        is_tp = info_order_type in self.TAKE_PROFITS_ORDERS
+        if is_stop or is_tp:
+            if trigger_price := fixed.get(ccxt_enums.ExchangeOrderCCXTColumns.TRIGGER_PRICE.value, None):
                 selling = (
                     fixed.get(ccxt_enums.ExchangeOrderCCXTColumns.SIDE.value, None)
                     == trading_enums.TradeOrderSide.SELL.value
@@ -378,13 +409,15 @@ class BinanceCCXTAdapter(exchanges.CCXTAdapter):
                 trigger_above = False
                 if is_stop:
                     updated_type = trading_enums.TradeOrderType.STOP_LOSS.value
+                    # force price to trigger price
+                    fixed[trading_enums.ExchangeConstantsOrderColumns.PRICE.value] = trigger_price
                     trigger_above = not selling # sell stop loss triggers when price is lower than target
                 elif is_tp:
                     # updated_type = trading_enums.TradeOrderType.TAKE_PROFIT.value
                     # take profits are not yet handled as such: consider them as limit orders
                     updated_type = trading_enums.TradeOrderType.LIMIT.value # waiting for TP handling
                     if not fixed[trading_enums.ExchangeConstantsOrderColumns.PRICE.value]:
-                        fixed[trading_enums.ExchangeConstantsOrderColumns.PRICE.value] = stop_price # waiting for TP handling
+                        fixed[trading_enums.ExchangeConstantsOrderColumns.PRICE.value] = trigger_price # waiting for TP handling
                     trigger_above = selling # sell take profit triggers when price is higher than target
                 else:
                     self.logger.error(
@@ -393,6 +426,11 @@ class BinanceCCXTAdapter(exchanges.CCXTAdapter):
                 # stop loss and take profits are not tagged as such by ccxt, force it
                 fixed[trading_enums.ExchangeConstantsOrderColumns.TYPE.value] = updated_type
                 fixed[trading_enums.ExchangeConstantsOrderColumns.TRIGGER_ABOVE.value] = trigger_above
+            else:
+                self.logger.error(
+                    f"Unknown [{self.connector.exchange_manager.exchange_name}] order: stop order "
+                    f"with no trigger price, order: {fixed}"
+                )
         return fixed
 
     def fix_trades(self, raw, **kwargs):

@@ -132,12 +132,12 @@ class MarketMakingTradingMode(trading_modes.AbstractTradingMode):
             title=self.MAX_SPREAD_DESC,
         )
         self.UI.user_input(
-            self.BIDS_COUNT, commons_enums.UserInputTypes.INT, 3, inputs,
+            self.BIDS_COUNT, commons_enums.UserInputTypes.INT, 5, inputs,
             min_val=0, max_val=order_book_distribution.MAX_HANDLED_BIDS_ORDERS,
             other_schema_values={"exclusiveMinimum": True, "exclusiveMaximum": False}, title=self.BIDS_COUNT_DECS,
         )
         self.UI.user_input(
-            self.ASKS_COUNT, commons_enums.UserInputTypes.INT, 3, inputs,
+            self.ASKS_COUNT, commons_enums.UserInputTypes.INT, 5, inputs,
             min_val=0, max_val=order_book_distribution.MAX_HANDLED_ASKS_ORDERS,
             other_schema_values={"exclusiveMinimum": True, "exclusiveMaximum": False}, title=self.ASKS_COUNT_DECS,
         )

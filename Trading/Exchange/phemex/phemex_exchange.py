@@ -86,8 +86,16 @@ class Phemex(exchanges.RestExchange):
             order_status = trading_enums.OrderStatus.CANCELED
         return order_status
 
-    async def get_order(self, exchange_order_id: str, symbol: str = None, **kwargs: dict) -> dict:
-        if order := await self.connector.get_order(symbol=symbol, exchange_order_id=exchange_order_id, **kwargs):
+    async def get_order(
+        self,
+        exchange_order_id: str,
+        symbol: typing.Optional[str] = None,
+        order_type: typing.Optional[trading_enums.TraderOrderType] = None,
+        **kwargs: dict
+    ) -> dict:
+        if order := await self.connector.get_order(
+            symbol=symbol, exchange_order_id=exchange_order_id, order_type=order_type, **kwargs
+        ):
             return order
         # try from closed orders (get_order is not returning filled or cancelled orders)
         if order := await self.get_order_from_open_and_closed_orders(exchange_order_id, symbol):

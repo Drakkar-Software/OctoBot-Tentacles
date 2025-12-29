@@ -245,10 +245,16 @@ class MEXC(exchanges.RestExchange):
             False
         )
 
-    async def get_order(self, exchange_order_id: str, symbol: str = None, **kwargs: dict) -> dict:
+    async def get_order(
+        self,
+        exchange_order_id: str,
+        symbol: typing.Optional[str] = None,
+        order_type: typing.Optional[trading_enums.TraderOrderType] = None,
+        **kwargs: dict
+    ) -> dict:
         try:
             return await super().get_order(
-                exchange_order_id, symbol=symbol, **kwargs
+                exchange_order_id, symbol=symbol, order_type=order_type, **kwargs
             )
         except octobot_trading.errors.FailedRequest as err:
             if "Order does not exist" in str(err):

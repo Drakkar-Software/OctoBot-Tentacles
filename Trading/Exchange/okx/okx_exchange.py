@@ -267,6 +267,7 @@ class Okx(exchanges.RestExchange):
         return params
 
     async def _get_all_typed_orders(self, method, symbol=None, since=None, limit=None, **kwargs) -> list:
+        # todo replace by settings fetch_stop_order_in_different_request method when OKX will be stable again
         limit = self._fix_limit(limit)
         is_stop_order = kwargs.get("stop", False)
         if is_stop_order and self.connector.adapter.OKX_ORDER_TYPE not in kwargs:
@@ -294,10 +295,17 @@ class Okx(exchanges.RestExchange):
             super().get_closed_orders, symbol=symbol, since=since, limit=limit, **kwargs
         )
 
-    async def get_order(self, exchange_order_id: str, symbol: str = None, **kwargs: dict) -> dict:
+    async def get_order(
+        self,
+        exchange_order_id: str,
+        symbol: typing.Optional[str] = None,
+        order_type: typing.Optional[trading_enums.TraderOrderType] = None,
+        **kwargs: dict
+    ) -> dict:
         try:
-            kwargs = self._get_okx_order_params(exchange_order_id, **kwargs)
-            order = await super().get_order(exchange_order_id, symbol=symbol, **kwargs)
+            order = await super().get_order(
+                exchange_order_id, symbol=symbol, order_type=order_type, **kwargs
+            )
             return order
         except trading_errors.NotSupported:
             if kwargs.get("stop", False):
@@ -306,34 +314,30 @@ class Okx(exchanges.RestExchange):
                 return await self.get_order_from_open_and_closed_orders(exchange_order_id, symbol=symbol, **kwargs)
             raise
 
-    async def cancel_order(
-        self, exchange_order_id: str, symbol: str, order_type: trading_enums.TraderOrderType, **kwargs: dict
-    ) -> trading_enums.OrderStatus:
-        return await super().cancel_order(
-            exchange_order_id, symbol, order_type, **self._get_okx_order_params(exchange_order_id, order_type, **kwargs)
-        )
-
-    def _get_okx_order_params(self, exchange_order_id, order_type=None, **kwargs):
+    def order_request_kwargs_factory(
+        self, 
+        exchange_order_id: str, 
+        order_type: typing.Optional[trading_enums.TraderOrderType] = None, 
+        **kwargs
+    ) -> dict:
         params = kwargs or {}
         try:
             if "stop" not in params:
-                order_type = order_type or \
-                             self.exchange_manager.exchange_personal_data.orders_manager.get_order(
-                                 None, exchange_order_id=exchange_order_id
-                             ).order_type
-                params["stop"] = trading_personal_data.is_stop_order(order_type) \
+                order_type = (
+                    order_type or 
+                    self.exchange_manager.exchange_personal_data.orders_manager.get_order(
+                        None, exchange_order_id=exchange_order_id
+                    ).order_type
+                )
+                params["stop"] = (
+                    trading_personal_data.is_stop_order(order_type)
                     or trading_personal_data.is_take_profit_order(order_type)
-        except KeyError:
-            pass
+                )
+        except KeyError as err:
+            self.logger.warning(
+                f"Order {exchange_order_id} not found in order manager: considering it a regular (no stop/take profit) order {err}"
+            )
         return params
-
-    async def _verify_order(self, created_order, order_type, symbol, price, quantity, side, get_order_params=None):
-
-        if trading_personal_data.is_stop_order(order_type) or trading_personal_data.is_take_profit_order(order_type):
-            get_order_params = get_order_params or {}
-            get_order_params["stop"] = True
-        return await super()._verify_order(created_order, order_type, symbol, price, quantity, side,
-                                           get_order_params=get_order_params)
 
     def _is_oco_order(self, params):
         return all(
