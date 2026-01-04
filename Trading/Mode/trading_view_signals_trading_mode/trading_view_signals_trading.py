@@ -80,6 +80,7 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
     STOP_SIGNAL = "stop"
     CANCEL_SIGNAL = "cancel"
     SIDE_PARAM_KEY = "SIDE"
+    NEXT_EXECUTION_TIME_KEY = "NEXT_EXECUTION_TIME"
 
     def __init__(self, config, exchange_manager):
         super().__init__(config, exchange_manager)
@@ -87,6 +88,7 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
         self.CANCEL_PREVIOUS_ORDERS = True
         self.merged_simple_symbol = None
         self.str_symbol = None
+        self.next_execution_time: typing.Optional[float] = None
 
     def init_user_inputs(self, inputs: dict) -> None:
         """
@@ -466,6 +468,7 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
                     dependencies = new_dependencies
         pre_update_data = self._parse_pre_update_order_details(parsed_data)
         await self._process_pre_state_update_actions(ctx, pre_update_data)
+        await self._process_meta_actions(parsed_data)
         state, order_data = await self._parse_order_details(ctx, parsed_data)
         self.final_eval = self.EVAL_BY_STATES[state]
         # Use daily trading mode state system
@@ -480,6 +483,15 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
         except Exception as err:
             self.logger.exception(
                 err, True, f"Error when processing pre_state_update_actions: {err} (data: {data})"
+            )
+
+    async def _process_meta_actions(self, parsed_data: dict):
+        try:
+            if next_execution_time := parsed_data.get(TradingViewSignalsTradingMode.NEXT_EXECUTION_TIME_KEY):
+                self.trading_mode.next_execution_time = float(next_execution_time)
+        except Exception as err:
+            self.logger.exception(
+                err, True, f"Error when processing meta_actions: {err} (data: {parsed_data})"
             )
 
     async def _set_state(
