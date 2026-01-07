@@ -13,9 +13,10 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import octobot_trading.errors
 
 
-class FailedNonOrderActionError(Exception):
+class FailedNonOrderActionError(octobot_trading.errors.ToPropagateError):
     """
     Raised when an not-order related action fails
     """
