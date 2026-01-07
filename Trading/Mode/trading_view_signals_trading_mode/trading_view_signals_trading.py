@@ -94,18 +94,20 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
     STOP_SIGNAL = "stop"
     CANCEL_SIGNAL = "cancel"
     SIDE_PARAM_KEY = "SIDE"
-    NEXT_EXECUTION_TIME_KEY = "NEXT_EXECUTION_TIME"
     # special signals, to be used programmatically
-    ENSURE_EXCHANGE_BALANCE_SIGNAL = "ENSURE_EXCHANGE_BALANCE"
-    ENSURE_BLOCKCHAIN_WALLET_BALANCE_SIGNAL = "ENSURE_BLOCKCHAIN_WALLET_BALANCE"
-    if trading_constants.ALLOW_FUNDS_TRANSFER:
-        # disabled by default unless ALLOW_FUNDS_TRANSFER is True
-        WITHDRAW_FUNDS_SIGNAL = "WITHDRAW_FUNDS"
-        TRANSFER_FUNDS_SIGNAL = "TRANSFER_FUNDS"
-    else:
-        # disabled signals (can't be used)
-        WITHDRAW_FUNDS_SIGNAL = None
-        TRANSFER_FUNDS_SIGNAL = None
+    ENSURE_EXCHANGE_BALANCE_SIGNAL = "ensure_exchange_balance"
+    ENSURE_BLOCKCHAIN_WALLET_BALANCE_SIGNAL = "ensure_blockchain_wallet_balance"
+    WITHDRAW_FUNDS_SIGNAL = "withdraw_funds" # disabled by default unless ALLOW_FUNDS_TRANSFER is True
+    TRANSFER_FUNDS_SIGNAL = "transfer_funds" # disabled by default unless ALLOW_FUNDS_TRANSFER is True
+
+    NON_ORDER_SIGNALS = {
+        # signals that are not related to order management
+        # they will be only be processed by the 1st trading mode on this matrix  
+        ENSURE_EXCHANGE_BALANCE_SIGNAL,
+        ENSURE_BLOCKCHAIN_WALLET_BALANCE_SIGNAL,
+        WITHDRAW_FUNDS_SIGNAL,
+        TRANSFER_FUNDS_SIGNAL,
+    }
 
     def __init__(self, config, exchange_manager):
         super().__init__(config, exchange_manager)
@@ -113,7 +115,6 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
         self.CANCEL_PREVIOUS_ORDERS = True
         self.merged_simple_symbol = None
         self.str_symbol = None
-        self.next_execution_time: typing.Optional[float] = None
 
     def init_user_inputs(self, inputs: dict) -> None:
         """
@@ -263,6 +264,23 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
             return False
         return True
 
+    @classmethod
+    def is_non_order_signal(cls, parsed_data: dict) -> bool:
+        try:
+            return parsed_data[cls.SIGNAL_KEY].casefold() in cls.NON_ORDER_SIGNALS
+        except KeyError:
+            return False
+
+    async def _process_or_ignore_non_order_signal(self, parsed_data: dict) -> bool:
+        if self.is_non_order_signal(parsed_data):
+            if self.is_first_trading_mode_on_this_matrix():
+                self.logger.info(f"Non order signal {parsed_data[self.SIGNAL_KEY]} processing")
+                await self.producers[0].signal_callback(parsed_data, script_keywords.get_base_context(self))
+            else:
+                self.logger.info(f"Non order signal {parsed_data[self.SIGNAL_KEY]} ignored: another trading mode on this matrix will process it")
+            return True
+        return False
+
     async def _trading_view_signal_callback(self, data):
         signal_data = data.get("metadata", "")
         errors = []
@@ -274,12 +292,13 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
                 await self.producers[0].signal_callback(parsed_data, script_keywords.get_base_context(self))
             else:
                 self._log_error_message_if_relevant(parsed_data, signal_data)
-        except (trading_errors.InvalidArgumentError, trading_errors.InvalidCancelPolicyError, trading_errors.PermissionError) as e:
+        except (trading_errors.InvalidArgumentError, trading_errors.InvalidCancelPolicyError, trading_errors.ConfigurationPermissionError) as e:
             self.logger.error(f"Error when processing trading view signal: {e} (signal: {signal_data})")
         except trading_errors.MissingFunds as e:
             self.logger.error(f"Error when processing trading view signal: not enough funds: {e} (signal: {signal_data})")
         except KeyError as e:
-            self.logger.error(f"Error when processing trading view signal: missing {e} required value (signal: {signal_data})")
+            if not await self._process_or_ignore_non_order_signal(parsed_data):
+                self.logger.error(f"Error when processing trading view signal: missing {e} required value (signal: {signal_data})")
         except Exception as e:
             self.logger.error(
                 f"Unexpected error when processing trading view signal: {e} {e.__class__.__name__} (signal: {signal_data})"
@@ -499,7 +518,8 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
 
     async def signal_callback(self, parsed_data: dict, ctx):
         _, dependencies = await self.apply_cancel_policies()
-        if self.trading_mode.CANCEL_PREVIOUS_ORDERS:
+        is_order_signal = not self.trading_mode.is_non_order_signal(parsed_data)
+        if is_order_signal and self.trading_mode.CANCEL_PREVIOUS_ORDERS:
             # cancel open orders
             _, new_dependencies = await self.cancel_symbol_open_orders(self.trading_mode.symbol)
             if new_dependencies:
@@ -527,21 +547,18 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             )
 
     async def _process_meta_actions(self, parsed_data: dict):
-        try:
-            if next_execution_time := parsed_data.get(TradingViewSignalsTradingMode.NEXT_EXECUTION_TIME_KEY):
-                self.trading_mode.next_execution_time = float(next_execution_time)
-        except Exception as err:
-            self.logger.exception(
-                err, True, f"Error when processing meta_actions: {err} (data: {parsed_data})"
-            )
+        # implement in subclass if needed
+        pass
 
     async def _set_state(
-        self, cryptocurrency: str, symbol: str, action: SignalActions, new_state, order_data, parsed_data, 
+        self, cryptocurrency: str, symbol: str, action: SignalActions,
+        new_state: trading_enums.EvaluatorStates, order_data: dict, parsed_data: dict, 
         dependencies: typing.Optional[commons_signals.SignalDependencies] = None
     ):
         async with self.trading_mode_trigger():
-            self.state = new_state
-            self.logger.info(f"[{symbol}] new state: {self.state.name}")
+            if self.state != new_state:
+                self.state = new_state
+                self.logger.info(f"[{symbol}] new state: {self.state.name}")
 
             # if new state is not neutral --> cancel orders and create new else keep orders
             if action == SignalActions.CREATE_ORDERS:
@@ -567,7 +584,7 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             case SignalActions.CANCEL_ORDERS:
                 await self.cancel_orders_from_order_data(symbol, order_data)
             case SignalActions.ENSURE_EXCHANGE_BALANCE:
-                self.ensure_exchange_balance(parsed_data)
+                await self.ensure_exchange_balance(parsed_data)
             case SignalActions.ENSURE_BLOCKCHAIN_WALLET_BALANCE:
                 await self.ensure_blockchain_wallet_balance(parsed_data)
             case SignalActions.WITHDRAW_FUNDS:
@@ -594,42 +611,73 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             symbol, side=cancel_order_side, tag=cancel_order_tag, exchange_order_ids=exchange_ids
         )
 
-    def ensure_exchange_balance(self, parsed_data: dict):
+    async def ensure_exchange_balance(self, parsed_data: dict) -> decimal.Decimal:
         ensure_exchange_balance_params = actions_params.EnsureExchangeBalanceParams.from_dict(parsed_data)
         holdings = trading_api.get_portfolio_currency(self.exchange_manager, ensure_exchange_balance_params.asset).available
         if holdings < decimal.Decimal(str(ensure_exchange_balance_params.holdings)):
             raise trading_view_signals_trading_mode_errors.MissingFundsError(
                 f"Not enough {ensure_exchange_balance_params.asset} available on {self.exchange_manager.exchange_name} exchange account: available: {holdings}, required: {ensure_exchange_balance_params.holdings}"
             )
+        else:
+            self.logger.info(
+                f"Enough {ensure_exchange_balance_params.asset} available on {self.exchange_manager.exchange_name} exchange account: available: {holdings}, required: {ensure_exchange_balance_params.holdings}"
+            )
+        return holdings
 
-    async def ensure_blockchain_wallet_balance(self, parsed_data: dict):
+    async def ensure_blockchain_wallet_balance(self, parsed_data: dict) -> decimal.Decimal:
         ensure_blockchain_wallet_balance_params = actions_params.EnsureBlockchainWalletBalanceParams.from_dict(parsed_data)
-        wallet = trading_api.create_wallet(ensure_blockchain_wallet_balance_params.wallet_details)
-        balance = await wallet.get_balance(ensure_blockchain_wallet_balance_params.asset)
+        wallet = trading_api.create_blockchain_wallet(
+            ensure_blockchain_wallet_balance_params.wallet_details, 
+            self.exchange_manager.trader
+        )
+        wallet_balance = await wallet.get_balance()
+        balance = wallet_balance[ensure_blockchain_wallet_balance_params.asset][
+            trading_constants.CONFIG_PORTFOLIO_FREE
+        ] if ensure_blockchain_wallet_balance_params.asset in wallet_balance else trading_constants.ZERO
+
         if balance < decimal.Decimal(str(ensure_blockchain_wallet_balance_params.holdings)):
             raise trading_view_signals_trading_mode_errors.MissingFundsError(
                 f"Not enough {ensure_blockchain_wallet_balance_params.asset} available on "
-                f"{ensure_blockchain_wallet_balance_params.wallet_details.blockchain_descriptor.name} "
+                f"{ensure_blockchain_wallet_balance_params.wallet_details.blockchain_descriptor.network} "
                 f"blockchain wallet: available: {balance}, required: {ensure_blockchain_wallet_balance_params.holdings}"
             )
+        else:
+            self.logger.info(
+                f"Enough {ensure_blockchain_wallet_balance_params.asset} available on "
+                f"{ensure_blockchain_wallet_balance_params.wallet_details.blockchain_descriptor.network} "
+                f"blockchain wallet: available: {balance}, required: {ensure_blockchain_wallet_balance_params.holdings}"
+            )
+        return balance
 
-    async def withdraw_funds(self, parsed_data: dict):
+    async def withdraw_funds(self, parsed_data: dict) -> dict:
         withdraw_funds_params = actions_params.WithdrawFundsParams.from_dict(parsed_data)
         # requires ALLOW_FUNDS_TRANSFER env to be True (disabled by default to protect funds)
-        await self.exchange_manager.trader.withdraw(
+        transaction = await self.exchange_manager.trader.withdraw(
             withdraw_funds_params.asset,
             decimal.Decimal(str(withdraw_funds_params.amount)),
+            withdraw_funds_params.network,
             withdraw_funds_params.address,
             tag=withdraw_funds_params.tag,
             params=withdraw_funds_params.params
         )
-
-    async def transfer_funds(self, parsed_data: dict):
-        transfer_funds_params = actions_params.TransferFundsParams.from_dict(parsed_data)
-        wallet = trading_api.create_wallet(transfer_funds_params.wallet_details)
-        # requires ALLOW_FUNDS_TRANSFER env to be True (disabled by default to protect funds)
-        await wallet.transfer(
-            transfer_funds_params.asset, 
-            decimal.Decimal(str(transfer_funds_params.amount)), 
-            transfer_funds_params.address
+        self.logger.info(
+            f"Withdrawn {withdraw_funds_params.amount} {withdraw_funds_params.asset} "
+            f"from {self.exchange_manager.exchange_name}: {transaction}"
         )
+        return transaction
+    
+    async def transfer_funds(self, parsed_data: dict) -> dict:
+        transfer_funds_params = actions_params.TransferFundsParams.from_dict(parsed_data)
+        wallet = trading_api.create_blockchain_wallet(
+            transfer_funds_params.wallet_details, 
+            self.exchange_manager.trader
+        )
+        # requires ALLOW_FUNDS_TRANSFER env to be True (disabled by default to protect funds)
+        transaction = await wallet.withdraw(
+            transfer_funds_params.asset,
+            decimal.Decimal(str(transfer_funds_params.amount)),
+            transfer_funds_params.wallet_details.blockchain_descriptor.network,
+            transfer_funds_params.address,
+        )
+        self.logger.info(f"Transferred {transfer_funds_params.amount} {transfer_funds_params.asset}: {transaction}")
+        return transaction
