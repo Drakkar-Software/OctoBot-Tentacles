@@ -15,7 +15,6 @@
 #  License along with this library.
 import decimal
 import math
-
 import mock
 import pytest
 import os.path
@@ -683,6 +682,30 @@ async def test_signal_callback(tools):
         set_leverage_mock.assert_not_called()
         _set_state_mock.assert_not_called()
 
+        # Test meta action only signal - should return early without calling _parse_order_details or _set_state
+        _set_state_mock.reset_mock()
+        prev_value = set(mode.META_ACTION_ONLY_SIGNALS)
+        try:
+            mode.META_ACTION_ONLY_SIGNALS.add("buy")
+            with mock.patch.object(producer, "_parse_order_details", mock.AsyncMock()) as _parse_order_details_mock, \
+                mock.patch.object(producer, "apply_cancel_policies", mock.AsyncMock(return_value=(True, None))) as apply_cancel_policies_mock, \
+                mock.patch.object(producer, "_process_pre_state_update_actions", mock.AsyncMock()) as _process_pre_state_update_actions_mock, \
+                mock.patch.object(producer, "_process_meta_actions", mock.AsyncMock()) as _process_meta_actions_mock:
+                await producer.signal_callback({
+                    mode.EXCHANGE_KEY: exchange_manager.exchange_name,
+                    mode.SYMBOL_KEY: "unused",
+                    mode.SIGNAL_KEY: "BUY",
+                }, context)
+                # Should call apply_cancel_policies, _process_pre_state_update_actions, and _process_meta_actions
+                apply_cancel_policies_mock.assert_awaited_once()
+                _process_pre_state_update_actions_mock.assert_awaited_once()
+                _process_meta_actions_mock.assert_awaited_once()
+                # Should NOT call _parse_order_details or _set_state (early return)
+                _parse_order_details_mock.assert_not_awaited()
+                _set_state_mock.assert_not_awaited()
+        finally:
+            mode.__class__.META_ACTION_ONLY_SIGNALS = prev_value
+
 
 async def test_signal_callback_with_meta_actions(tools):
     exchange_manager, symbol, mode, producer, consumer = tools
@@ -727,6 +750,7 @@ async def test_signal_callback_with_cancel_policies(tools):
     exchange_manager, symbol, mode, producer, consumer = tools
     context = script_keywords.get_base_context(producer.trading_mode)
     mode.CANCEL_PREVIOUS_ORDERS = True
+    print(f"{mode.META_ACTION_ONLY_SIGNALS=}")
 
     async def _apply_cancel_policies(*args, **kwargs):
         return True, trading_signals.get_orders_dependencies([mock.Mock(order_id="123"), mock.Mock(order_id="456-cancel_policy")])
@@ -916,7 +940,7 @@ async def test_process_non_creating_orders_actions(tools):
             order_data,
             parsed_data
         )
-        cancel_orders_mock.assert_awaited_once_with(symbol, order_data)
+        cancel_orders_mock.assert_awaited_once_with(symbol, order_data, parsed_data)
         cancel_orders_mock.reset_mock()
 
     # Test ENSURE_EXCHANGE_BALANCE action
@@ -1139,6 +1163,51 @@ async def test_is_non_order_signal(tools):
         assert mode.is_non_order_signal({
             mode.SIGNAL_KEY: signal,
         }) is False
+
+
+async def test_is_meta_action_only(tools):
+    exchange_manager, symbol, mode, producer, consumer = tools
+    # Test with missing SIGNAL_KEY - should return False
+    assert mode.is_meta_action_only({}) is False
+    
+    # Test with various signals - all should return False since META_ACTION_ONLY_SIGNALS is currently an empty set
+    # and get_signal returns a string, so string == set() will always be False
+    for signal in [
+        mode.BUY_SIGNAL,
+        mode.SELL_SIGNAL,
+        mode.MARKET_SIGNAL,
+        mode.LIMIT_SIGNAL,
+        mode.STOP_SIGNAL,
+        mode.CANCEL_SIGNAL,
+        mode.ENSURE_EXCHANGE_BALANCE_SIGNAL,
+        mode.ENSURE_BLOCKCHAIN_WALLET_BALANCE_SIGNAL,
+        mode.WITHDRAW_FUNDS_SIGNAL,
+        mode.TRANSFER_FUNDS_SIGNAL,
+        "unknown_signal",
+        "",
+    ]:
+        assert mode.is_meta_action_only({
+            mode.SIGNAL_KEY: signal,
+        }) is False
+    
+    # Test case-insensitive behavior (get_signal uses casefold)
+    assert mode.is_meta_action_only({
+        mode.SIGNAL_KEY: "BUY",
+    }) is False
+    assert mode.is_meta_action_only({
+        mode.SIGNAL_KEY: "buy",
+    }) is False
+    assert mode.is_meta_action_only({
+        mode.SIGNAL_KEY: "Buy",
+    }) is False
+    prev_value = set(mode.META_ACTION_ONLY_SIGNALS)
+    try:
+        mode.META_ACTION_ONLY_SIGNALS.add("buy")
+        assert mode.is_meta_action_only({
+            mode.SIGNAL_KEY: "BUY",
+        }) is True
+    finally:
+        mode.__class__.META_ACTION_ONLY_SIGNALS = prev_value
 
 
 def compare_dict_with_nan(d_1, d_2):
