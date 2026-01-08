@@ -108,6 +108,7 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
         WITHDRAW_FUNDS_SIGNAL,
         TRANSFER_FUNDS_SIGNAL,
     }
+    META_ACTION_ONLY_SIGNALS = set()
 
     def __init__(self, config, exchange_manager):
         super().__init__(config, exchange_manager)
@@ -200,7 +201,7 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
                 return
 
     @classmethod
-    def parse_signal_data(cls, signal_data: str, errors: list) -> dict:
+    def parse_signal_data(cls, signal_data: typing.Union[str, dict], errors: list) -> dict:
         if isinstance(signal_data, dict):
             # already parsed: return a deep copy to avoid modifying the original data
             return copy.deepcopy(signal_data)
@@ -265,11 +266,19 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
         return True
 
     @classmethod
+    def get_signal(cls, parsed_data: dict) -> str:
+        return parsed_data.get(cls.SIGNAL_KEY, "").casefold()
+
+    @classmethod
     def is_non_order_signal(cls, parsed_data: dict) -> bool:
         try:
-            return parsed_data[cls.SIGNAL_KEY].casefold() in cls.NON_ORDER_SIGNALS
+            return cls.get_signal(parsed_data) in cls.NON_ORDER_SIGNALS
         except KeyError:
             return False
+
+    @classmethod
+    def is_meta_action_only(cls, parsed_data: dict) -> bool:
+        return cls.get_signal(parsed_data) in cls.META_ACTION_ONLY_SIGNALS
 
     async def _process_or_ignore_non_order_signal(self, parsed_data: dict) -> bool:
         if self.is_non_order_signal(parsed_data):
@@ -536,6 +545,8 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
         pre_update_data = self._parse_pre_update_order_details(parsed_data)
         await self._process_pre_state_update_actions(ctx, pre_update_data)
         await self._process_meta_actions(parsed_data)
+        if self.trading_mode.is_meta_action_only(parsed_data):
+            return
         action, state, order_data = await self._parse_order_details(ctx, parsed_data)
         self.final_eval = self.EVAL_BY_STATES[state]
         # Use daily trading mode state system
@@ -588,7 +599,7 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
     ):
         match (action):
             case SignalActions.CANCEL_ORDERS:
-                await self.cancel_orders_from_order_data(symbol, order_data)
+                await self.cancel_orders_from_order_data(symbol, order_data, parsed_data)
             case SignalActions.ENSURE_EXCHANGE_BALANCE:
                 await self.ensure_exchange_balance(parsed_data)
             case SignalActions.ENSURE_BLOCKCHAIN_WALLET_BALANCE:
@@ -600,14 +611,15 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             case _:
                 raise trading_errors.InvalidArgumentError(f"Unknown action: {action}.")
 
-    async def cancel_orders_from_order_data(self, symbol: str, order_data) -> tuple[bool, typing.Optional[commons_signals.SignalDependencies]]:
+    async def cancel_orders_from_order_data(self, symbol: str, order_data: dict, parsed_data: dict) -> tuple[bool, typing.Optional[commons_signals.SignalDependencies]]:
         if not self.trading_mode.consumers:
             return False, None
 
         exchange_ids = order_data.get(TradingViewSignalsModeConsumer.EXCHANGE_ORDER_IDS, None)
         cancel_order_raw_side = order_data.get(
-            TradingViewSignalsModeConsumer.ORDER_EXCHANGE_CREATION_PARAMS, {}).get(
-                TradingViewSignalsTradingMode.SIDE_PARAM_KEY, None)
+            TradingViewSignalsModeConsumer.ORDER_EXCHANGE_CREATION_PARAMS, {}
+        ).get(TradingViewSignalsTradingMode.SIDE_PARAM_KEY, None) or parsed_data.get(TradingViewSignalsTradingMode.SIDE_PARAM_KEY, None)
+        cancel_order_raw_side = cancel_order_raw_side.lower() if cancel_order_raw_side else None
         cancel_order_side = trading_enums.TradeOrderSide.BUY if cancel_order_raw_side == trading_enums.TradeOrderSide.BUY.value \
             else trading_enums.TradeOrderSide.SELL if cancel_order_raw_side == trading_enums.TradeOrderSide.SELL.value else None
         cancel_order_tag = order_data.get(TradingViewSignalsModeConsumer.TAG_KEY, None)
@@ -658,16 +670,19 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
     async def withdraw_funds(self, parsed_data: dict) -> dict:
         withdraw_funds_params = actions_params.WithdrawFundsParams.from_dict(parsed_data)
         # requires ALLOW_FUNDS_TRANSFER env to be True (disabled by default to protect funds)
+        amount = withdraw_funds_params.amount or (
+            trading_api.get_portfolio_currency(self.exchange_manager, withdraw_funds_params.asset).available
+        )
         transaction = await self.exchange_manager.trader.withdraw(
             withdraw_funds_params.asset,
-            decimal.Decimal(str(withdraw_funds_params.amount)),
+            decimal.Decimal(str(amount)),
             withdraw_funds_params.network,
             withdraw_funds_params.address,
             tag=withdraw_funds_params.tag,
             params=withdraw_funds_params.params
         )
         self.logger.info(
-            f"Withdrawn {withdraw_funds_params.amount} {withdraw_funds_params.asset} "
+            f"Withdrawn {amount} {withdraw_funds_params.asset} "
             f"from {self.exchange_manager.exchange_name}: {transaction}"
         )
         return transaction
@@ -678,12 +693,22 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             transfer_funds_params.wallet_details, 
             self.exchange_manager.trader
         )
+        if transfer_funds_params.address:
+            address = transfer_funds_params.address
+        elif transfer_funds_params.destination_exchange == self.exchange_manager.exchange_name:
+            address = (
+                await self.exchange_manager.trader.get_deposit_address(transfer_funds_params.asset)
+            )[trading_enums.ExchangeConstantsDepositAddressColumns.ADDRESS.value]
+        else:
+            raise trading_errors.InvalidArgumentError(
+                f"Unsupported destination exchange: {transfer_funds_params.destination_exchange}"
+            )
         # requires ALLOW_FUNDS_TRANSFER env to be True (disabled by default to protect funds)
         transaction = await wallet.withdraw(
             transfer_funds_params.asset,
             decimal.Decimal(str(transfer_funds_params.amount)),
             transfer_funds_params.wallet_details.blockchain_descriptor.network,
-            transfer_funds_params.address,
+            address,
         )
         self.logger.info(f"Transferred {transfer_funds_params.amount} {transfer_funds_params.asset}: {transaction}")
         return transaction
