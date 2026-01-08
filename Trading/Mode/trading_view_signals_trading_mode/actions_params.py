@@ -14,6 +14,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import dataclasses
+import typing
 
 import octobot_commons.dataclasses
 import octobot_trading.blockchain_wallets as blockchain_wallets
@@ -35,9 +36,9 @@ class EnsureBlockchainWalletBalanceParams(octobot_commons.dataclasses.FlexibleDa
 @dataclasses.dataclass
 class WithdrawFundsParams(octobot_commons.dataclasses.FlexibleDataclass):
     asset: str
-    amount: float
     network: str # network to withdraw to
     address: str # recipient address of the withdrawal
+    amount: typing.Optional[float] = None # defaults to all available balance if unspecified
     tag: str = ""
     params: dict = dataclasses.field(default_factory=dict) # extra parameters specific to the exchange API endpoint
 
@@ -46,5 +47,6 @@ class WithdrawFundsParams(octobot_commons.dataclasses.FlexibleDataclass):
 class TransferFundsParams(octobot_commons.dataclasses.FlexibleDataclass):
     asset: str
     amount: float
-    address: str # recipient address of the transfer
+    address: typing.Optional[str] # recipient address of the transfer
     wallet_details: blockchain_wallets.BlockchainWalletParameters # details of the wallet to transfer from
+    destination_exchange: typing.Optional[str] = None # recipient address of the transfer on the exchange
