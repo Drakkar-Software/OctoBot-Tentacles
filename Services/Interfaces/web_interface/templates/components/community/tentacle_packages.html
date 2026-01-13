@@ -80,14 +80,13 @@
               </p>
               <p>
                 <button type="button" class="btn btn-outline-primary"
-                        data-role="open-checkout" data-payment-method="crypto" data-checkout-api-url="{{url_for('api.checkout_url')}}">
-                    <i class="fa-brands fa-ethereum mr-2"></i> I want to pay in with crypto
+                        data-role="open-checkout" data-payment-method="credit-card" data-checkout-api-url="{{url_for('api.checkout_url')}}">
+                    <i class="fa-solid fa-credit-card mr-2"></i> Pay by credit card
                 </button>
               </p>
               <p>
-                <button type="button" class="btn btn-outline-primary"
-                        data-role="open-checkout" data-payment-method="credit-card" data-checkout-api-url="{{url_for('api.checkout_url')}}">
-                    <i class="fa-solid fa-credit-card mr-2"></i> I want to pay by credit card
+                <button type="button" class="btn btn-outline-primary disabled" data-role="open-checkout" data-payment-method="crypto" data-checkout-api-url="{{url_for('api.checkout_url')}}">
+                    <i class="fa-brands fa-ethereum mr-2"></i> Pay with crypto (coming back soon)
                 </button>
               </p>
               <p class="d-none" data-role="checkout-url-fallback-part">
