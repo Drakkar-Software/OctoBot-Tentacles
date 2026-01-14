@@ -13,25 +13,34 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
+import octobot_commons.enums as commons_enums
+import octobot_commons.constants as commons_constants
+import octobot_commons.time_frame_manager as time_frame_manager
 import octobot_trading.exchanges as exchanges
 from octobot_trading.enums import WebsocketFeeds as Feeds
-import tentacles.Trading.Exchange.coinbase.coinbase_exchange as coinbase_exchange
+import tentacles.Trading.Exchange.lbank.lbank_exchange as lbank_exchange
 
 
-class CoinbaseCCXTWebsocketConnector(exchanges.CCXTWebsocketConnector):
+class LBankCCXTWebsocketConnector(exchanges.CCXTWebsocketConnector, lbank_exchange.LBankSignConnectorMixin):
     EXCHANGE_FEEDS = {
         Feeds.TRADES: True,
-        Feeds.KLINE: Feeds.UNSUPPORTED.value,
+        Feeds.KLINE: True,
         Feeds.TICKER: True,
-        Feeds.CANDLE: Feeds.UNSUPPORTED.value,
+        Feeds.CANDLE: True,
     }
+    FIX_CANDLES_TIMEZONE_IF_NEEDED: bool = True
+
+    def __init__(self, *args, **kwargs):
+        exchanges.CCXTWebsocketConnector.__init__(self, *args, **kwargs)
+        lbank_exchange.LBankSignConnectorMixin.__init__(self)
+
+    def _create_client(self):
+        exchanges.CCXTWebsocketConnector._create_client(self)
+        self.client.sign = self._lazy_maybe_force_signed_requests(self.client.sign)
 
     @classmethod
     def get_name(cls):
-        return coinbase_exchange.Coinbase.get_name()
-
-    def _get_keys_adapter(self):
-        return self.exchange_manager.exchange.connector._keys_adapter
+        return lbank_exchange.LBank.get_name()
 
     def get_adapter_class(self, adapter_class):
-        return coinbase_exchange.CoinbaseCCXTAdapter
+        return lbank_exchange.LBankCCXTAdapter
