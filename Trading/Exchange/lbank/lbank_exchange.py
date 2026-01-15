@@ -30,9 +30,15 @@ class LBankSignConnectorMixin:
     def _lazy_maybe_force_signed_requests(self, origin_ccxt_sign):
         def lazy_sign(path, api, method, params, headers, body):
             if self._force_signed_requests is None:
+                # force sign if the exchange requires authentication or if the connector is authenticated
                 self._force_signed_requests = self.exchange_manager.exchange.requires_authentication(
                     self.exchange_manager.exchange.tentacle_config, None, None
+                ) or (
+                    self.exchange_manager.exchange.connector 
+                    and self.exchange_manager.exchange.connector.is_authenticated
                 )
+                if self._force_signed_requests:
+                    self.logger.info(f"Enabled force signing requests for {self.exchange_manager.exchange_name}")
             ccxt_sign_result = origin_ccxt_sign(path, api, method, params, headers, body)
             if self._force_signed_requests:
                 if self.exchange_manager.exchange.is_authenticated_request(
@@ -148,9 +154,6 @@ class LBank(exchanges.RestExchange):
     FIX_MARKET_STATUS = True
     REMOVE_MARKET_STATUS_PRICE_LIMITS = True
     SUPPORT_FETCHING_CANCELLED_ORDERS = False
-    ALWAYS_REQUIRES_AUTHENTICATION = True # used by default to force signed requests
-    # set True when create_market_buy_order_with_cost should be used to create buy market orders
-    # (useful to predict the exact spent amount)
     ENABLE_SPOT_BUY_MARKET_WITH_COST = True
     REQUIRE_ORDER_FEES_FROM_TRADES = True  # set True when get_order is not giving fees on closed orders and fees
     # should be fetched using recent trades.

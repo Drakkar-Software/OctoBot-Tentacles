@@ -24,6 +24,7 @@ _SPECIFIC_REFERENCE_MARKET_PER_EXCHANGE: dict[str, str] = {
 }
 _EXCHANGES_WITH_DIFFERENT_PUBLIC_DATA_AFTER_AUTH = set[str]([
     "mexc",
+    "lbank",
 ])
 
 def get_default_reference_market_per_exchange(exchanges: list[str]) -> dict[str, str]:
