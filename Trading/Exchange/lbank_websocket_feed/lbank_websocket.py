@@ -38,6 +38,13 @@ class LBankCCXTWebsocketConnector(exchanges.CCXTWebsocketConnector, lbank_exchan
         exchanges.CCXTWebsocketConnector._create_client(self)
         self.client.sign = self._lazy_maybe_force_signed_requests(self.client.sign)
 
+    def _should_authenticate(self):
+        return exchanges.CCXTWebsocketConnector._should_authenticate(self) or (
+            # oveerride to authenticate if the connector is authenticated
+            self.exchange_manager.exchange.connector 
+            and self.exchange_manager.exchange.connector.is_authenticated
+        )
+
     @classmethod
     def get_name(cls):
         return lbank_exchange.LBank.get_name()
