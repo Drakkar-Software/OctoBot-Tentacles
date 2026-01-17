@@ -498,9 +498,11 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
         self.healthy = False
         self.subscribed_channel_specs_by_exchange_id: dict[str, set[trading_exchanges.ChannelSpecs]] = {}
         self.is_first_execution: bool = True
-        self._started_at = 0
-        self._last_error_at = 0
+        self._started_at: float = 0
+        self._last_error_at: float = 0
         self.latest_actions_plan: OrdersUpdatePlan = None
+        self.last_target_buy_orders_count: int = 0
+        self.last_target_sell_orders_count: int = 0
 
         try:
             self._load_symbol_trading_config()
@@ -644,6 +646,9 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
                         return True
         return False
 
+    def _is_previous_plan_still_processing(self) -> bool:
+        return self.latest_actions_plan is not None and not self.latest_actions_plan.processed.is_set()
+
     async def _handle_market_making_orders(
         self, current_price, symbol_market, trigger_source: str, force_full_refresh: bool
     ):
@@ -673,7 +678,7 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
         )
         open_orders = self.get_market_making_orders()
         require_data_refresh = False
-        if self.latest_actions_plan is not None and not self.latest_actions_plan.processed.is_set():
+        if self._is_previous_plan_still_processing():
             # if previous plan is still processing but being cancelled: skip call (another one is waiting for cancel)
             skip_exec = self.latest_actions_plan.cancelled
             # if previous plan is still processing and not being cancelled: check if cancel is required
@@ -782,6 +787,9 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
             symbol_market,
             available_base=theoretically_available_base, available_quote=theoretically_available_quote,
         )
+        # update last target orders count
+        self.last_target_sell_orders_count = len(ideal_distribution.asks)
+        self.last_target_buy_orders_count = len(ideal_distribution.bids)
         cancelled_orders = created_orders = []
         missing_all_orders_sides = []
         try:
@@ -1201,7 +1209,7 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
                 technically_available_base += order.origin_quantity - filled_quantity
         return technically_available_base, technically_available_quote
 
-    def get_market_making_orders(self):
+    def get_market_making_orders(self) -> list[trading_personal_data.Order]:
         return [
             order
             for order in self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders(
@@ -1211,6 +1219,25 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
             if isinstance(order, (trading_personal_data.BuyLimitOrder, trading_personal_data.SellLimitOrder))
         ]
 
+    def _is_missing_open_orders(
+        self, sided_orders: list[trading_personal_data.Order], side: trading_enums.TradeOrderSide
+    ) -> bool:
+        if not sided_orders:
+            # no orders on this side: orders are missing
+            return True
+        if (last_target_orders_count := (
+            self.last_target_buy_orders_count
+            if side == trading_enums.TradeOrderSide.BUY
+            else self.last_target_sell_orders_count
+        )) and (len(sided_orders) < last_target_orders_count) and not self._is_previous_plan_still_processing():
+            self.logger.info(
+                f"Missing {last_target_orders_count - len(sided_orders)} {self.symbol} {side.value} "
+                f"orders [{self.exchange_manager.exchange_name}], last target count: {last_target_orders_count}"
+            )
+            # at least one order is missing compared to the last check
+            return True
+        return False
+
     async def on_new_reference_price(self, reference_price: decimal.Decimal) -> bool:
         trigger = False
         open_orders = self.get_market_making_orders()
@@ -1219,7 +1246,7 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
             for order in open_orders
             if order.side == trading_enums.TradeOrderSide.BUY
         ]
-        if not buy_orders:
+        if self._is_missing_open_orders(buy_orders, trading_enums.TradeOrderSide.BUY):
             trigger = True
         else:
             max_buy_price = max(order.origin_price for order in buy_orders)
@@ -1230,7 +1257,7 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
             for order in open_orders
             if order.side == trading_enums.TradeOrderSide.SELL
         ]
-        if not sell_orders:
+        if self._is_missing_open_orders(sell_orders, trading_enums.TradeOrderSide.SELL):
             trigger = True
         else:
             min_sell_price = min(order.origin_price for order in sell_orders)
