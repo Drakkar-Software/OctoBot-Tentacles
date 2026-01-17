@@ -26,6 +26,7 @@ class Kraken(exchanges.RestExchange):
     FIX_MARKET_STATUS = True
 
     RECENT_TRADE_FIXED_LIMIT = 1000
+    ADJUST_FOR_TIME_DIFFERENCE = True  # set True when the client needs to adjust its requests for time difference with the server
 
     def __init__(
         self, config, exchange_manager, exchange_config_by_exchange: typing.Optional[dict[str, dict]],
