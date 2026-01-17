@@ -182,6 +182,8 @@ class Kucoin(exchanges.RestExchange):
     LOCAL_FEES_CURRENCIES: typing.List[str] = ["KCS"]
 
     DEFAULT_BALANCE_CURRENCIES_TO_FETCH = ["USDT"]
+    ADJUST_FOR_TIME_DIFFERENCE = True  # set True when the client needs to adjust its requests for time difference with the server
+
 
     @classmethod
     def get_name(cls):

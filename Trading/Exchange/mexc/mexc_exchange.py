@@ -157,6 +157,7 @@ class MEXC(exchanges.RestExchange):
     ]
     # set when the exchange can allow users to pay fees in a custom currency (ex: BNB on binance)
     LOCAL_FEES_CURRENCIES: typing.List[str] = ["MX"]
+    ADJUST_FOR_TIME_DIFFERENCE = True  # set True when the client needs to adjust its requests for time difference with the server
 
     @classmethod
     def get_name(cls):

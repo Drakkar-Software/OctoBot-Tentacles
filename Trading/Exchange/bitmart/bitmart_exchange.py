@@ -85,6 +85,7 @@ class BitMart(exchanges.RestExchange):
     # bitmart {"msg":"This endpoint has been deprecated. Please refer to the document:
     # https://developer-pro.bitmart.com/en/spot/#update-plan","code":30031}
     SUPPORT_FETCHING_CANCELLED_ORDERS = False
+    ADJUST_FOR_TIME_DIFFERENCE = True  # set True when the client needs to adjust its requests for time difference with the server
 
     @classmethod
     def get_name(cls):
