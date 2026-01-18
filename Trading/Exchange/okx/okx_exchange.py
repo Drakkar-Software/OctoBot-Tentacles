@@ -172,6 +172,7 @@ class Okx(exchanges.RestExchange):
 
     # set True when get_positions() is not returning empty positions and should use get_position() instead
     REQUIRES_SYMBOL_FOR_EMPTY_POSITION = True
+    ADJUST_FOR_TIME_DIFFERENCE = True  # set True when the client needs to adjust its requests for time difference with the server
 
     @classmethod
     def get_name(cls):

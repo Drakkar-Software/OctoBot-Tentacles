@@ -85,6 +85,7 @@ class Bybit(exchanges.RestExchange):
 
     # Set True when get_open_order() can return outdated orders (cancelled or not yet created)
     CAN_HAVE_DELAYED_CANCELLED_ORDERS = True
+    ADJUST_FOR_TIME_DIFFERENCE = True  # set True when the client needs to adjust its requests for time difference with the server
 
     BUY_STR = "Buy"
     SELL_STR = "Sell"

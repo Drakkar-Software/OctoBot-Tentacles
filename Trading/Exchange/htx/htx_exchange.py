@@ -23,6 +23,7 @@ class Htx(exchanges.RestExchange):
     # set True when create_market_buy_order_with_cost should be used to create buy market orders
     # (useful to predict the exact spent amount)
     ENABLE_SPOT_BUY_MARKET_WITH_COST = True
+    ADJUST_FOR_TIME_DIFFERENCE = True  # set True when the client needs to adjust its requests for time difference with the server
 
     @classmethod
     def get_name(cls):

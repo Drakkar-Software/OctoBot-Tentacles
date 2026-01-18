@@ -47,6 +47,8 @@ class MEXCConnector(exchanges.CCXTConnector):
                 self._force_signed_requests = self.exchange_manager.exchange.requires_authentication(
                     self.exchange_manager.exchange.tentacle_config, None, None
                 )
+                if self._force_signed_requests:
+                    self.logger.info(f"Enabled force signing requests for {self.exchange_manager.exchange_name}")
             ccxt_sign_result = origin_ccxt_sign(path, api, method, params, headers, body)
             if self._force_signed_requests:
                 url = ccxt_sign_result.get("url") or ""
@@ -155,6 +157,7 @@ class MEXC(exchanges.RestExchange):
     ]
     # set when the exchange can allow users to pay fees in a custom currency (ex: BNB on binance)
     LOCAL_FEES_CURRENCIES: typing.List[str] = ["MX"]
+    ADJUST_FOR_TIME_DIFFERENCE = True  # set True when the client needs to adjust its requests for time difference with the server
 
     @classmethod
     def get_name(cls):

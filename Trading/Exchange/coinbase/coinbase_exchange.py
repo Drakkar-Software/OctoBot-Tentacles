@@ -360,6 +360,7 @@ class Coinbase(exchanges.RestExchange):
             trading_enums.ExchangeSupportedElements.SUPPORTED_BUNDLED_ORDERS.value: {},
         }
     }
+    ADJUST_FOR_TIME_DIFFERENCE = True  # set True when the client needs to adjust its requests for time difference with the server
     # stop limit price is 2% bellow trigger price to ensure instant fill
     STOP_LIMIT_ORDER_INSTANT_FILL_PRICE_RATIO = decimal.Decimal("0.98")
 

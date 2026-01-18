@@ -31,6 +31,7 @@ class GateIO(exchanges.RestExchange):
         # gateio {"message":"Request IP not in whitelist: 11.11.11.11","label":"FORBIDDEN"}
         ("ip not in whitelist",),
     ]
+    ADJUST_FOR_TIME_DIFFERENCE = True  # set True when the client needs to adjust its requests for time difference with the server
 
     @classmethod
     def get_name(cls):
