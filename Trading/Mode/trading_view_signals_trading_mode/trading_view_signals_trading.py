@@ -24,6 +24,7 @@ import async_channel.channels as channels
 import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_commons.enums as commons_enums
 import octobot_commons.constants as commons_constants
+import octobot_commons.logging as commons_logging
 import octobot_commons.signals as commons_signals
 import octobot_commons.tentacles_management as tentacles_management
 import octobot_services.api as services_api
@@ -48,6 +49,7 @@ except ImportError:
 import tentacles.Trading.Mode.daily_trading_mode.daily_trading as daily_trading_mode
 import tentacles.Trading.Mode.trading_view_signals_trading_mode.actions_params as actions_params
 import tentacles.Trading.Mode.trading_view_signals_trading_mode.errors as trading_view_signals_trading_mode_errors
+import tentacles.Meta.Keywords.scripting_library as scripting_library
 
 
 _CANCEL_POLICIES_CACHE = {}
@@ -67,6 +69,7 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
     SERVICE_FEED_CLASS = trading_view_service_feed.TradingViewServiceFeed if hasattr(trading_view_service_feed, 'TradingViewServiceFeed') else None
     TRADINGVIEW_FUTURES_SUFFIXES = [".P"]
     PARAM_SEPARATORS = [";", "\\n", "\n"]
+    GENERIC_USD_STABLECOIN_SYMBOL = "USD*"
 
     EXCHANGE_KEY = "EXCHANGE"
     TRADING_TYPE_KEY = "TRADING_TYPE"   # expect a trading_enums.ExchangeTypes value
@@ -191,17 +194,28 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
         return consumers + await self._get_feed_consumers()
 
     @classmethod
-    def _adapt_symbol(cls, parsed_data):
+    def _adapt_symbol(cls, parsed_data, exchange_name: typing.Optional[str]):
         if cls.SYMBOL_KEY not in parsed_data:
             return
         symbol = parsed_data[cls.SYMBOL_KEY]
         for suffix in cls.TRADINGVIEW_FUTURES_SUFFIXES:
             if symbol.endswith(suffix):
                 parsed_data[cls.SYMBOL_KEY] = symbol.split(suffix)[0]
-                return
+                break
+        if exchange_name and cls.GENERIC_USD_STABLECOIN_SYMBOL in parsed_data[cls.SYMBOL_KEY]:
+            # replace the generic USD stablecoin symbol with the actual stablecoin symbol for this exchange
+            default_reference_market = scripting_library.get_default_exchange_reference_market(exchange_name)
+            replaced_symbol = parsed_data[cls.SYMBOL_KEY].replace(cls.GENERIC_USD_STABLECOIN_SYMBOL, default_reference_market)
+            commons_logging.get_logger(cls.__name__).info(
+                f"Replaced generic USD stablecoin symbol {parsed_data[cls.SYMBOL_KEY]} with {replaced_symbol} for exchange {exchange_name} in signal data: {parsed_data}"
+            )
+            parsed_data[cls.SYMBOL_KEY] = replaced_symbol
+        
 
     @classmethod
-    def parse_signal_data(cls, signal_data: typing.Union[str, dict], errors: list) -> dict:
+    def parse_signal_data(
+        cls, signal_data: typing.Union[str, dict], exchange_name: typing.Optional[str], errors: list
+    ) -> dict:
         if isinstance(signal_data, dict):
             # already parsed: return a deep copy to avoid modifying the original data
             return copy.deepcopy(signal_data)
@@ -226,7 +240,7 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
             except IndexError:
                 errors.append(f"Invalid signal line in trading view signal, ignoring it. Line: \"{line}\"")
 
-        cls._adapt_symbol(parsed_data)
+        cls._adapt_symbol(parsed_data, exchange_name)
         return parsed_data
 
 
@@ -293,7 +307,7 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
     async def _trading_view_signal_callback(self, data):
         signal_data = data.get("metadata", "")
         errors = []
-        parsed_data = self.parse_signal_data(signal_data, errors)
+        parsed_data = self.parse_signal_data(signal_data, self.exchange_manager.exchange_name, errors)
         for error in errors:
             self.logger.error(error)
         try:
