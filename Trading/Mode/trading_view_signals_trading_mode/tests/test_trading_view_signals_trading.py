@@ -148,6 +148,7 @@ def blockchain_wallet_details():
 
 async def test_parse_signal_data():
     errors = []
+    exchange_name = "binance"
     assert Mode.TradingViewSignalsTradingMode.parse_signal_data(
         """
         
@@ -159,6 +160,7 @@ async def test_parse_signal_data():
         
         PLOp=true
         """,
+        exchange_name,
         errors
     ) == {
         "KEY": "value",
@@ -170,6 +172,7 @@ async def test_parse_signal_data():
     errors = []
     assert Mode.TradingViewSignalsTradingMode.parse_signal_data(
         "KEY=value\nEXCHANGE=1\n\n\n\nPLOp=false\n",
+        exchange_name,
         errors
     ) == {
         "KEY": "value",
@@ -181,6 +184,7 @@ async def test_parse_signal_data():
     errors = []
     assert Mode.TradingViewSignalsTradingMode.parse_signal_data(
         "KEY=value\\nEXCHANGE=1\\nPLOp=ABC",
+        exchange_name,
         errors
     ) == {
         "KEY": "value",
@@ -192,6 +196,7 @@ async def test_parse_signal_data():
     errors = []
     assert Mode.TradingViewSignalsTradingMode.parse_signal_data(
         "KEY=value\\nEXCHANGE\\nPLOp=ABC",
+        exchange_name,
         errors
     ) == {
         "KEY": "value",
@@ -205,6 +210,7 @@ async def test_parse_signal_data():
     errors = []
     assert Mode.TradingViewSignalsTradingMode.parse_signal_data(
         "KEY=value;EXCHANGE;;;;;PLOp=ABC;TAKE_PROFIT_PRICE=1;;TAKE_PROFIT_PRICE_2=3",
+        exchange_name,
         errors
     ) == {
         "KEY": "value",
@@ -220,6 +226,7 @@ async def test_parse_signal_data():
     errors = []
     assert Mode.TradingViewSignalsTradingMode.parse_signal_data(
         ";KEY=value;EXCHANGE\nPLOp=ABC\\nGG=HIHI;LEVERAGE=3",
+        exchange_name,
         errors
     ) == {
         "KEY": "value",
@@ -232,6 +239,58 @@ async def test_parse_signal_data():
     assert "nPLOp" not in str(errors[0])
     assert "KEY" not in str(errors[0])
     assert "LEVERAGE" not in str(errors[0])
+
+
+async def test_parse_signal_data_with_generic_usd_stablecoin_symbol():
+    errors = []
+    exchange_name = "binance"
+    assert Mode.TradingViewSignalsTradingMode.parse_signal_data(
+        "SYMBOL=USD*", None, errors
+    ) == {
+        "SYMBOL": "USD*", # no exchange, leave as is
+    }
+    assert Mode.TradingViewSignalsTradingMode.parse_signal_data(
+        "NO_SYMBOL=USD*", "", errors
+    ) == {
+        "NO_SYMBOL": "USD*", # no exchange, leave as is
+    }
+    assert Mode.TradingViewSignalsTradingMode.parse_signal_data(
+        "SYMBOL=USD*", exchange_name, errors
+    ) == {
+        "SYMBOL": "USDC", # default reference market for binance, as defined in 
+        # tentacles.Meta.Keywords.scripting_library.configuration.exchanges_configuration
+        # (case insensitive)
+    }
+    assert Mode.TradingViewSignalsTradingMode.parse_signal_data(
+        "NO_SYMBOL=USD*", exchange_name, errors
+    ) == {
+        "NO_SYMBOL": "USD*", # no symbol, leave as is
+    }
+    assert Mode.TradingViewSignalsTradingMode.parse_signal_data(
+        "SYMBOL=USD*;EXCHANGE=BiNance", exchange_name, errors
+    ) == {
+        "SYMBOL": "USDC", # default reference market for binance, as defined in 
+        # tentacles.Meta.Keywords.scripting_library.configuration.exchanges_configuration
+        # (case insensitive)
+        "EXCHANGE": "BiNance",
+    }
+    assert Mode.TradingViewSignalsTradingMode.parse_signal_data(
+        "SYMBOL=USD*", "mexc", errors
+    ) == {
+        "SYMBOL": commons_constants.DEFAULT_REFERENCE_MARKET, # no default reference market for mexc, use default
+    }
+    assert Mode.TradingViewSignalsTradingMode.parse_signal_data(
+        "SYMBOL=USD*;EXCHANGE=????", "????", errors
+    ) == {
+        "SYMBOL": commons_constants.DEFAULT_REFERENCE_MARKET, # unknown exchange, use default
+        "EXCHANGE": "????",
+    }
+    assert Mode.TradingViewSignalsTradingMode.parse_signal_data(
+        "SYMBOL=USD*", None, errors
+    ) == {
+        "SYMBOL": "USD*", # no exchange, leave as is
+    }
+    assert errors == []
 
 
 async def test_trading_view_signal_callback(tools):
