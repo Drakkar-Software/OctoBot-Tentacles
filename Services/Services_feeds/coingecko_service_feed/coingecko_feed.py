@@ -89,6 +89,8 @@ class CoingeckoServiceFeed(service_feeds.AbstractServiceFeed):
     FEED_CHANNEL = CoingeckoServiceFeedChannel
     REQUIRED_SERVICES = [Services_bases.CoingeckoService]
 
+    BACKTESTING_ENABLED = True
+
     API_RATE_LIMIT_SECONDS = 10
 
     def __init__(self, config, main_async_loop, bot_id):
@@ -272,6 +274,78 @@ class CoingeckoServiceFeed(service_feeds.AbstractServiceFeed):
         except Exception as e:
             self.logger.exception(e, True, f"Error when initializing Coingecko feed: {e}")
             return False
+
+    @classmethod
+    def get_historical_sources(cls) -> list:
+        return [
+            services_constants.COINGECKO_TOPIC_MARKETS,
+            services_constants.COINGECKO_TOPIC_TRENDING,
+            services_constants.COINGECKO_TOPIC_GLOBAL,
+        ]
+
+    async def get_historical_data(
+        self,
+        start_timestamp,
+        end_timestamp,
+        symbols=None,
+        source=None,
+        **kwargs
+    ) -> typing.AsyncIterator[list[dict]]:
+        """Fetch historical/snapshot data from CoinGecko API (snapshot at collection time)."""
+        if source not in (
+            services_constants.COINGECKO_TOPIC_MARKETS,
+            services_constants.COINGECKO_TOPIC_TRENDING,
+            services_constants.COINGECKO_TOPIC_GLOBAL,
+        ):
+            raise ValueError(f"Invalid source: {source}")
+        if self.coins_api is None:
+            self._initialize_api_client()
+        ts_ms = int(end_timestamp) if end_timestamp else int(start_timestamp)
+        if source == services_constants.COINGECKO_TOPIC_MARKETS:
+            ok = await self._get_markets_data(per_page=250)
+            if not ok or not self.data_cache.get(services_constants.COINGECKO_TOPIC_MARKETS):
+                return
+            events = []
+            for coin in self.data_cache[services_constants.COINGECKO_TOPIC_MARKETS]:
+                payload = dataclasses.asdict(coin) if dataclasses.is_dataclass(coin) else coin
+                symbol = getattr(coin, "id", "") if not isinstance(coin, dict) else coin.get("id", "")
+                events.append({
+                    "timestamp": ts_ms,
+                    "channel": source,
+                    "symbol": symbol,
+                    "payload": payload if isinstance(payload, dict) else dataclasses.asdict(coin),
+                })
+            if events:
+                yield events
+        elif source == services_constants.COINGECKO_TOPIC_TRENDING:
+            ok = await self._get_trending_data()
+            if not ok or not self.data_cache.get(services_constants.COINGECKO_TOPIC_TRENDING):
+                return
+            events = []
+            for coin in self.data_cache[services_constants.COINGECKO_TOPIC_TRENDING]:
+                payload = dataclasses.asdict(coin) if dataclasses.is_dataclass(coin) else coin
+                events.append({
+                    "timestamp": ts_ms,
+                    "channel": source,
+                    "symbol": getattr(coin, "id", "") or (coin.get("id", "") if isinstance(coin, dict) else ""),
+                    "payload": payload if isinstance(payload, dict) else dataclasses.asdict(coin),
+                })
+            if events:
+                yield events
+        elif source == services_constants.COINGECKO_TOPIC_GLOBAL:
+            ok = await self._get_global_data()
+            if not ok or self.data_cache.get(services_constants.COINGECKO_TOPIC_GLOBAL) is None:
+                return
+            global_obj = self.data_cache[services_constants.COINGECKO_TOPIC_GLOBAL]
+            payload = dataclasses.asdict(global_obj) if dataclasses.is_dataclass(global_obj) else global_obj
+            if not isinstance(payload, dict):
+                payload = dataclasses.asdict(global_obj)
+            yield [{
+                "timestamp": ts_ms,
+                "channel": source,
+                "symbol": "",
+                "payload": payload,
+            }]
 
     async def stop(self):
         await super().stop()

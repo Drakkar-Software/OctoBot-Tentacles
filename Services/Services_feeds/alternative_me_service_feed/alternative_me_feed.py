@@ -41,7 +41,10 @@ class AlternativeMeServiceFeed(service_feeds.AbstractServiceFeed):
     FEED_CHANNEL = AlternativeMeServiceFeedChannel
     REQUIRED_SERVICES = [Services_bases.AlternativeMeService]
 
+    BACKTESTING_ENABLED = True
+
     API_RATE_LIMIT_SECONDS = 10
+    DEFAULT_HISTORICAL_LIMIT = 1000
 
     def __init__(self, config, main_async_loop, bot_id):
         super().__init__(config, main_async_loop, bot_id)
@@ -66,7 +69,13 @@ class AlternativeMeServiceFeed(service_feeds.AbstractServiceFeed):
     def _get_sleep_time_before_next_wakeup(self):
         return commons_enums.TimeFramesMinutes[self.refresh_time_frame] * commons_constants.MINUTE_TO_SECONDS
 
-    async def _get_fear_and_greed_data(self, session: aiohttp.ClientSession, limit: typing.Optional[int] = 100) -> bool:
+    async def _get_fear_and_greed_data(
+        self,
+        session: aiohttp.ClientSession,
+        limit: typing.Optional[int] = 100,
+        start_timestamp: typing.Optional[float] = None,
+        end_timestamp: typing.Optional[float] = None,
+    ) -> bool:
         api_url = f"https://api.alternative.me/fng/?limit={limit}&format=json&date_format=us"
         async with session.get(api_url) as response:
             if response.status != 200:
@@ -81,6 +90,11 @@ class AlternativeMeServiceFeed(service_feeds.AbstractServiceFeed):
                     value=float(entry["value"]),
                     value_classification=entry["value_classification"]
                 ) for entry in data]
+            if start_timestamp is not None and end_timestamp is not None:
+                self.data_cache[services_constants.ALTERNATIVE_ME_TOPIC_FEAR_AND_GREED] = [
+                    item for item in self.data_cache[services_constants.ALTERNATIVE_ME_TOPIC_FEAR_AND_GREED]
+                    if start_timestamp <= item.timestamp * 1000 <= end_timestamp
+                ]
             return True
 
     def get_data_cache(self, current_time: float, key: typing.Optional[str] = None):
@@ -127,6 +141,48 @@ class AlternativeMeServiceFeed(service_feeds.AbstractServiceFeed):
         except Exception as e:
             self.logger.exception(e, True, f"Error when initializing Alternative.me feed: {e}")
             return False
+
+    @classmethod
+    def get_historical_sources(cls) -> list:
+        return [services_constants.ALTERNATIVE_ME_TOPIC_FEAR_AND_GREED]
+
+    async def get_historical_data(
+        self,
+        start_timestamp,
+        end_timestamp,
+        symbols=None,
+        source=None,
+        **kwargs
+    ) -> typing.AsyncIterator[list[dict]]:
+        """Fetch historical Fear and Greed data from Alternative.me API via internal fetch."""
+        if source != services_constants.ALTERNATIVE_ME_TOPIC_FEAR_AND_GREED:
+            raise ValueError(f"Invalid source: {source}")
+        async with aiohttp.ClientSession() as session:
+            ok = await self._get_fear_and_greed_data(
+                session,
+                limit=self.DEFAULT_HISTORICAL_LIMIT,
+                start_timestamp=start_timestamp,
+                end_timestamp=end_timestamp,
+            )
+            await asyncio.sleep(self.API_RATE_LIMIT_SECONDS)
+        if not ok or not self.data_cache.get(services_constants.ALTERNATIVE_ME_TOPIC_FEAR_AND_GREED):
+            return
+        events = []
+        for item in self.data_cache[services_constants.ALTERNATIVE_ME_TOPIC_FEAR_AND_GREED]:
+            ts_ms = int(item.timestamp * 1000)
+            events.append({
+                "timestamp": ts_ms,
+                "channel": source or services_constants.ALTERNATIVE_ME_TOPIC_FEAR_AND_GREED,
+                "symbol": "",
+                "payload": {
+                    "value": item.value,
+                    "value_classification": item.value_classification,
+                    "timestamp": datetime.datetime.fromtimestamp(item.timestamp, tz=datetime.timezone.utc).strftime("%m-%d-%Y"),
+                },
+            })
+        if events:
+            events.sort(key=lambda x: x["timestamp"])
+            yield events
 
     async def stop(self):
         await super().stop()

@@ -59,6 +59,8 @@ class LunarCrushServiceFeed(service_feeds.AbstractServiceFeed):
     FEED_CHANNEL = LunarCrushServiceFeedChannel
     REQUIRED_SERVICES = [Services_bases.LunarCrushService]
 
+    BACKTESTING_ENABLED = True
+
     def __init__(self, config, main_async_loop, bot_id):
         super().__init__(config, main_async_loop, bot_id)
         self.lunarcrush_coins = []
@@ -142,6 +144,51 @@ class LunarCrushServiceFeed(service_feeds.AbstractServiceFeed):
         except Exception as e:
             self.logger.exception(e, True, f"Error when initializing LunarCrush feed: {e}")
             return False
+
+    @classmethod
+    def get_historical_sources(cls) -> list:
+        return [services_constants.LUNARCRUSH_COIN_METRICS]
+
+    async def get_historical_data(
+        self,
+        start_timestamp,
+        end_timestamp,
+        symbols=None,
+        source=None,
+        **kwargs
+    ) -> typing.AsyncIterator[list[dict]]:
+        """Fetch historical coin metrics from LunarCrush time-series API."""
+        if source != services_constants.LUNARCRUSH_COIN_METRICS:
+            raise ValueError(f"Invalid source: {source}")
+        coins = list(symbols) if symbols else list(self.lunarcrush_coins)
+        if not coins:
+            return
+        if not self.services and self.REQUIRED_SERVICES:
+            self.services = [s.instance() for s in self.REQUIRED_SERVICES]
+        headers = self.services[0].get_authentication_headers() if self.services else None
+        start_date = datetime.datetime.fromtimestamp(start_timestamp / 1000.0, tz=datetime.timezone.utc)
+        end_date = datetime.datetime.fromtimestamp(end_timestamp / 1000.0, tz=datetime.timezone.utc)
+        async with aiohttp.ClientSession(headers=headers) as session:
+            for coin in coins:
+                ok = await self._get_coin_data(session, coin, start_date, end_date)
+                if not ok or not self.data_cache.get(services_constants.LUNARCRUSH_COIN_METRICS) or coin not in self.data_cache[services_constants.LUNARCRUSH_COIN_METRICS]:
+                    continue
+                events = []
+                for entry in self.data_cache[services_constants.LUNARCRUSH_COIN_METRICS][coin]:
+                    ts_ms = entry.time * 1000
+                    if start_timestamp <= ts_ms <= end_timestamp:
+                        payload = dataclasses.asdict(entry) if dataclasses.is_dataclass(entry) else entry
+                        if not isinstance(payload, dict):
+                            payload = dataclasses.asdict(entry)
+                        events.append({
+                            "timestamp": ts_ms,
+                            "channel": source or services_constants.LUNARCRUSH_COIN_METRICS,
+                            "symbol": coin,
+                            "payload": payload,
+                        })
+                if events:
+                    events.sort(key=lambda x: x["timestamp"])
+                    yield events
 
     async def stop(self):
         await super().stop()
