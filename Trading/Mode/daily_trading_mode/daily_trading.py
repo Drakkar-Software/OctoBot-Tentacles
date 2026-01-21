@@ -954,7 +954,8 @@ class DailyTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
             trading_errors.OrderCreationError,
             trading_errors.InvalidPositionSide,
             trading_errors.UnsupportedContractConfigurationError,
-            trading_errors.InvalidCancelPolicyError
+            trading_errors.InvalidCancelPolicyError,
+            trading_errors.TraderDisabledError
         ):
             raise
         except asyncio.TimeoutError as e:
@@ -1049,49 +1050,51 @@ class DailyTradingModeProducer(trading_modes.AbstractTradingModeProducer):
         if new_state != self.state:
             self.state = new_state
             self.logger.info(f"[{symbol}] new state: {self.state.name}")
-
-            # if new state is not neutral --> cancel orders and create new else keep orders
-            if new_state is not trading_enums.EvaluatorStates.NEUTRAL:
-                _, dependencies = await self.apply_cancel_policies()
-                if self.trading_mode.consumers:
-                    if self.trading_mode.consumers[0].USE_TARGET_PROFIT_MODE:
-                        new_dependencies = await self._cancel_position_opening_orders(symbol)
+            await self._on_new_state(cryptocurrency, symbol, new_state)
+    
+    @trading_modes.enabled_trader_only()
+    async def _on_new_state(self, cryptocurrency: str, symbol: str, new_state):
+        # if new state is not neutral --> cancel orders and create new else keep orders
+        if new_state is not trading_enums.EvaluatorStates.NEUTRAL:
+            _, dependencies = await self.apply_cancel_policies()
+            if self.trading_mode.consumers:
+                if self.trading_mode.consumers[0].USE_TARGET_PROFIT_MODE:
+                    new_dependencies = await self._cancel_position_opening_orders(symbol)
+                else:
+                    # cancel open orders when not on target profit mode
+                    _, new_dependencies = await self.cancel_symbol_open_orders(symbol)
+                if new_dependencies:
+                    if dependencies:
+                        dependencies.extend(new_dependencies)
                     else:
-                        # cancel open orders when not on target profit mode
-                        _, new_dependencies = await self.cancel_symbol_open_orders(symbol)
-                    if new_dependencies:
-                        if dependencies:
-                            dependencies.extend(new_dependencies)
-                        else:
-                            dependencies = new_dependencies
+                        dependencies = new_dependencies
 
-                # call orders creation from consumers
-                await self.submit_trading_evaluation(cryptocurrency=cryptocurrency,
-                                                     symbol=symbol,
-                                                     time_frame=None,
-                                                     final_note=self.final_eval,
-                                                     state=self.state,
-                                                     dependencies=dependencies)
+            # call orders creation from consumers
+            await self.submit_trading_evaluation(cryptocurrency=cryptocurrency,
+                                                    symbol=symbol,
+                                                    time_frame=None,
+                                                    final_note=self.final_eval,
+                                                    state=self.state,
+                                                    dependencies=dependencies)
 
-                # send_notification
-                if not self.exchange_manager.is_backtesting:
-                    await self._send_alert_notification(symbol, new_state)
+            # send_notification
+            if not self.exchange_manager.is_backtesting:
+                await self._send_alert_notification(symbol, new_state)
 
     async def _cancel_position_opening_orders(self, symbol) -> signals.SignalDependencies:
         dependencies = signals.SignalDependencies()
-        if self.exchange_manager.trader.is_enabled:
-            for order in self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders(symbol=symbol):
-                if (
-                    not (order.is_cancelled() or order.is_closed())
-                    # orders with chained orders and no "triggered by" are "position opening"
-                    and order.chained_orders and order.triggered_by is None
-                ):
-                    try:
-                        is_cancelled, dependency = await self.trading_mode.cancel_order(order)
-                        if is_cancelled:
-                            dependencies.extend(dependency)
-                    except trading_errors.UnexpectedExchangeSideOrderStateError as err:
-                        self.logger.warning(f"Skipped order cancel: {err}, order: {order}")
+        for order in self.exchange_manager.exchange_personal_data.orders_manager.get_open_orders(symbol=symbol):
+            if (
+                not (order.is_cancelled() or order.is_closed())
+                # orders with chained orders and no "triggered by" are "position opening"
+                and order.chained_orders and order.triggered_by is None
+            ):
+                try:
+                    is_cancelled, dependency = await self.trading_mode.cancel_order(order)
+                    if is_cancelled:
+                        dependencies.extend(dependency)
+                except trading_errors.UnexpectedExchangeSideOrderStateError as err:
+                    self.logger.warning(f"Skipped order cancel: {err}, order: {order}")
         return dependencies
 
     async def _send_alert_notification(self, symbol, new_state):

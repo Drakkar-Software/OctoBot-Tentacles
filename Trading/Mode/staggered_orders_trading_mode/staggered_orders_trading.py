@@ -802,16 +802,15 @@ class StaggeredOrdersTradingModeProducer(trading_modes.AbstractTradingModeProduc
     def _get_new_state_price(self):
         return decimal.Decimal(str(self.current_price if self.starting_price == 0 else self.starting_price))
 
+    @trading_modes.enabled_trader_only()
     async def create_state(self, current_price, ignore_mirror_orders_only, ignore_available_funds, trigger_trailing):
         if current_price is not None:
             self._refresh_symbol_data(self.symbol_market)
             async with self.get_lock(), self.trading_mode_trigger(skip_health_check=True):
-                if self.exchange_manager.trader.is_enabled:
-                    await self._handle_staggered_orders(
-                        current_price, ignore_mirror_orders_only, ignore_available_funds, trigger_trailing
-                    )
-                    self.logger.debug(f"{self.symbol} orders updated on {self.exchange_name}")
-
+                await self._handle_staggered_orders(
+                    current_price, ignore_mirror_orders_only, ignore_available_funds, trigger_trailing
+                )
+                self.logger.debug(f"{self.symbol} orders updated on {self.exchange_name}")
 
     async def order_filled_callback(self, filled_order: dict):
         # create order on the order side
