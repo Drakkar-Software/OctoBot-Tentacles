@@ -435,17 +435,17 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
             await self._create_arbitrage_initial_order(arbitrage_container)
             self._register_state(state, other_exchanges_average_price - self.own_exchange_mark_price)
 
+    @trading_modes.enabled_trader_only()
     async def _create_arbitrage_initial_order(self, arbitrage_container):
-        if self.exchange_manager.trader.is_enabled:
-            data = {
-                ArbitrageModeConsumer.ARBITRAGE_CONTAINER_KEY: arbitrage_container,
-                ArbitrageModeConsumer.ARBITRAGE_PHASE_KEY: ArbitrageModeConsumer.INITIAL_PHASE
-            }
-            await self.submit_trading_evaluation(cryptocurrency=self.trading_mode.cryptocurrency,
-                                                 symbol=self.trading_mode.symbol,
-                                                 time_frame=None,
-                                                 state=arbitrage_container.state,
-                                                 data=data)
+        data = {
+            ArbitrageModeConsumer.ARBITRAGE_CONTAINER_KEY: arbitrage_container,
+            ArbitrageModeConsumer.ARBITRAGE_PHASE_KEY: ArbitrageModeConsumer.INITIAL_PHASE
+        }
+        await self.submit_trading_evaluation(cryptocurrency=self.trading_mode.cryptocurrency,
+                                                symbol=self.trading_mode.symbol,
+                                                time_frame=None,
+                                                state=arbitrage_container.state,
+                                                data=data)
 
     async def _trigger_arbitrage_secondary_order(self, arbitrage: arbitrage_container_import.ArbitrageContainer,
                                                  filled_order: dict,
@@ -470,18 +470,18 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
             secondary_quantity = secondary_base_amount / arbitrage.target_price
         await self._create_arbitrage_secondary_order(arbitrage, secondary_quantity)
 
+    @trading_modes.enabled_trader_only()
     async def _create_arbitrage_secondary_order(self, arbitrage_container, secondary_quantity):
-        if self.exchange_manager.trader.is_enabled:
-            data = {
-                ArbitrageModeConsumer.ARBITRAGE_CONTAINER_KEY: arbitrage_container,
-                ArbitrageModeConsumer.ARBITRAGE_PHASE_KEY: ArbitrageModeConsumer.SECONDARY_PHASE,
-                ArbitrageModeConsumer.QUANTITY_KEY: secondary_quantity
-            }
-            await self.submit_trading_evaluation(cryptocurrency=self.trading_mode.cryptocurrency,
-                                                 symbol=self.trading_mode.symbol,
-                                                 time_frame=None,
-                                                 state=arbitrage_container.state,
-                                                 data=data)
+        data = {
+            ArbitrageModeConsumer.ARBITRAGE_CONTAINER_KEY: arbitrage_container,
+            ArbitrageModeConsumer.ARBITRAGE_PHASE_KEY: ArbitrageModeConsumer.SECONDARY_PHASE,
+            ArbitrageModeConsumer.QUANTITY_KEY: secondary_quantity
+        }
+        await self.submit_trading_evaluation(cryptocurrency=self.trading_mode.cryptocurrency,
+                                                symbol=self.trading_mode.symbol,
+                                                time_frame=None,
+                                                state=arbitrage_container.state,
+                                                data=data)
 
     def _ensure_no_existing_arbitrage_on_this_price(self, state):
         for arbitrage_container in self._get_open_arbitrages():
@@ -501,13 +501,13 @@ class ArbitrageModeProducer(trading_modes.AbstractTradingModeProducer):
             # look for expired opposite side arbitrages and cancel them if still possible
             if arbitrage_container.state is not state and \
                     arbitrage_container.is_expired(other_exchanges_average_price):
-                if self.exchange_manager.trader.is_enabled:
-                    if await self._cancel_order(arbitrage_container):
-                        to_remove_arbitrages.append(arbitrage_container)
+                if await self._cancel_order(arbitrage_container):
+                    to_remove_arbitrages.append(arbitrage_container)
 
         for arbitrage in to_remove_arbitrages:
             self._get_open_arbitrages().remove(arbitrage)
 
+    @trading_modes.enabled_trader_only(disabled_return_value=False)
     async def _cancel_order(self, arbitrage_container) -> bool:
         try:
             if await self.trading_mode.cancel_order(

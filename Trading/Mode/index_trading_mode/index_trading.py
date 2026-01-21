@@ -432,6 +432,7 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
                 self.logger.debug(f"Next index check in {self.trading_mode.refresh_interval_days} days")
             self._last_trigger_time = current_time
 
+    @trading_modes.enabled_trader_only()
     async def ensure_index(self):
         await self._wait_for_symbol_prices_and_profitability_init(self._get_config_init_timeout())
         self.logger.info(
