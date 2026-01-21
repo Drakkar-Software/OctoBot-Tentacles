@@ -268,10 +268,13 @@ class DipAnalyserTradingModeConsumer(trading_modes.AbstractTradingModeConsumer):
                 raise trading_errors.OrderCreationError()
             raise trading_errors.MissingMinimalExchangeTradeVolume()
 
-        except (trading_errors.MissingFunds,
-                trading_errors.MissingMinimalExchangeTradeVolume,
-                trading_errors.OrderCreationError,
-                trading_errors.InvalidCancelPolicyError):
+        except (
+            trading_errors.MissingFunds,
+            trading_errors.MissingMinimalExchangeTradeVolume,
+            trading_errors.OrderCreationError,
+            trading_errors.InvalidCancelPolicyError,
+            trading_errors.TraderDisabledError
+        ):
             raise
         except Exception as e:
             self.logger.exception(
@@ -522,45 +525,47 @@ class DipAnalyserTradingModeProducer(trading_modes.AbstractTradingModeProducer):
                 price
             )
 
+    @trading_modes.enabled_trader_only()
     async def _create_sell_order_if_enabled(self, order_id, sell_quantity, buy_price):
-        if self.exchange_manager.trader.is_enabled:
-            data = {
-                DipAnalyserTradingModeConsumer.ORDER_ID_KEY: order_id,
-                DipAnalyserTradingModeConsumer.VOLUME_KEY: sell_quantity,
-                DipAnalyserTradingModeConsumer.BUY_PRICE_KEY: buy_price,
-            }
-            await self.submit_trading_evaluation(cryptocurrency=self.trading_mode.cryptocurrency,
-                                                 symbol=self.trading_mode.symbol,
-                                                 time_frame=None,
-                                                 state=trading_enums.EvaluatorStates.SHORT,
-                                                 data=data)
+        data = {
+            DipAnalyserTradingModeConsumer.ORDER_ID_KEY: order_id,
+            DipAnalyserTradingModeConsumer.VOLUME_KEY: sell_quantity,
+            DipAnalyserTradingModeConsumer.BUY_PRICE_KEY: buy_price,
+        }
+        await self.submit_trading_evaluation(
+            cryptocurrency=self.trading_mode.cryptocurrency,
+            symbol=self.trading_mode.symbol,
+            time_frame=None,
+            state=trading_enums.EvaluatorStates.SHORT,
+            data=data
+        )
 
     async def _create_bottom_order(self, notification_candle_time, volume_weight, price_weight):
         self.logger.info(f"** New buy signal for ** : {self.trading_mode.symbol}")
         # call orders creation method
         await self._create_buy_order_if_enabled(notification_candle_time, volume_weight, price_weight)
 
+    @trading_modes.enabled_trader_only()
     async def _create_buy_order_if_enabled(self, notification_candle_time, volume_weight, price_weight):
-        if self.exchange_manager.trader.is_enabled:
-            # cancel previous by orders if any
-            cancelled_orders = await self._cancel_buy_orders()
-            if self.last_buy_candle == notification_candle_time and cancelled_orders or \
-               self.last_buy_candle != notification_candle_time:
-                # if subsequent notification from the same candle: only create order if able to cancel the previous buy
-                # to avoid multiple order on the same candle
-                data = {
-                    DipAnalyserTradingModeConsumer.VOLUME_WEIGHT_KEY: volume_weight,
-                    DipAnalyserTradingModeConsumer.PRICE_WEIGHT_KEY: price_weight,
-                }
-                await self.submit_trading_evaluation(cryptocurrency=self.trading_mode.cryptocurrency,
-                                                     symbol=self.trading_mode.symbol,
-                                                     time_frame=None,
-                                                     state=trading_enums.EvaluatorStates.LONG,
-                                                     data=data)
-                self.last_buy_candle = notification_candle_time
-            else:
-                self.logger.debug(f"Trader ignored buy signal for {self.trading_mode.symbol}: "
-                                  f"buy order already filled.")
+        # cancel previous by orders if any
+        cancelled_orders = await self._cancel_buy_orders()
+        if self.last_buy_candle == notification_candle_time and cancelled_orders or \
+            self.last_buy_candle != notification_candle_time:
+            # if subsequent notification from the same candle: only create order if able to cancel the previous buy
+            # to avoid multiple order on the same candle
+            data = {
+                DipAnalyserTradingModeConsumer.VOLUME_WEIGHT_KEY: volume_weight,
+                DipAnalyserTradingModeConsumer.PRICE_WEIGHT_KEY: price_weight,
+            }
+            await self.submit_trading_evaluation(cryptocurrency=self.trading_mode.cryptocurrency,
+                                                    symbol=self.trading_mode.symbol,
+                                                    time_frame=None,
+                                                    state=trading_enums.EvaluatorStates.LONG,
+                                                    data=data)
+            self.last_buy_candle = notification_candle_time
+        else:
+            self.logger.debug(f"Trader ignored buy signal for {self.trading_mode.symbol}: "
+                                f"buy order already filled.")
 
     @classmethod
     def get_should_cancel_loaded_orders(cls):
@@ -572,13 +577,13 @@ class DipAnalyserTradingModeProducer(trading_modes.AbstractTradingModeProducer):
                     self.trading_mode.symbol)
                 if order.side == trading_enums.TradeOrderSide.BUY]
 
+    @trading_modes.enabled_trader_only(disabled_return_value=False)
     async def _cancel_buy_orders(self):
         cancelled_orders = False
-        if self.exchange_manager.trader.is_enabled:
-            for order in self._get_current_buy_orders():
-                try:
-                    cancelled_orders = await self.trading_mode.cancel_order(order) or cancelled_orders
-                except (trading_errors.OrderCancelError, trading_errors.UnexpectedExchangeSideOrderStateError) as err:
-                    self.logger.warning(f"Skipping order cancel: {err}")
-                    # order can't be cancelled: don't set cancelled_orders to True
+        for order in self._get_current_buy_orders():
+            try:
+                cancelled_orders = await self.trading_mode.cancel_order(order) or cancelled_orders
+            except (trading_errors.OrderCancelError, trading_errors.UnexpectedExchangeSideOrderStateError) as err:
+                self.logger.warning(f"Skipping order cancel: {err}")
+                # order can't be cancelled: don't set cancelled_orders to True
         return cancelled_orders

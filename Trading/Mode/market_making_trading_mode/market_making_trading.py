@@ -21,6 +21,7 @@ import decimal
 import typing
 
 import octobot_commons.enums as commons_enums
+import octobot_commons.constants as common_constants
 import octobot_commons.symbols.symbol_util as symbol_util
 import octobot_commons.pretty_printer
 import octobot_tentacles_manager.api
@@ -300,6 +301,12 @@ class MarketMakingTradingModeConsumer(trading_modes.AbstractTradingModeConsumer)
         current_price = data[self.CURRENT_PRICE_KEY]
         symbol_market = data[self.SYMBOL_MARKET_KEY]
         try:
+            if self.trading_mode.producers[0].should_stop:
+                self.logger.info(
+                    f"Skipping creating new orders for {symbol} {self.exchange_manager.exchange_name}: "
+                    f"bot should stop"
+                )
+                return []
             if order_actions_plan.cancelled:
                 # any plan can be cancelled if it did not start processing
                 self.logger.info(f"Cancelling {str(order_actions_plan)} action plan processing: plan did not start")
@@ -516,7 +523,8 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
         self.read_config()
 
         self.logger.debug(f"Loaded healthy config for {self.symbol}")
-        self.healthy = True
+        self.healthy: bool = True
+        self._last_disabled_trader_log_at: float = 0
 
     def _load_symbol_trading_config(self) -> bool:
         self.symbol_trading_config = self.trading_mode.get_pair_settings()[0]
@@ -603,7 +611,7 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
                 self._schedule_order_refresh
             )
 
-    async def _ensure_market_making_orders(self, trigger_source: str):
+    async def _ensure_market_making_orders(self, trigger_source: str) -> bool:
         # can be called:
         #   - on initialization
         #   - when price moves beyond spread
@@ -615,40 +623,50 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
         )
         return await self.create_state(current_price, symbol_market, trigger_source, False)
 
-    async def create_state(self, current_price, symbol_market, trigger_source: str, force_full_refresh: bool):
+    async def create_state(
+        self, current_price, symbol_market, trigger_source: str, force_full_refresh: bool
+    ) -> bool:
         if current_price is not None:
             async with self.trading_mode_trigger(skip_health_check=True):
-                if self.exchange_manager.trader.is_enabled:
-                    try:
-                        if await self._handle_market_making_orders(
-                            current_price, symbol_market, trigger_source, force_full_refresh
-                        ):
-                            self.is_first_execution = False
-                            self._started_at = self.exchange_manager.exchange.get_exchange_current_time()
-                            return True
-                    except ValueError as err:
-                        if self._last_error_at <= self._started_at:
-                            # only log full exception every 1st time it occurs then use warnings to avoid flooding
-                            # when on websockets
-                            self.logger.exception(
-                                err, True, f"Unexpected error when starting {self.symbol} trading mode: {err}"
-                            )
-                        else:
-                            self.logger.warning(f"Skipped {self.symbol} orders update: {err}")
-                        self._last_error_at = self.exchange_manager.exchange.get_exchange_current_time()
-                        if "Missing volume" not in str(err):
-                            # config error: should not happen, in this case, return true to skip auto reschedule
-                            await self.sent_once_critical_notification(
-                                "Configuration issue",
-                                f"Impossible to start {self.symbol} market making "
-                                f"on {self.exchange_manager.exchange_name}: {err}"
-                            )
+                try:
+                    if await self._handle_market_making_orders(
+                        current_price, symbol_market, trigger_source, force_full_refresh
+                    ):
+                        self.is_first_execution = False
+                        self._started_at = self.exchange_manager.exchange.get_exchange_current_time()
                         return True
+                except trading_errors.TraderDisabledError as err:
+                    current_time = self.exchange_manager.exchange.get_exchange_current_time()
+                    current_minute_ts = current_time - current_time % (5 * common_constants.MINUTE_TO_SECONDS)
+                    if self._last_disabled_trader_log_at < current_minute_ts:
+                        # log warning at most once per 5 minutes to avoid spamming at each new price
+                        self.logger.warning(str(err))
+                        self._last_disabled_trader_log_at = current_minute_ts
+                    return False
+                except ValueError as err:
+                    if self._last_error_at <= self._started_at:
+                        # only log full exception every 1st time it occurs then use warnings to avoid flooding
+                        # when on websockets
+                        self.logger.exception(
+                            err, True, f"Unexpected error when starting {self.symbol} trading mode: {err}"
+                        )
+                    else:
+                        self.logger.warning(f"Skipped {self.symbol} orders update: {err}")
+                    self._last_error_at = self.exchange_manager.exchange.get_exchange_current_time()
+                    if "Missing volume" not in str(err):
+                        # config error: should not happen, in this case, return true to skip auto reschedule
+                        await self.sent_once_critical_notification(
+                            "Configuration issue",
+                            f"Impossible to start {self.symbol} market making "
+                            f"on {self.exchange_manager.exchange_name}: {err}"
+                        )
+                    return True
         return False
 
     def _is_previous_plan_still_processing(self) -> bool:
         return self.latest_actions_plan is not None and not self.latest_actions_plan.processed.is_set()
 
+    @trading_modes.enabled_trader_only(raise_when_disabled=True)
     async def _handle_market_making_orders(
         self, current_price, symbol_market, trigger_source: str, force_full_refresh: bool
     ):
@@ -1110,6 +1128,12 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
         return False
 
     async def _schedule_order_actions(self, order_actions_plan: OrdersUpdatePlan, current_price, symbol_market):
+        if self.should_stop:
+            self.logger.info(
+                f"Skipping scheduling order actions for {self.symbol} {self.exchange_manager.exchange_name}: "
+                f"bot should stop"
+            )
+            return
         self.logger.info(
             f"Scheduling {self.symbol} {self.exchange_manager.exchange_name} {str(order_actions_plan)} using "
             f"current price: {current_price}"

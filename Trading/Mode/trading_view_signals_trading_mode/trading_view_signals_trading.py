@@ -315,7 +315,12 @@ class TradingViewSignalsTradingMode(trading_modes.AbstractTradingMode):
                 await self.producers[0].signal_callback(parsed_data, script_keywords.get_base_context(self))
             else:
                 self._log_error_message_if_relevant(parsed_data, signal_data)
-        except (trading_errors.InvalidArgumentError, trading_errors.InvalidCancelPolicyError, trading_errors.ConfigurationPermissionError) as e:
+        except (
+            trading_errors.InvalidArgumentError,
+            trading_errors.InvalidCancelPolicyError,
+            trading_errors.ConfigurationPermissionError,
+            trading_errors.TraderDisabledError
+        ) as e:
             self.logger.error(f"Error when processing trading view signal: {e} (signal: {signal_data})")
         except trading_errors.MissingFunds as e:
             self.logger.error(f"Error when processing trading view signal: not enough funds: {e} (signal: {signal_data})")
@@ -539,6 +544,7 @@ class TradingViewSignalsModeProducer(daily_trading_mode.DailyTradingModeProducer
             allow_holdings_adaptation=allow_holdings_adaptation,
         )
 
+    @trading_modes.enabled_trader_only(raise_when_disabled=True)
     async def signal_callback(self, parsed_data: dict, ctx):
         _, dependencies = await self.apply_cancel_policies()
         is_order_signal = not self.trading_mode.is_non_order_signal(parsed_data)
