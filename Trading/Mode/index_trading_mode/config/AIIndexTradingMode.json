@@ -1,0 +1,7 @@
+{
+    "required_strategies": ["CryptoLLMAIStrategyEvaluator", "GlobalLLMAIStrategyEvaluator"],
+    "refresh_interval": 1,
+    "rebalance_trigger_min_percent": 5,
+    "strategy_types": ["TA", "SOCIAL", "REAL_TIME"],
+    "fallback_distribution": []
+}
