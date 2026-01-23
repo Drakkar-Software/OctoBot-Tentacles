@@ -14,15 +14,32 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import json
-from .base_agent import BaseAgent
+
+import octobot_agents as agent
+
 from .models import RealTimeAnalysisOutput
 
 
-class RealTimeAnalysisAgent(BaseAgent):
-    """Agent specialized in real-time market analysis."""
+class RealTimeAnalysisAIAgentChannel(agent.AbstractAgentChannel):
+    """Channel for RealTimeAnalysisAIAgentProducer."""
+    OUTPUT_SCHEMA = RealTimeAnalysisOutput
 
-    def __init__(self, **kwargs):
-        super().__init__("real_time_analysis", **kwargs)
+
+class RealTimeAnalysisAIAgentConsumer(agent.AbstractAIAgentChannelConsumer):
+    """Consumer for RealTimeAnalysisAIAgentProducer."""
+    pass
+
+
+class RealTimeAnalysisAIAgentProducer(agent.AbstractAIAgentChannelProducer):
+    """Producer specialized in real-time market analysis."""
+    
+    AGENT_NAME = "RealTimeAnalysisAgent"
+    AGENT_VERSION = "1.0.0"
+    AGENT_CHANNEL = RealTimeAnalysisAIAgentChannel
+    AGENT_CONSUMER = RealTimeAnalysisAIAgentConsumer
+
+    def __init__(self, channel, **kwargs):
+        super().__init__(channel, **kwargs)
 
     def _get_default_prompt(self) -> str:
         return (
@@ -49,7 +66,7 @@ class RealTimeAnalysisAgent(BaseAgent):
             "Output only valid JSON matching the RealTimeAnalysisOutput schema."
         )
 
-    async def execute(self, input_data, llm_service) -> dict:
+    async def execute(self, input_data, ai_service) -> dict:
         """Evaluate aggregated real-time market data."""
         aggregated_data = input_data
         if not aggregated_data:
@@ -62,8 +79,8 @@ class RealTimeAnalysisAgent(BaseAgent):
         data_str = json.dumps(aggregated_data, indent=2)
 
         messages = [
-            llm_service.create_message("system", self.prompt),
-            llm_service.create_message(
+            ai_service.create_message("system", self.prompt),
+            ai_service.create_message(
                 "user",
                 f"Real-time market data:\n{data_str}\n\n"
                 "Provide evaluation as JSON matching the RealTimeAnalysisOutput schema. "
@@ -73,11 +90,11 @@ class RealTimeAnalysisAgent(BaseAgent):
         ]
 
         try:
+            # Uses RealTimeAnalysisAIAgentChannel.OUTPUT_SCHEMA by default
             parsed = await self._call_llm(
                 messages,
-                llm_service,
+                ai_service,
                 json_output=True,
-                response_schema=RealTimeAnalysisOutput,
             )
             eval_note = float(parsed.get("eval_note", 0))
             eval_note_description = parsed.get("description", "Real-time analysis")

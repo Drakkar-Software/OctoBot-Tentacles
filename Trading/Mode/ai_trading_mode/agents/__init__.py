@@ -1,4 +1,4 @@
-#  Drakkar-Software OctoBot
+#  Drakkar-Software OctoBot-Tentacles
 #  Copyright (c) Drakkar-Software, All rights reserved.
 #
 #  This library is free software; you can redistribute it and/or
@@ -15,13 +15,30 @@
 #  License along with this library.
 
 """
-AI Trading Mode Agents package.
-Contains signal, risk, and distribution agents for AI-driven portfolio management.
+DEPRECATED: This module is kept for backward compatibility.
+All agents have been moved to tentacles.Agent.Trading/
+Please use the new locations:
+- tentacles.Agent.Trading.signal_agent.SignalAgent
+- tentacles.Agent.Trading.risk_agent.RiskAgent
+- tentacles.Agent.Trading.distribution_agent.DistributionAgent
+- tentacles.Agent.Trading.team.AIAgentTeam
 """
 
-from tentacles.Trading.Mode.ai_trading_mode.agents.team import AIAgentTeam
-from tentacles.Trading.Mode.ai_trading_mode.agents.state import AIAgentState
-from tentacles.Trading.Mode.ai_trading_mode.agents.base_agent import BaseAgent
-from tentacles.Trading.Mode.ai_trading_mode.agents.signal_agent import SignalAgent
-from tentacles.Trading.Mode.ai_trading_mode.agents.risk_agent import RiskAgent
-from tentacles.Trading.Mode.ai_trading_mode.agents.distribution_agent import DistributionAgent
+# Re-export from new locations for backward compatibility
+from tentacles.Agent.Trading.signal_agent import SignalAgent
+from tentacles.Agent.Trading.signal_agent.state import AIAgentState
+from tentacles.Agent.Trading.risk_agent import RiskAgent
+from tentacles.Agent.Trading.distribution_agent import DistributionAgent
+from tentacles.Agent.Trading.team import AIAgentTeam
+
+# BaseAgent is now AbstractAIAgentChannelProducer from octobot_agents
+from octobot_agents import AbstractAIAgentChannelProducer as BaseAgent
+
+__all__ = [
+    "AIAgentTeam",
+    "AIAgentState",
+    "BaseAgent",
+    "SignalAgent",
+    "RiskAgent",
+    "DistributionAgent",
+]

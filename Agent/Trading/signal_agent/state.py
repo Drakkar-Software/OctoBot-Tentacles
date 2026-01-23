@@ -1,4 +1,4 @@
-#  Drakkar-Software OctoBot
+#  Drakkar-Software OctoBot-Tentacles
 #  Copyright (c) Drakkar-Software, All rights reserved.
 #
 #  This library is free software; you can redistribute it and/or
@@ -17,16 +17,8 @@
 """
 AI Agent State definitions for the trading mode agents.
 """
-import operator
 from typing import Dict, List, Optional, Any
 from typing_extensions import Annotated, TypedDict
-
-from tentacles.Trading.Mode.ai_trading_mode.agents.models import (
-    CryptoSignalOutput,
-    RiskAssessmentOutput,
-    SignalSynthesisOutput,
-    DistributionOutput,
-)
 
 
 def merge_dicts(a: dict, b: dict) -> dict:
@@ -65,32 +57,27 @@ class StrategyData(TypedDict, total=False):
     evaluation_type: str
 
 
-class SignalAgentsOutput(TypedDict, total=False):
-    """Output from all signal agents."""
-    signals: Annotated[Dict[str, CryptoSignalOutput], merge_dicts]
-
-
 class AIAgentState(TypedDict, total=False):
     """
     Shared state for all AI trading agents.
     Contains strategy data, portfolio info, and agent outputs.
     """
     # Input data
-    global_strategy_data: Dict[str, List[StrategyData]]
-    crypto_strategy_data: Dict[str, Dict[str, List[StrategyData]]]  # {cryptocurrency: strategy_data}
+    global_strategy_data: Dict[str, List[Any]]
+    crypto_strategy_data: Dict[str, Dict[str, List[Any]]]  # {cryptocurrency: strategy_data}
     cryptocurrencies: List[str]
     reference_market: str
     
     # Trading context
-    portfolio: Annotated[PortfolioState, merge_dicts]
-    orders: Annotated[OrdersState, merge_dicts]
+    portfolio: Dict[str, Any]
+    orders: Dict[str, Any]
     current_distribution: Dict[str, float]  # Current portfolio distribution percentages
     
     # Agent outputs
-    signal_outputs: Annotated[SignalAgentsOutput, merge_dicts]
-    risk_output: Annotated[Optional[RiskAssessmentOutput], replace_value]
-    signal_synthesis: Annotated[Optional[SignalSynthesisOutput], replace_value]
-    distribution_output: Annotated[Optional[DistributionOutput], replace_value]
+    signal_outputs: Dict[str, Any]
+    risk_output: Optional[Any]
+    signal_synthesis: Optional[Any]
+    distribution_output: Optional[Any]
     
     # Metadata
     exchange_name: str

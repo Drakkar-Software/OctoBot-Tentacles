@@ -14,19 +14,17 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import typing
-import asyncio
 
 import octobot_commons.constants as common_constants
 import octobot_commons.enums as commons_enums
 import octobot_commons.evaluators_util as evaluators_util
 import octobot_evaluators.matrix as matrix
 import octobot_evaluators.enums as evaluators_enums
-import octobot_evaluators.constants as evaluators_constants
 import octobot_evaluators.evaluators as evaluators
 import octobot_services.api.services as services_api
 import tentacles.Services.Services_bases
 
-from .agents import AgentFactory
+from tentacles.Agent.Teams.simple_ai_evaluator_agents_team import SimpleAIEvaluatorAgentsTeam
 
 
 class BaseLLMAIStrategyEvaluator(evaluators.StrategyEvaluator):
@@ -152,74 +150,44 @@ class BaseLLMAIStrategyEvaluator(evaluators.StrategyEvaluator):
         aggregated_data: dict,
         missing_data_types: list,
         gpt_service,
-    ) -> tuple[float, str]:
+    ) -> tuple[float | str, str]:
         """
-        Run strategy agents on aggregated data and return eval_note and description.
+        Run strategy agents on aggregated data using the SimpleAIEvaluatorAgentsTeam.
+        
+        Returns:
+            Tuple of (eval_note, eval_note_description).
         """
-        # Create strategy agents for each evaluator type
-        strategy_agents = []
-        for eval_type in self.evaluator_types:
-            if eval_type in aggregated_data:
-                agent = AgentFactory.create_agent_for_evaluator_type(
-                    eval_type,
-                    model=self.model,
-                    max_tokens=self.max_tokens,
-                    temperature=self.temperature,
-                )
-                # Store the evaluator type on the agent for data access
-                agent.evaluator_type = eval_type
-                strategy_agents.append(agent)
-
-        if not strategy_agents:
-            self.logger.error("No valid strategy agents could be created")
-            return 0, "Error: No valid strategy agents"
-
-        # Run agents in parallel
-        agent_results = await asyncio.gather(
-            *[
-                agent.execute(aggregated_data[agent.evaluator_type], gpt_service)
-                for agent in strategy_agents
-            ],
-            return_exceptions=True,
-        )
-
-        # Filter out exceptions and get valid results
-        valid_results = []
-        for i, result in enumerate(agent_results):
-            if isinstance(result, Exception):
-                self.logger.error(f"Strategy agent {i} failed: {result}")
-            else:
-                valid_results.append(result)
-
-        if not valid_results:
-            self.logger.error("All strategy agents failed")
-            return 0, "Error: All strategy agents failed"
-
-        # Use summarization agent to combine results
-        summarization_agent = AgentFactory.create_summarization_agent(
+        # Determine which agents to include based on available data
+        include_ta = evaluators_enums.EvaluatorMatrixTypes.TA.value in aggregated_data
+        include_sentiment = evaluators_enums.EvaluatorMatrixTypes.SOCIAL.value in aggregated_data
+        include_realtime = evaluators_enums.EvaluatorMatrixTypes.REAL_TIME.value in aggregated_data
+        
+        if not any([include_ta, include_sentiment, include_realtime]):
+            self.logger.error("No valid data available for any agent")
+            return common_constants.START_PENDING_EVAL_NOTE, "Error: No valid data available"
+        
+        # Create and run the team
+        team = SimpleAIEvaluatorAgentsTeam(
+            ai_service=gpt_service,
             model=self.model,
             max_tokens=self.max_tokens,
             temperature=self.temperature,
+            include_ta=include_ta,
+            include_sentiment=include_sentiment,
+            include_realtime=include_realtime,
         )
-        # Pass information about missing data types to help with more appropriate analysis
-        context_info = {
-            "missing_data_types": missing_data_types,
-            "available_data_types": list(aggregated_data.keys()),
-            "total_expected_types": self.evaluator_types,
-        }
-        eval_note, eval_note_description = await summarization_agent.execute(
-            valid_results, gpt_service, context_info
-        )
-
-        # Apply output format if needed
-        if self.output_format == "with_confidence" and valid_results:
-            # Use average confidence from agents
-            avg_confidence = sum(r.get("confidence", 0) for r in valid_results) / len(
-                valid_results
+        
+        try:
+            eval_note, eval_note_description = await team.run_with_data(
+                aggregated_data=aggregated_data,
+                missing_data_types=missing_data_types,
             )
-            eval_note_description += f" (Confidence: {avg_confidence:.0f}%)"
-
-        return eval_note, eval_note_description
+            
+            return eval_note, eval_note_description
+            
+        except Exception as e:
+            self.logger.exception(f"SimpleAIEvaluatorAgentsTeam failed: {e}")
+            return common_constants.START_PENDING_EVAL_NOTE, f"Error: Agent team failed: {str(e)}"
 
 
 class CryptoLLMAIStrategyEvaluator(BaseLLMAIStrategyEvaluator):

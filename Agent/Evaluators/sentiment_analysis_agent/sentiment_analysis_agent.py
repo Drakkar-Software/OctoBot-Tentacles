@@ -14,15 +14,32 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import json
-from .base_agent import BaseAgent
+
+import octobot_agents as agent
+
 from .models import SentimentAnalysisOutput
 
 
-class SentimentAnalysisAgent(BaseAgent):
-    """Agent specialized in sentiment analysis evaluation."""
+class SentimentAnalysisAIAgentChannel(agent.AbstractAgentChannel):
+    """Channel for SentimentAnalysisAIAgentProducer."""
+    OUTPUT_SCHEMA = SentimentAnalysisOutput
 
-    def __init__(self, **kwargs):
-        super().__init__("sentiment_analysis", **kwargs)
+
+class SentimentAnalysisAIAgentConsumer(agent.AbstractAIAgentChannelConsumer):
+    """Consumer for SentimentAnalysisAIAgentProducer."""
+    pass
+
+
+class SentimentAnalysisAIAgentProducer(agent.AbstractAIAgentChannelProducer):
+    """Producer specialized in sentiment analysis evaluation."""
+    
+    AGENT_NAME = "SentimentAnalysisAgent"
+    AGENT_VERSION = "1.0.0"
+    AGENT_CHANNEL = SentimentAnalysisAIAgentChannel
+    AGENT_CONSUMER = SentimentAnalysisAIAgentConsumer
+
+    def __init__(self, channel, **kwargs):
+        super().__init__(channel, **kwargs)
 
     def _get_default_prompt(self) -> str:
         return (
@@ -51,7 +68,7 @@ class SentimentAnalysisAgent(BaseAgent):
             "Output only valid JSON matching the SentimentAnalysisOutput schema."
         )
 
-    async def execute(self, input_data, llm_service) -> dict:
+    async def execute(self, input_data, ai_service) -> dict:
         """Evaluate aggregated sentiment analysis data."""
         aggregated_data = input_data
         if not aggregated_data:
@@ -64,8 +81,8 @@ class SentimentAnalysisAgent(BaseAgent):
         data_str = json.dumps(aggregated_data, indent=2)
 
         messages = [
-            llm_service.create_message("system", self.prompt),
-            llm_service.create_message(
+            ai_service.create_message("system", self.prompt),
+            ai_service.create_message(
                 "user",
                 f"Sentiment analysis data:\n{data_str}\n\n"
                 "Provide evaluation as JSON matching the SentimentAnalysisOutput schema. "
@@ -75,11 +92,11 @@ class SentimentAnalysisAgent(BaseAgent):
         ]
 
         try:
+            # Uses SentimentAnalysisAIAgentChannel.OUTPUT_SCHEMA by default
             parsed = await self._call_llm(
                 messages,
-                llm_service,
+                ai_service,
                 json_output=True,
-                response_schema=SentimentAnalysisOutput,
             )
             eval_note = float(parsed.get("eval_note", 0))
             eval_note_description = parsed.get("description", "Sentiment analysis")

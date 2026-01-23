@@ -14,15 +14,32 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import json
-from .base_agent import BaseAgent
+
+import octobot_agents as agent
+
 from .models import TechnicalAnalysisOutput
 
 
-class TechnicalAnalysisAgent(BaseAgent):
-    """Agent specialized in technical analysis evaluation."""
+class TechnicalAnalysisAIAgentChannel(agent.AbstractAgentChannel):
+    """Channel for TechnicalAnalysisAIAgentProducer."""
+    OUTPUT_SCHEMA = TechnicalAnalysisOutput
 
-    def __init__(self, **kwargs):
-        super().__init__("technical_analysis", **kwargs)
+
+class TechnicalAnalysisAIAgentConsumer(agent.AbstractAIAgentChannelConsumer):
+    """Consumer for TechnicalAnalysisAIAgentProducer."""
+    pass
+
+
+class TechnicalAnalysisAIAgentProducer(agent.AbstractAIAgentChannelProducer):
+    """Producer specialized in technical analysis evaluation."""
+    
+    AGENT_NAME = "TechnicalAnalysisAgent"
+    AGENT_VERSION = "1.0.0"
+    AGENT_CHANNEL = TechnicalAnalysisAIAgentChannel
+    AGENT_CONSUMER = TechnicalAnalysisAIAgentConsumer
+
+    def __init__(self, channel, **kwargs):
+        super().__init__(channel, **kwargs)
 
     def _get_default_prompt(self) -> str:
         return (
@@ -49,7 +66,7 @@ class TechnicalAnalysisAgent(BaseAgent):
             "Output only valid JSON matching the TechnicalAnalysisOutput schema."
         )
 
-    async def execute(self, input_data, llm_service) -> dict:
+    async def execute(self, input_data, ai_service) -> dict:
         """Evaluate aggregated technical analysis data."""
         aggregated_data = input_data
         if not aggregated_data:
@@ -62,8 +79,8 @@ class TechnicalAnalysisAgent(BaseAgent):
         data_str = json.dumps(aggregated_data, indent=2)
 
         messages = [
-            llm_service.create_message("system", self.prompt),
-            llm_service.create_message(
+            ai_service.create_message("system", self.prompt),
+            ai_service.create_message(
                 "user",
                 f"Technical analysis data:\n{data_str}\n\n"
                 "Provide evaluation as JSON matching the TechnicalAnalysisOutput schema. "
@@ -73,11 +90,11 @@ class TechnicalAnalysisAgent(BaseAgent):
         ]
 
         try:
+            # Uses TechnicalAnalysisAIAgentChannel.OUTPUT_SCHEMA by default
             parsed = await self._call_llm(
                 messages,
-                llm_service,
+                ai_service,
                 json_output=True,
-                response_schema=TechnicalAnalysisOutput,
             )
             eval_note = float(parsed.get("eval_note", 0))
             eval_note_description = parsed.get("description", "Technical analysis")

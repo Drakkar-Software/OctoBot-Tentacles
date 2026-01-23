@@ -13,18 +13,7 @@
 #
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
-from .base_agent import BaseAgent
-from .summarization_agent import SummarizationAgent
-from .technical_analysis_agent import TechnicalAnalysisAgent
-from .sentiment_analysis_agent import SentimentAnalysisAgent
-from .real_time_analysis_agent import RealTimeAnalysisAgent
-from .factory import AgentFactory
 
-__all__ = [
-    "BaseAgent",
-    "SummarizationAgent",
-    "TechnicalAnalysisAgent",
-    "SentimentAnalysisAgent",
-    "RealTimeAnalysisAgent",
-    "AgentFactory",
-]
+from .signal_agent import *
+from .risk_agent import *
+from .distribution_agent import *

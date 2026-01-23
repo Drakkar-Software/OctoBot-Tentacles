@@ -1,4 +1,4 @@
-#  Drakkar-Software OctoBot
+#  Drakkar-Software OctoBot-Tentacles
 #  Copyright (c) Drakkar-Software, All rights reserved.
 #
 #  This library is free software; you can redistribute it and/or
@@ -22,40 +22,51 @@ Uses ai_index_distribution functions to apply changes.
 import json
 import typing
 
-from pydantic import BaseModel
+import octobot_agents as agent
 
-from tentacles.Trading.Mode.ai_trading_mode.agents.base_agent import BaseAgent
-from tentacles.Trading.Mode.ai_trading_mode.agents.state import AIAgentState
-from tentacles.Trading.Mode.ai_trading_mode.agents.models import (
-    DistributionOutput,
-    RiskAssessmentOutput,
-    SignalSynthesisOutput,
-)
+from tentacles.Agent.Trading.signal_agent.state import AIAgentState
+from tentacles.Agent.Trading.signal_agent.models import SignalSynthesisOutput
+from tentacles.Agent.Trading.risk_agent.models import RiskAssessmentOutput
+from .models import DistributionOutput
 
 
-class DistributionAgent(BaseAgent):
+class DistributionAIAgentChannel(agent.AbstractAgentChannel):
+    """Channel for DistributionAIAgentProducer."""
+    OUTPUT_SCHEMA = DistributionOutput
+
+
+class DistributionAIAgentConsumer(agent.AbstractAIAgentChannelConsumer):
+    """Consumer for DistributionAIAgentProducer."""
+    pass
+
+
+class DistributionAIAgentProducer(agent.AbstractAIAgentChannelProducer):
     """
-    Distribution agent that makes final portfolio allocation decisions.
+    Distribution agent producer that makes final portfolio allocation decisions.
     Combines signal synthesis and risk assessment to determine target distribution.
     """
     
     AGENT_NAME = "DistributionAgent"
     AGENT_VERSION = "1.0.0"
+    AGENT_CHANNEL = DistributionAIAgentChannel
+    AGENT_CONSUMER = DistributionAIAgentConsumer
     
-    def __init__(self, model=None, max_tokens=None, temperature=None):
+    def __init__(self, channel, model=None, max_tokens=None, temperature=None, **kwargs):
         """
-        Initialize the distribution agent.
+        Initialize the distribution agent producer.
         
         Args:
+            channel: The channel this producer is registered to.
             model: LLM model to use.
             max_tokens: Maximum tokens for response.
             temperature: Temperature for LLM randomness.
         """
         super().__init__(
-            name=self.AGENT_NAME,
+            channel=channel,
             model=model,
             max_tokens=max_tokens,
             temperature=temperature,
+            **kwargs,
         )
     
     def _get_default_prompt(self) -> str:
@@ -183,18 +194,19 @@ Remember:
 - Balance opportunity with risk
 """
     
-    async def execute(self, state: AIAgentState, llm_service) -> typing.Any:
+    async def execute(self, input_data: typing.Any, ai_service) -> typing.Any:
         """
         Execute distribution decision.
         
         Args:
-            state: The current agent state.
-            llm_service: The LLM service instance.
+            input_data: The current agent state (AIAgentState).
+            ai_service: The AI service instance.
             
         Returns:
             Dictionary with distribution_output.
         """
-        self.logger.info(f"Starting {self.name}...")
+        state = input_data
+        self.logger.debug(f"Starting {self.AGENT_NAME}...")
         
         try:
             messages = [
@@ -202,35 +214,36 @@ Remember:
                 {"role": "user", "content": self._build_user_prompt(state)},
             ]
             
+            # Uses DistributionAIAgentChannel.OUTPUT_SCHEMA (DistributionOutput) by default
             response_data = await self._call_llm(
                 messages,
-                llm_service,
+                ai_service,
                 json_output=True,
-                response_schema=DistributionOutput,
             )
             
             # Parse into model
             distribution_output = DistributionOutput(**response_data)
             
-            self.logger.info(f"{self.name} completed successfully.")
+            self.logger.debug(f"{self.AGENT_NAME} completed successfully.")
             
             return {"distribution_output": distribution_output}
             
         except Exception as e:
-            self.logger.exception(f"Error in {self.name}: {e}")
+            self.logger.exception(f"Error in {self.AGENT_NAME}: {e}")
             return {}
 
 
-async def run_distribution_agent(state: AIAgentState, llm_service) -> dict:
+async def run_distribution_agent(state: AIAgentState, ai_service, agent_id: str = "distribution-agent") -> dict:
     """
     Convenience function to run the distribution agent.
     
     Args:
         state: The current agent state.
-        llm_service: The LLM service instance.
+        ai_service: The AI service instance.
+        agent_id: Unique identifier for the agent instance.
         
     Returns:
         State updates from the agent.
     """
-    agent = DistributionAgent()
-    return await agent.execute(state, llm_service)
+    distribution_agent = DistributionAIAgentProducer(channel=None)
+    return await distribution_agent.execute(state, ai_service)

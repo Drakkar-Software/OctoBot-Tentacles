@@ -1,4 +1,4 @@
-#  Drakkar-Software OctoBot
+#  Drakkar-Software OctoBot-Tentacles
 #  Copyright (c) Drakkar-Software, All rights reserved.
 #
 #  This library is free software; you can redistribute it and/or
@@ -21,36 +21,50 @@ Evaluates portfolio risk using trading API data.
 import json
 import typing
 
-from pydantic import BaseModel
+import octobot_agents as agent
 
-from tentacles.Trading.Mode.ai_trading_mode.agents.base_agent import BaseAgent
-from tentacles.Trading.Mode.ai_trading_mode.agents.state import AIAgentState
-from tentacles.Trading.Mode.ai_trading_mode.agents.models import RiskAssessmentOutput, CryptoSignalOutput
+from tentacles.Agent.Trading.signal_agent.state import AIAgentState
+from tentacles.Agent.Trading.signal_agent.models import CryptoSignalOutput
+from .models import RiskAssessmentOutput
 
 
-class RiskAgent(BaseAgent):
+class RiskAIAgentChannel(agent.AbstractAgentChannel):
+    """Channel for RiskAIAgentProducer."""
+    OUTPUT_SCHEMA = RiskAssessmentOutput
+
+
+class RiskAIAgentConsumer(agent.AbstractAIAgentChannelConsumer):
+    """Consumer for RiskAIAgentProducer."""
+    pass
+
+
+class RiskAIAgentProducer(agent.AbstractAIAgentChannelProducer):
     """
-    Risk assessment agent that evaluates portfolio risk.
+    Risk assessment agent producer that evaluates portfolio risk.
     Uses portfolio data from trading API to assess concentration, volatility, and liquidity risks.
     """
     
     AGENT_NAME = "RiskAgent"
     AGENT_VERSION = "1.0.0"
+    AGENT_CHANNEL = RiskAIAgentChannel
+    AGENT_CONSUMER = RiskAIAgentConsumer
     
-    def __init__(self, model=None, max_tokens=None, temperature=None):
+    def __init__(self, channel, model=None, max_tokens=None, temperature=None, **kwargs):
         """
-        Initialize the risk agent.
+        Initialize the risk agent producer.
         
         Args:
+            channel: The channel this producer is registered to.
             model: LLM model to use.
             max_tokens: Maximum tokens for response.
             temperature: Temperature for LLM randomness.
         """
         super().__init__(
-            name=self.AGENT_NAME,
+            channel=channel,
             model=model,
             max_tokens=max_tokens,
             temperature=temperature,
+            **kwargs,
         )
     
     def _get_default_prompt(self) -> str:
@@ -152,18 +166,19 @@ Evaluate the portfolio risk considering:
 Provide risk metrics, maximum allocation limits, and mitigation recommendations as JSON.
 """
     
-    async def execute(self, state: AIAgentState, llm_service) -> typing.Any:
+    async def execute(self, input_data: typing.Any, ai_service) -> typing.Any:
         """
         Execute risk assessment.
         
         Args:
-            state: The current agent state.
-            llm_service: The LLM service instance.
+            input_data: The current agent state (AIAgentState).
+            ai_service: The AI service instance.
             
         Returns:
             Dictionary with risk_output.
         """
-        self.logger.info(f"Starting {self.name}...")
+        state = input_data
+        self.logger.debug(f"Starting {self.AGENT_NAME}...")
         
         try:
             messages = [
@@ -171,35 +186,36 @@ Provide risk metrics, maximum allocation limits, and mitigation recommendations 
                 {"role": "user", "content": self._build_user_prompt(state)},
             ]
             
+            # Uses RiskAIAgentChannel.OUTPUT_SCHEMA (RiskAssessmentOutput) by default
             response_data = await self._call_llm(
                 messages,
-                llm_service,
+                ai_service,
                 json_output=True,
-                response_schema=RiskAssessmentOutput,
             )
             
             # Parse into model
             risk_output = RiskAssessmentOutput(**response_data)
             
-            self.logger.info(f"{self.name} completed successfully.")
+            self.logger.debug(f"{self.AGENT_NAME} completed successfully.")
             
             return {"risk_output": risk_output}
             
         except Exception as e:
-            self.logger.exception(f"Error in {self.name}: {e}")
+            self.logger.exception(f"Error in {self.AGENT_NAME}: {e}")
             return {}
 
 
-async def run_risk_agent(state: AIAgentState, llm_service) -> dict:
+async def run_risk_agent(state: AIAgentState, ai_service, agent_id: str = "risk-agent") -> dict:
     """
     Convenience function to run the risk agent.
     
     Args:
         state: The current agent state.
-        llm_service: The LLM service instance.
+        ai_service: The AI service instance.
+        agent_id: Unique identifier for the agent instance.
         
     Returns:
         State updates from the agent.
     """
-    agent = RiskAgent()
-    return await agent.execute(state, llm_service)
+    risk_agent = RiskAIAgentProducer(channel=None)
+    return await risk_agent.execute(state, ai_service)
