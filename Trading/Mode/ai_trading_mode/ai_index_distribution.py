@@ -18,20 +18,19 @@ import decimal
 
 import tentacles.Trading.Mode.index_trading_mode.index_distribution as index_distribution
 
-# Instruction constants
-INSTRUCTION_ACTION = "action"
-INSTRUCTION_SYMBOL = "symbol"
-INSTRUCTION_AMOUNT = "amount"
-INSTRUCTION_WEIGHT = "weight"
-
-# Action types
-ACTION_REDUCE_EXPOSURE = "reduce_exposure"
-ACTION_INCREASE_EXPOSURE = "increase_exposure"
-ACTION_ADD_TO_DISTRIBUTION = "add_to_distribution"
-ACTION_REMOVE_FROM_DISTRIBUTION = "remove_from_distribution"
-ACTION_UPDATE_RATIO = "update_ratio"
-ACTION_INCREASE_FIAT_RATIO = "increase_fiat_ratio"
-ACTION_DECREASE_FIAT_RATIO = "decrease_fiat_ratio"
+from tentacles.Agent.Trading.distribution_agent.constants import (
+    INSTRUCTION_ACTION,
+    INSTRUCTION_SYMBOL,
+    INSTRUCTION_AMOUNT,
+    INSTRUCTION_WEIGHT,
+    ACTION_REDUCE_EXPOSURE,
+    ACTION_INCREASE_EXPOSURE,
+    ACTION_ADD_TO_DISTRIBUTION,
+    ACTION_REMOVE_FROM_DISTRIBUTION,
+    ACTION_UPDATE_RATIO,
+    ACTION_INCREASE_FIAT_RATIO,
+    ACTION_DECREASE_FIAT_RATIO,
+)
 
 
 def apply_ai_instructions(trading_mode, instructions: list):

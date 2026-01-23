@@ -16,8 +16,6 @@
 import asyncio
 import aiohttp
 import typing
-import datetime
-import dataclasses
 
 import octobot_commons.enums as commons_enums
 import octobot_commons.constants as commons_constants
@@ -25,44 +23,11 @@ import octobot_services.channel as services_channel
 import octobot_services.constants as services_constants
 import octobot_services.service_feeds as service_feeds
 import tentacles.Services.Services_bases as Services_bases
+import tentacles.Services.Services_bases.coindesk_service.models as coindesk_models
 
 
 class CoindeskServiceFeedChannel(services_channel.AbstractServiceFeedChannel):
     pass
-
-
-@dataclasses.dataclass
-class CoindeskNews:
-    id: str
-    guid: str
-    published_on: datetime.datetime
-    image_url: str
-    title: str
-    url: str
-    source_id: str
-    body: str
-    keywords: str
-    lang: str
-    upvotes: int
-    downvotes: int
-    score: int
-    sentiment: str # POSITIVE, NEGATIVE, NEUTRAL
-    status: str
-    source_name: str
-    source_key: str
-    source_url: str
-    source_lang: str
-    source_type: str
-    categories: str
-
-@dataclasses.dataclass
-class CoindeskMarketcap:
-    timestamp: datetime.datetime
-    open: float
-    close: float
-    high: float
-    low: float
-    top_tier_volume: float
 
 class CoindeskServiceFeed(service_feeds.AbstractServiceFeed):
     FEED_CHANNEL = CoindeskServiceFeedChannel
@@ -114,7 +79,7 @@ class CoindeskServiceFeed(service_feeds.AbstractServiceFeed):
             market_cap_data = await response.json()
 
             new_values = [
-                CoindeskMarketcap(
+                coindesk_models.CoindeskMarketcap(
                     timestamp=entry["TIMESTAMP"],
                     open=entry["OPEN"],
                     close=entry["CLOSE"],
@@ -151,7 +116,7 @@ class CoindeskServiceFeed(service_feeds.AbstractServiceFeed):
                 category_data = article.get("CATEGORY_DATA", [])
                 categories_str = str([cat["NAME"] for cat in category_data])
 
-                values.append(CoindeskNews(
+                values.append(coindesk_models.CoindeskNews(
                     id=article["ID"],
                     guid=article["GUID"],
                     published_on=article["PUBLISHED_ON"],

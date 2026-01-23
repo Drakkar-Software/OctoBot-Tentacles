@@ -18,8 +18,8 @@
 AI Index Trading Mode module for OctoBot.
 Handles AI-driven portfolio rebalancing based on strategy evaluations and external agent instructions.
 """
-import os
 import typing
+from datetime import datetime
 
 import octobot_commons.enums as commons_enums
 import octobot_commons.constants as commons_constants
@@ -31,12 +31,13 @@ import octobot_evaluators.constants as evaluators_constants
 import octobot_trading.enums as trading_enums
 import octobot_trading.modes as trading_modes
 import octobot_trading.constants as trading_constants
+import octobot_trading.api as trading_api
 import octobot_services.api.services as services_api
 import tentacles.Services.Services_bases
 
 from tentacles.Trading.Mode.ai_trading_mode import ai_index_distribution
 from tentacles.Trading.Mode.index_trading_mode import index_trading
-from tentacles.Trading.Mode.ai_trading_mode.agents.team import AIAgentTeam
+from tentacles.Trading.Mode.ai_trading_mode.team import TradingAgentTeam
 
 # Data keys
 STRATEGY_DATA_KEY = "strategy_data"
@@ -52,6 +53,16 @@ class AIIndexTradingModeProducer(index_trading.IndexTradingModeProducer):
         self._global_strategy_data = {}
         self._crypto_strategy_data = {}  # {cryptocurrency: strategy_data}
         self.services_config = None
+
+    def get_channels_registration(self):
+        """
+        Override parent to register on MATRIX_CHANNEL instead of candle channels.
+        AI trading mode should only trade based on AI evaluator results (strategy evaluations),
+        not on candle events directly.
+        """
+        return [
+            self.TOPIC_TO_CHANNEL_NAME[commons_enums.ActivationTopics.EVALUATION_CYCLE.value]
+        ]
 
     async def set_final_eval(
         self,
@@ -231,7 +242,7 @@ class AIIndexTradingModeProducer(index_trading.IndexTradingModeProducer):
         """
         Handle cryptocurrency-specific strategy analysis from CryptoLLMAIStrategyEvaluator.
         This is only triggered when both global and crypto-specific data are available.
-        Runs the AI agent team to generate portfolio distribution decisions.
+        Runs the AI agents sequentially to generate portfolio distribution decisions.
         """
         if not self._global_strategy_data or cryptocurrency not in self._crypto_strategy_data:
             self.logger.debug(
@@ -241,80 +252,197 @@ class AIIndexTradingModeProducer(index_trading.IndexTradingModeProducer):
         
         # Check if all cryptocurrencies have been analyzed
         # Only run the full agent team when we have data for all tracked coins
-        indexed_coins = getattr(self.trading_mode, 'indexed_coins', [])
-        if not indexed_coins:
+        if not self.trading_mode.indexed_coins:
             self.logger.debug("No indexed coins configured, skipping agent analysis.")
             return
         
         # Check if we have crypto strategy data for all indexed coins
         all_coins_ready = all(
             coin in self._crypto_strategy_data 
-            for coin in indexed_coins
+            for coin in self.trading_mode.indexed_coins
         )
         
         if not all_coins_ready:
             self.logger.debug(
                 f"Waiting for all crypto strategy data. "
                 f"Have: {list(self._crypto_strategy_data.keys())}, "
-                f"Need: {indexed_coins}"
+                f"Need: {self.trading_mode.indexed_coins}"
             )
             return
         
-        self.logger.info("All strategy data collected. Running AI agent team...")
+        self.logger.debug("All strategy data collected. Running AI agents...")
         
         try:
-            await self._run_agent_team()
+            await self._run_agents()
         except Exception as e:
-            self.logger.exception(f"Error running AI agent team: {e}")
+            self.logger.exception(f"Error running AI agents: {e}")
     
-    async def _run_agent_team(self):
+    async def _run_agents(self):
         """
-        Run the AI agent team to analyze portfolio and generate distribution decisions.
+        Run AI agents using TradingAgentTeam to analyze portfolio and generate distribution decisions.
+        
+        The team orchestrates:
+        1. Signal agent - analyzes all cryptocurrencies and synthesizes signals
+        2. Risk agent - evaluates portfolio risk based on signals
+        3. Distribution agent - makes final allocation decisions
         """        
         # Get LLM service
-        llm_service = await self._get_llm_service()
-        if llm_service is None:
+        ai_service = await self._get_llm_service()
+        if ai_service is None:
             self.logger.error("Failed to create LLM service. Check AI configuration.")
             return
         
-        # Build agent team
-        agent_team = AIAgentTeam(llm_service=llm_service)
+        # Build state
+        state = self._build_agent_state()
         
-        # Get portfolio and orders state
-        portfolio_state = AIAgentTeam.build_portfolio_state(self.exchange_manager)
-        orders_state = AIAgentTeam.build_orders_state(self.exchange_manager)
-        current_distribution = AIAgentTeam.build_current_distribution(self.trading_mode)
+        self.logger.debug("Running TradingAgentTeam for portfolio distribution analysis...")
         
-        # Get cryptocurrencies
-        cryptocurrencies = list(self._crypto_strategy_data.keys())
-        reference_market = self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market
+        # Create and run the team
+        team = TradingAgentTeam(ai_service=ai_service)
         
-        # Run agent team
-        self.logger.info("Running AI agent team for portfolio distribution analysis...")
-        distribution_output = await agent_team.run(
-            global_strategy_data=self._global_strategy_data,
-            crypto_strategy_data=self._crypto_strategy_data,
-            cryptocurrencies=cryptocurrencies,
-            portfolio=portfolio_state,
-            orders=orders_state,
-            current_distribution=current_distribution,
-            reference_market=reference_market,
-            exchange_name=self.exchange_name,
-        )
+        try:
+            distribution_output = await team.run_with_state(state)
+        except Exception as e:
+            self.logger.exception(f"TradingAgentTeam execution failed: {e}")
+            return
         
         if distribution_output is None:
             self.logger.warning("Agent team returned no distribution output.")
             return
         
         self.logger.info(
-            f"Agent team completed. Urgency: {distribution_output.rebalance_urgency}"
+            f"TradingAgentTeam completed. Urgency: {distribution_output.rebalance_urgency}"
         )
+        self.logger.info(f"AI Reasoning: {distribution_output.reasoning}")
+        for dist in distribution_output.distributions:
+            self.logger.info(
+                f"  {dist.asset}: {dist.percentage:.1f}% ({dist.action}) - {dist.explanation}"
+            )
         
         # Convert to AI instructions and trigger rebalance
         ai_instructions = distribution_output.get_ai_instructions()
         
         if ai_instructions and distribution_output.rebalance_urgency != "none":
+            self.logger.info(f"Triggering rebalance with {len(ai_instructions)} instructions")
             await self._submit_trading_evaluation(ai_instructions)
+        else:
+            if distribution_output.rebalance_urgency == "none":
+                self.logger.info("No rebalance triggered (urgency is 'none')")
+            else:
+                self.logger.info("No rebalance triggered (no instructions)")
+    
+    def _build_agent_state(self) -> dict:
+        """
+        Build the state dictionary for agent execution.
+        """
+        portfolio_state = self._build_portfolio_state()
+        orders_state = self._build_orders_state()
+        current_distribution = self._build_current_distribution()
+
+        # Get all traded symbols from exchange manager
+        traded_symbols = trading_api.get_trading_symbols(self.exchange_manager, include_additional_pairs=True)
+        # Extract both base and quote currencies (cryptocurrencies) from symbols
+        traded_cryptocurrencies = list(set(
+            currency for symbol in traded_symbols 
+            for currency in [symbol.base, symbol.quote]
+        ))
+        # Combine with indexed_coins to ensure all configured coins are included
+        indexed_cryptocurrencies = list(self.trading_mode.indexed_coins) if self.trading_mode.indexed_coins else []
+        # Merge and deduplicate
+        cryptocurrencies = list(set(traded_cryptocurrencies + indexed_cryptocurrencies))
+        
+        reference_market = self.exchange_manager.exchange_personal_data.portfolio_manager.reference_market
+        
+        return {
+            "global_strategy_data": self._global_strategy_data,
+            "crypto_strategy_data": self._crypto_strategy_data,
+            "cryptocurrencies": cryptocurrencies,
+            "reference_market": reference_market,
+            "portfolio": portfolio_state,
+            "orders": orders_state,
+            "current_distribution": current_distribution,
+            "signal_outputs": {"signals": {}},
+            "risk_output": None,
+            "signal_synthesis": None,
+            "distribution_output": None,
+            "exchange_name": self.exchange_name,
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+    
+    def _build_portfolio_state(self) -> dict:
+        """Build portfolio state from exchange manager."""
+        portfolio = trading_api.get_portfolio(self.exchange_manager)
+        reference_market = trading_api.get_portfolio_reference_market(self.exchange_manager)
+        
+        holdings = {}
+        holdings_value = {}
+        total_value = 0
+        
+        for asset, amount in portfolio.items():
+            if hasattr(amount, 'total'):
+                holdings[asset] = float(amount.total)
+            elif isinstance(amount, dict):
+                holdings[asset] = float(amount.get('total', 0))
+            else:
+                holdings[asset] = float(amount)
+        
+        # Get portfolio value
+        try:
+            portfolio_value_holder = self.exchange_manager.exchange_personal_data.portfolio_manager.portfolio_value_holder
+            total_value = float(portfolio_value_holder.get_traded_assets_holdings_value(reference_market))
+        except Exception:
+            total_value = 0
+        
+        # Get available balance
+        try:
+            available_balance = float(
+                self.exchange_manager.exchange_personal_data.portfolio_manager.portfolio
+                .get_currency_portfolio(reference_market).available
+            )
+        except Exception:
+            available_balance = 0
+        
+        return {
+            "holdings": holdings,
+            "holdings_value": holdings_value,
+            "total_value": total_value,
+            "reference_market": reference_market,
+            "available_balance": available_balance,
+        }
+    
+    def _build_orders_state(self) -> dict:
+        """Build orders state from exchange manager."""
+        try:
+            open_orders = trading_api.get_open_orders(self.exchange_manager)
+            orders_list = [
+                {
+                    "symbol": order.symbol,
+                    "side": order.side.value if hasattr(order.side, 'value') else str(order.side),
+                    "type": order.order_type.value if hasattr(order.order_type, 'value') else str(order.order_type),
+                    "amount": float(order.origin_quantity),
+                    "price": float(order.origin_price) if order.origin_price else None,
+                    "status": order.status.value if hasattr(order.status, 'value') else str(order.status),
+                }
+                for order in open_orders
+            ]
+        except Exception:
+            orders_list = []
+        
+        return {
+            "open_orders": orders_list,
+            "pending_orders": [],
+            "recent_trades": [],
+        }
+    
+    def _build_current_distribution(self) -> dict:
+        """Build current distribution from trading mode."""
+        if not hasattr(self.trading_mode, 'ratio_per_asset') or not self.trading_mode.ratio_per_asset:
+            return {}
+        
+        return {
+            asset: float(data.get(index_trading.index_distribution.DISTRIBUTION_VALUE, 0))
+            for asset, data in self.trading_mode.ratio_per_asset.items()
+        }
     
     async def _get_llm_service(self):
         """Get the LLM service instance."""
