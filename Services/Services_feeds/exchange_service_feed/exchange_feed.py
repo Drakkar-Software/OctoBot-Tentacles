@@ -133,7 +133,11 @@ class ExchangeServiceFeed(service_feeds.AbstractServiceFeed):
     async def _push_update_and_wait_exchange_profiles(self):
         for profile in self.exchange_profiles.values():
             if time.time() >= profile.next_refresh:
-                profile_updated = await self._fetch_exchange_profile(profile.profile_id)
+                profile_updated = False
+                try:
+                    profile_updated = await self._fetch_exchange_profile(profile.profile_id)
+                except Exception as e:
+                    self.logger.exception(e, True, f"Error when fetching exchange profile: {e}")
                 if profile_updated:
                     await self._async_notify_consumers(
                         {
