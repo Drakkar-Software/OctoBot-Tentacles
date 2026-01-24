@@ -58,8 +58,8 @@ class GPTService(services.AbstractService):
     def get_fields_description(self):
         if self._env_secret_key is None:
             return {
-                services_constants.CONIG_OPENAI_SECRET_KEY: "Your openai API secret key",
-                services_constants.CONIG_LLM_CUSTOM_BASE_URL: (
+                services_constants.CONFIG_OPENAI_SECRET_KEY: "Your openai API secret key",
+                services_constants.CONFIG_LLM_CUSTOM_BASE_URL: (
                     "Custom LLM base url to use. Leave empty to use openai.com. For Ollama models, "
                     "add /v1 to the url (such as: http://localhost:11434/v1)"
                 ),
@@ -69,8 +69,8 @@ class GPTService(services.AbstractService):
     def get_default_value(self):
         if self._env_secret_key is None:
             return {
-                services_constants.CONIG_OPENAI_SECRET_KEY: "",
-                services_constants.CONIG_LLM_CUSTOM_BASE_URL: "",
+                services_constants.CONFIG_OPENAI_SECRET_KEY: "",
+                services_constants.CONFIG_LLM_CUSTOM_BASE_URL: "",
             }
         return {}
 
@@ -340,7 +340,7 @@ class GPTService(services.AbstractService):
         if self._env_secret_key is not None or self.use_stored_signals_only() or self._get_base_url():
             return True
         try:
-            config_key = config[services_constants.CONIG_OPENAI_SECRET_KEY]
+            config_key = config[services_constants.CONFIG_OPENAI_SECRET_KEY]
             return bool(config_key) and config_key not in commons_constants.DEFAULT_CONFIG_VALUES
         except KeyError:
             return False
@@ -356,7 +356,7 @@ class GPTService(services.AbstractService):
             return False
 
     def get_required_config(self):
-        return [] if self._env_secret_key else [services_constants.CONIG_OPENAI_SECRET_KEY]
+        return [] if self._env_secret_key else [services_constants.CONFIG_OPENAI_SECRET_KEY]
 
     @classmethod
     def get_help_page(cls) -> str:
@@ -375,7 +375,7 @@ class GPTService(services.AbstractService):
         key = (
             self._env_secret_key or
             self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_GPT].get(
-                services_constants.CONIG_OPENAI_SECRET_KEY, None
+                services_constants.CONFIG_OPENAI_SECRET_KEY, None
             )
         )
         if key and not fields_utils.has_invalid_default_config_value(key):
@@ -387,7 +387,7 @@ class GPTService(services.AbstractService):
 
     def _get_base_url(self):
         value = self.config[services_constants.CONFIG_CATEGORY_SERVICES][services_constants.CONFIG_GPT].get(
-            services_constants.CONIG_LLM_CUSTOM_BASE_URL
+            services_constants.CONFIG_LLM_CUSTOM_BASE_URL
         )
         if fields_utils.has_invalid_default_config_value(value):
             return None
