@@ -77,7 +77,7 @@ class AlternativeMeServiceFeed(service_feeds.AbstractServiceFeed):
             data = fear_and_greed_data["data"]
             self.data_cache[services_constants.ALTERNATIVE_ME_TOPIC_FEAR_AND_GREED] = [
                 AlternativeMeFearAndGreed(
-                    timestamp=datetime.datetime.strptime(entry["timestamp"], '%m-%d-%Y').timestamp(),
+                    timestamp=datetime.datetime.strptime(entry["timestamp"], '%m-%d-%Y').replace(tzinfo=datetime.timezone.utc).timestamp(),
                     value=float(entry["value"]),
                     value_classification=entry["value_classification"]
                 ) for entry in data]
@@ -117,7 +117,7 @@ class AlternativeMeServiceFeed(service_feeds.AbstractServiceFeed):
                     await self._push_update_and_wait(session)
                 except Exception as e:
                     self.logger.exception(e, True, f"Error when receiving Alternative.me data: ({e})")
-                    self.should_stop = True
+                    await asyncio.sleep(self._get_sleep_time_before_next_wakeup())
             return False
 
     async def _start_service_feed(self):
