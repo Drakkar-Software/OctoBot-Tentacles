@@ -96,6 +96,12 @@ class CoindeskServiceFeed(service_feeds.AbstractServiceFeed):
     def _get_sleep_time_before_next_wakeup(self):
         return commons_enums.TimeFramesMinutes[self.refresh_time_frame] * commons_constants.MINUTE_TO_SECONDS
 
+    def _merge_cache_data(self, cache_key: str, new_values: list, id_getter: typing.Callable) -> list:
+        existing = self.data_cache.get(cache_key, [])
+        existing_ids = {id_getter(item) for item in existing}
+        new_unique = [item for item in new_values if id_getter(item) not in existing_ids]
+        return existing + new_unique
+
     def _get_marketcap_api_url(self, limit: typing.Optional[int] = 2000):
         return f"https://data-api.coindesk.com/overview/v1/historical/marketcap/all/assets/days?limit={limit}&response_format=JSON"
 
@@ -107,8 +113,7 @@ class CoindeskServiceFeed(service_feeds.AbstractServiceFeed):
 
             market_cap_data = await response.json()
 
-            # We should append and check duplicates
-            self.data_cache[services_constants.COINDESK_TOPIC_MARKETCAP] = [
+            new_values = [
                 CoindeskMarketcap(
                     timestamp=entry["TIMESTAMP"],
                     open=entry["OPEN"],
@@ -117,7 +122,10 @@ class CoindeskServiceFeed(service_feeds.AbstractServiceFeed):
                     low=entry["LOW"],
                     top_tier_volume=entry["TOP_TIER_VOLUME"]
                 ) for entry in market_cap_data["Data"]
-            ] 
+            ]
+            self.data_cache[services_constants.COINDESK_TOPIC_MARKETCAP] = self._merge_cache_data(
+                services_constants.COINDESK_TOPIC_MARKETCAP, new_values, lambda x: x.timestamp
+            )
             return True
 
 
@@ -167,8 +175,9 @@ class CoindeskServiceFeed(service_feeds.AbstractServiceFeed):
                     categories=categories_str
                 ))
 
-            # We should append and check duplicates
-            self.data_cache[services_constants.COINDESK_TOPIC_NEWS] = values
+            self.data_cache[services_constants.COINDESK_TOPIC_NEWS] = self._merge_cache_data(
+                services_constants.COINDESK_TOPIC_NEWS, values, lambda x: x.id
+            )
             return True
 
     def get_data_cache(self, current_time: float, key: typing.Optional[str] = None):
@@ -209,7 +218,7 @@ class CoindeskServiceFeed(service_feeds.AbstractServiceFeed):
                     await self._push_update_and_wait(session)
                 except Exception as e:
                     self.logger.exception(e, True, f"Error when receiving Coindesk feed: ({e})")
-                    self.should_stop = True
+                    await asyncio.sleep(self._get_sleep_time_before_next_wakeup())
             return False
 
     async def _start_service_feed(self):
