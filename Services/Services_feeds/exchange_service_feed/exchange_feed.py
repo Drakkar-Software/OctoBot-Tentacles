@@ -119,10 +119,8 @@ class ExchangeServiceFeed(service_feeds.AbstractServiceFeed):
         current_profile.update_next_refresh()
         exchange_has_positions = True
         if exchange_has_positions:
-            previous_positions = copy.deepcopy(current_profile.positions) if current_profile is not None else []
             current_profile.positions = await exchange_manager.exchange.get_user_positions(current_profile.profile_id)
-            if previous_positions != current_profile.positions:
-                updated = True
+            updated = True
         else:
             # TODO later: Update portfolio to support SPOT copy trading
             pass
