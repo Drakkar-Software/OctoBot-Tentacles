@@ -33,7 +33,6 @@ import octobot_trading.errors as trading_errors
 import octobot_trading.modes as trading_modes
 import octobot_trading.personal_data as trading_personal_data
 import octobot_trading.exchanges as trading_exchanges
-import octobot_tentacles_manager.configuration as tm_configuration
 import tentacles.Trading.Mode.market_making_trading_mode.order_book_distribution as order_book_distribution
 import tentacles.Trading.Mode.market_making_trading_mode.reference_price as reference_price_import
 
@@ -174,22 +173,6 @@ class MarketMakingTradingMode(trading_modes.AbstractTradingMode):
         return [MarketMakingTradingModeConsumer]
 
     @classmethod
-    async def get_forced_updater_channels(
-        cls, 
-        exchange_manager: trading_exchanges.ExchangeManager,
-        tentacles_setup_config: tm_configuration.TentaclesSetupConfiguration, 
-        trading_config: typing.Optional[dict]
-    ) -> set[trading_exchanges.ChannelSpecs]:
-        return set([
-            trading_exchanges.ChannelSpecs(
-                channel=trading_constants.TICKER_CHANNEL,
-            ),
-            trading_exchanges.ChannelSpecs(
-                channel=trading_constants.TRADES_CHANNEL,
-            )
-        ])
-
-    @classmethod
     def get_is_trading_on_exchange(cls, exchange_name, tentacles_setup_config) -> bool:
         """
         returns True if exchange_name is trading exchange or the hedging exchange
@@ -317,7 +300,12 @@ class MarketMakingTradingModeConsumer(trading_modes.AbstractTradingModeConsumer)
         finally:
             order_actions_plan.processed.set()
 
-    async def _process_plan(self, order_actions_plan: OrdersUpdatePlan, current_price, symbol_market):
+    async def _process_plan(
+        self,
+        order_actions_plan: OrdersUpdatePlan,
+        current_price: decimal.Decimal,
+        symbol_market: dict
+    ):
         created_orders = []
         cancelled_orders = []
         processed_actions = {}
@@ -503,13 +491,13 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
 
         self.symbol_trading_config: dict = None
         self.healthy = False
-        self.subscribed_channel_specs_by_exchange_id: dict[str, set[trading_exchanges.ChannelSpecs]] = {}
         self.is_first_execution: bool = True
         self._started_at: float = 0
         self._last_error_at: float = 0
         self.latest_actions_plan: OrdersUpdatePlan = None
         self.last_target_buy_orders_count: int = 0
         self.last_target_sell_orders_count: int = 0
+        self.subscribed_requirements_exchange_ids: set[str] = set()
 
         try:
             self._load_symbol_trading_config()
@@ -568,12 +556,23 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
     async def start(self) -> None:
         await super().start()
         if self.healthy:
+            await self._register_pair_requirement_on_reference_exchange()
             self.logger.debug(f"Initializing orders creation")
             await self._ensure_market_making_orders_and_reschedule()
 
     async def set_final_eval(self, matrix_id: str, cryptocurrency: str, symbol: str, time_frame, trigger_source: str):
         # nothing to do: this is not a strategy related trading mode
         pass
+
+    async def _register_pair_requirement_on_reference_exchange(self):
+        await trading_api.register_new_pairs_on_exchange(
+            self.exchange_manager.exchange_name,
+            trading_api.get_matrix_id_from_exchange_id(
+                self.exchange_manager.exchange_name, self.exchange_manager.id
+            ),
+            [self.symbol],
+            watch_only=True
+        )
 
     def _schedule_order_refresh(self):
         # schedule order creation / health check
@@ -1320,29 +1319,24 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
         await self._on_reference_price_update()
 
     async def _subscribe_to_exchange_mark_price(self, exchange_id: str, exchange_manager):
-        specs = trading_exchanges.ChannelSpecs(
-            trading_constants.MARK_PRICE_CHANNEL,
-            self.trading_mode.symbol,
-            None
-        )
-        if not self.already_subscribed_to_channel(exchange_id, specs):
+        if not self.already_subscribed_to_channel(
+            exchange_id, trading_constants.MARK_PRICE_CHANNEL, self._mark_price_callback, symbol=self.trading_mode.symbol
+        ):
             await exchanges_channel.get_chan(trading_constants.MARK_PRICE_CHANNEL, exchange_id).new_consumer(
                 callback=self._mark_price_callback,
                 symbol=self.trading_mode.symbol
             )
-            if exchange_id not in self.subscribed_channel_specs_by_exchange_id:
-                self.subscribed_channel_specs_by_exchange_id[exchange_id] = set()
-            self.subscribed_channel_specs_by_exchange_id[exchange_id].add(specs)
             self.logger.info(
-                f"{self.trading_mode.get_name()} for {self.trading_mode.symbol} on {self.exchange_name}:  "
-                f"{exchange_manager.exchange_name} price data feed."
+                f"{self.trading_mode.get_name()} for {self.trading_mode.symbol} on {self.exchange_name}  "
+                f"subscribed to {exchange_manager.exchange_name} price data feed."
             )
 
-    def already_subscribed_to_channel(self, exchange_id: str, specs: trading_exchanges.ChannelSpecs) -> bool:
-        return (
-            exchange_id in self.subscribed_channel_specs_by_exchange_id
-            and specs in self.subscribed_channel_specs_by_exchange_id[exchange_id]
-        )
+    def already_subscribed_to_channel(
+        self, exchange_id: str, channel: str, callback: typing.Callable, **filter_kwargs
+    ) -> bool:
+        chan = exchanges_channel.get_chan(channel, exchange_id)
+        consumers = chan.get_consumer_from_filters(filter_kwargs)
+        return any(consumer.callback == callback for consumer in consumers)
 
     async def _get_reference_price(self) -> decimal.Decimal:
         local_exchange_name = self.exchange_manager.exchange_name
@@ -1362,8 +1356,9 @@ class MarketMakingTradingModeProducer(trading_modes.AbstractTradingModeProducer)
             ) else exchange_manager.exchange_name
             if other_exchange_key != self.reference_price.exchange:
                 continue
-            if exchange_id not in self.subscribed_exchange_ids:
+            if exchange_id not in self.subscribed_requirements_exchange_ids:
                 await self._subscribe_to_exchange_mark_price(exchange_id, exchange_manager)
+                self.subscribed_requirements_exchange_ids.add(exchange_id)
             try:
                 price, updated = trading_personal_data.get_potentially_outdated_price(
                     exchange_manager, self.reference_price.pair
