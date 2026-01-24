@@ -503,7 +503,9 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
         if self.trading_mode.indexed_coins:
             self.logger.debug(f"Update traded symbol pair: {self.trading_mode.indexed_coins}...")
             # TODO: remove the pairs when the coins are entirely removed from the index
-            await self.exchange_manager.exchange_config.update_traded_symbol_pairs(added_pairs=self.trading_mode.indexed_coins, removed_pairs=[], watch_only=False)
+            await self.exchange_manager.exchange_config.add_traded_symbols(
+                self.trading_mode.indexed_coins, []
+            )
 
     def _empty_rebalance_details(self) -> dict:
         return {
