@@ -15,6 +15,8 @@
 #  License along with this library.
 import math
 import pytest
+import mock
+import time
 import octobot_commons.dsl_interpreter as dsl_interpreter
 import octobot_commons.errors
 
@@ -125,6 +127,24 @@ async def test_interpreter_call_operations(interpreter):
     assert await interpreter.interprete("round(1.23456789)") == 1
     assert await interpreter.interprete("floor(1.23456789)") == 1
     assert await interpreter.interprete("ceil(1.23456789)") == 2
+    assert await interpreter.interprete("sin(0)") == 0
+    assert abs(await interpreter.interprete("sin(pi/2)") - 1) < 1e-10
+    assert abs(await interpreter.interprete("sin(pi)") - 0) < 1e-10
+    assert await interpreter.interprete("cos(0)") == 1
+    assert abs(await interpreter.interprete("cos(pi/2)") - 0) < 1e-10
+    assert abs(await interpreter.interprete("cos(pi)") - (-1)) < 1e-10
+    assert 90 <= await interpreter.interprete("oscillate(100, 10, 60)") <= 110  # 100 ± 10%
+    assert 40 <= await interpreter.interprete("oscillate(50, 20, 30)") <= 60  # 50 ± 20%
+    assert 190 <= await interpreter.interprete("oscillate(200, 5, 120)") <= 210  # 200 ± 5%
+    assert 185 <= await interpreter.interprete("oscillate(150 + oscillate(50, 10, 60), 5, 120)") <= 215  # 200 ± 5%
+
+
+@pytest.mark.asyncio
+async def test_interpreter_oscillate_operations(interpreter):
+    for time_mock in range(int(time.time()), int(time.time()) + 3600, 1):
+        with mock.patch.object(time, 'time', return_value=time_mock * 0.1241):
+            # always returns a value between 90 and 110
+            assert 90 <= await interpreter.interprete("oscillate(100, 10, 60.221)") <= 110
 
 
 @pytest.mark.asyncio
@@ -138,6 +158,9 @@ async def test_interpreter_mixed_call_and_basic_operations(interpreter):
     assert await interpreter.interprete("abs(sqrt(max(1, 2, 4)))") == 2
     assert await interpreter.interprete("abs(sqrt(min(1, 2, 4)))") == 1
     assert await interpreter.interprete("mean(4, 5) + 1 + mean(1, 1 + 1, 3)") == 7.5
+    assert abs(await interpreter.interprete("sin(pi/2) + cos(0)") - 2) < 1e-10
+    assert abs(await interpreter.interprete("sin(pi/4) * cos(pi/4)") - 0.5) < 1e-10
+    assert abs(await interpreter.interprete("sqrt(sin(pi/2)**2 + cos(pi/2)**2)") - 1) < 1e-10
 
 
 @pytest.mark.asyncio
@@ -160,3 +183,23 @@ async def test_interpreter_insupported_operations(interpreter):
         await interpreter.interprete("mean(1, 'a')")
     with pytest.raises(octobot_commons.errors.InvalidParametersError):
         await interpreter.interprete("mean()")
+    with pytest.raises(octobot_commons.errors.InvalidParametersError):
+        await interpreter.interprete("sin('a')")
+    with pytest.raises(octobot_commons.errors.InvalidParametersError):
+        await interpreter.interprete("cos('a')")
+    with pytest.raises(octobot_commons.errors.InvalidParametersError):
+        await interpreter.interprete("oscillate('a', 10, 60)")
+    with pytest.raises(octobot_commons.errors.InvalidParametersError):
+        await interpreter.interprete("oscillate(100, 'b', 60)")
+    with pytest.raises(octobot_commons.errors.InvalidParametersError):
+        await interpreter.interprete("oscillate(100, 10, 'c')")
+    with pytest.raises(octobot_commons.errors.InvalidParametersError):
+        await interpreter.interprete("oscillate(100)")
+    with pytest.raises(octobot_commons.errors.InvalidParametersError):
+        await interpreter.interprete("oscillate(100, 10)")
+    with pytest.raises(octobot_commons.errors.InvalidParametersError):
+        await interpreter.interprete("oscillate(100, 10, 60, 70)")
+    with pytest.raises(octobot_commons.errors.InvalidParametersError):
+        await interpreter.interprete("oscillate(100, 10, -1)")
+    with pytest.raises(octobot_commons.errors.InvalidParametersError):
+        await interpreter.interprete("oscillate(100, 10, 0)")

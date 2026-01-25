@@ -15,6 +15,7 @@
 #  You should have received a copy of the GNU Lesser General Public
 #  License along with this library.
 import math
+import time
 
 import octobot_commons.errors
 import octobot_commons.dsl_interpreter as dsl_interpreter
@@ -179,3 +180,85 @@ class CeilOperator(dsl_interpreter.CallOperator):
         raise octobot_commons.errors.InvalidParametersError(
             f"ceil() requires a numeric argument, got {type(operand).__name__}"
         )
+
+
+class SinOperator(dsl_interpreter.CallOperator):
+    MIN_PARAMS = 1
+    MAX_PARAMS = 1
+    NAME = "sin"
+    DESCRIPTION = "Returns the sine of the given numeric operand (in radians)."
+    EXAMPLE = "sin(1.23)"
+
+    @staticmethod
+    def get_name() -> str:
+        return "sin"
+
+    def compute(self) -> dsl_interpreter.ComputedOperatorParameterType:
+        computed_parameters = self.get_computed_parameters()
+        operand = computed_parameters[0]
+        if isinstance(operand, (int, float)):
+            return math.sin(operand)
+        raise octobot_commons.errors.InvalidParametersError(
+            f"sin() requires a numeric argument, got {type(operand).__name__}"
+        )
+
+
+class CosOperator(dsl_interpreter.CallOperator):
+    MIN_PARAMS = 1
+    MAX_PARAMS = 1
+    NAME = "cos"
+    DESCRIPTION = "Returns the cosine of the given numeric operand (in radians)."
+    EXAMPLE = "cos(1.23)"
+
+    @staticmethod
+    def get_name() -> str:
+        return "cos"
+
+    def compute(self) -> dsl_interpreter.ComputedOperatorParameterType:
+        computed_parameters = self.get_computed_parameters()
+        operand = computed_parameters[0]
+        if isinstance(operand, (int, float)):
+            return math.cos(operand)
+        raise octobot_commons.errors.InvalidParametersError(
+            f"cos() requires a numeric argument, got {type(operand).__name__}"
+        )
+
+
+class OscillatorOperator(dsl_interpreter.CallOperator):
+    MIN_PARAMS = 3
+    MAX_PARAMS = 3
+    NAME = "oscillate"
+    DESCRIPTION = "Returns the base value with a time-based oscillating component added. The oscillation uses a sine wave with the specified maximum percentage of the base value and period in minutes."
+    EXAMPLE = "oscillate(100, 10, 60)"
+
+    @staticmethod
+    def get_name() -> str:
+        return "oscillate"
+
+    def compute(self) -> dsl_interpreter.ComputedOperatorParameterType:
+        computed_parameters = self.get_computed_parameters()
+        base_value = computed_parameters[0]
+        max_oscillating_percent = computed_parameters[1]
+        period_minutes = computed_parameters[2]
+
+        # Validate all parameters are numeric
+        if not isinstance(base_value, (int, float)):
+            raise octobot_commons.errors.InvalidParametersError(
+                f"oscillate() requires a numeric base value, got {type(base_value).__name__}"
+            )
+        if not isinstance(max_oscillating_percent, (int, float)):
+            raise octobot_commons.errors.InvalidParametersError(
+                f"oscillate() requires a numeric max oscillating percent, got {type(max_oscillating_percent).__name__}"
+            )
+        if not isinstance(period_minutes, (int, float)) or period_minutes <= 0:
+            raise octobot_commons.errors.InvalidParametersError(
+                f"oscillate() requires a positive numeric period in minutes, got {type(period_minutes).__name__}"
+            )
+
+        oscillation_range = base_value * (max_oscillating_percent / 100)
+        period_seconds = period_minutes * 60
+        phase = 2 * math.pi * (time.time() / period_seconds)
+        oscillation = math.sin(phase)
+        oscillation_value = oscillation_range * oscillation
+
+        return base_value + oscillation_value
