@@ -238,3 +238,122 @@ def test_validate_config(distribution):
     distribution.min_spread = decimal.Decimal(50)
     with pytest.raises(ValueError):
         distribution.validate_config()
+
+
+def test_get_order_volumes_decreasing(distribution):
+    """Test _get_order_volumes with DECREASING direction."""
+    side = trading_enums.TradeOrderSide.BUY
+    total_volume = decimal.Decimal("100")
+    order_prices = [
+        decimal.Decimal("50000"),
+        decimal.Decimal("49900"),
+        decimal.Decimal("49800"),
+        decimal.Decimal("49700"),
+        decimal.Decimal("49600"),
+    ]
+    multiplier = decimal.Decimal("1.5")
+    
+    volumes = distribution._get_order_volumes(
+        side, total_volume, order_prices, 
+        multiplier=multiplier, direction=order_book_distribution.DECREASING
+    )
+    
+    # DECREASING: orders are smaller when closer to reference price
+    # First order (closest to reference) should be smallest
+    # Last order (farthest from reference) should be largest
+    assert len(volumes) == len(order_prices)
+    assert all(vol > decimal.Decimal("0") for vol in volumes)
+    
+    # Verify volumes are in decreasing order (first is smallest, last is largest)
+    for i in range(len(volumes) - 1):
+        assert volumes[i] < volumes[i + 1], \
+            f"DECREASING direction: volume at index {i} ({volumes[i]}) should be less than at index {i+1} ({volumes[i+1]})"
+    
+    # Verify total volume matches (allowing for small rounding errors, but never exceeds)
+    total = sum(volumes)
+    assert total <= total_volume, \
+        f"Total volume should not exceed {total_volume}, got {total}"
+    assert total >= total_volume - decimal.Decimal("0.01"), \
+        f"Total volume should be close to {total_volume}, got {total}"
+
+
+def test_get_order_volumes_increasing(distribution):
+    """Test _get_order_volumes with INCREASING direction."""
+    side = trading_enums.TradeOrderSide.SELL
+    total_volume = decimal.Decimal("200")
+    order_prices = [
+        decimal.Decimal("50100"),
+        decimal.Decimal("50200"),
+        decimal.Decimal("50300"),
+        decimal.Decimal("50400"),
+        decimal.Decimal("50500"),
+    ]
+    multiplier = decimal.Decimal("2.0")
+    
+    volumes = distribution._get_order_volumes(
+        side, total_volume, order_prices, 
+        multiplier=multiplier, direction=order_book_distribution.INCREASING
+    )
+    
+    # INCREASING: orders are larger when closer to reference price
+    # First order (closest to reference) should be largest
+    # Last order (farthest from reference) should be smallest
+    assert len(volumes) == len(order_prices)
+    assert all(vol > decimal.Decimal("0") for vol in volumes)
+    
+    # Check that the first orders are smaller than the later ones
+    for i in range(len(volumes) - 1):
+        assert volumes[i] < volumes[i + 1], \
+            f"INCREASING direction: volume at index {i} ({volumes[i]}) should be less than at index {i+1} ({volumes[i+1]})"
+    
+    # Verify total volume matches (allowing for small rounding errors, but never exceeds)
+    total = sum(volumes)
+    assert total <= total_volume, \
+        f"Total volume should not exceed {total_volume}, got {total}"
+    assert total >= total_volume - decimal.Decimal("0.01"), \
+        f"Total volume should be close to {total_volume}, got {total}"
+
+
+def test_get_order_volumes_random(distribution):
+    """Test _get_order_volumes with RANDOM direction."""
+    import random
+    
+    # Set seed for reproducible test
+    random.seed(42)
+    
+    side = trading_enums.TradeOrderSide.BUY
+    total_volume = decimal.Decimal("150")
+    order_prices = [
+        decimal.Decimal("50000"),
+        decimal.Decimal("49900"),
+        decimal.Decimal("49800"),
+        decimal.Decimal("49700"),
+        decimal.Decimal("49600"),
+    ]
+    multiplier = decimal.Decimal("0.3")
+    
+    volumes = distribution._get_order_volumes(
+        side, total_volume, order_prices, 
+        multiplier=multiplier, direction=order_book_distribution.RANDOM
+    )
+    
+    # RANDOM: volumes should be randomly distributed
+    assert len(volumes) == len(order_prices)
+    assert all(vol > decimal.Decimal("0") for vol in volumes)
+    
+    # Verify total volume matches (allowing for small rounding errors, but never exceeds)
+    total = sum(volumes)
+    assert total <= total_volume, \
+        f"Total volume should not exceed {total_volume}, got {total}"
+    assert total >= total_volume - decimal.Decimal("0.01"), \
+        f"Total volume should be close to {total_volume}, got {total}"
+    
+    # Verify volumes are within expected range based on multiplier
+    # With multiplier 0.3, volumes should be between 0.7 * average and 1.3 * average
+    average_order_size = total_volume / decimal.Decimal(str(len(order_prices)))
+    min_expected = average_order_size * decimal.Decimal("0.7")
+    max_expected = average_order_size * decimal.Decimal("1.3")
+    
+    for vol in volumes:
+        assert min_expected <= vol <= max_expected, \
+            f"Volume {vol} should be between {min_expected} and {max_expected}"
