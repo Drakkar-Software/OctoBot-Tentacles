@@ -60,6 +60,9 @@ from tentacles.Meta.DSL_operators.python_std_operators.base_call_operators impor
     RoundOperator,
     FloorOperator,
     CeilOperator,
+    SinOperator,
+    CosOperator,
+    OscillatorOperator,
 )
 import tentacles.Meta.DSL_operators.python_std_operators.base_name_operators as dsl_interpreter_base_name_operators
 from tentacles.Meta.DSL_operators.python_std_operators.base_name_operators import (
@@ -111,6 +114,9 @@ __all__ = [
     "RoundOperator",
     "FloorOperator",
     "CeilOperator",
+    "SinOperator",
+    "CosOperator",
+    "OscillatorOperator",
     "PiOperator",
     "IfExpOperator",
     "SubscriptOperator",
