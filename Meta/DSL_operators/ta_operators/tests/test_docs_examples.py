@@ -44,4 +44,7 @@ async def test_mm_formulas_docs_examples(interpreter):
     assert round(await interpreter.interprete("floor(close[-1])"), 2) == 92
     assert round(await interpreter.interprete("ceil(close[-1])"), 2) == 93
     assert round(await interpreter.interprete("abs(close[-1] - open[-1])"), 2) == 0
+    assert 0 < await interpreter.interprete("sin(3.14)") < 0.01
+    assert await interpreter.interprete("cos(3*pi)") == -1
+    assert 900 <= await interpreter.interprete("oscillate(1000, 10, 60)") <= 1100
     assert round(await interpreter.interprete("100 if close[-1] > open[-1] else (90 + 1)"), 2) == 91

@@ -38,6 +38,7 @@ except ImportError:
             class ExchangeServiceFeed:
                 def get_name(self, *args, **kwargs):
                     raise ImportError("exchange_service_feed not installed")
+        exchange_service_feed = ExchangeServiceFeedImportMock()
 
 class ProfileCopyTradingMode(index_trading_mode.IndexTradingMode):
     SERVICE_FEED_CLASS = exchange_service_feed.ExchangeServiceFeed if hasattr(exchange_service_feed, 'ExchangeServiceFeed') else None
