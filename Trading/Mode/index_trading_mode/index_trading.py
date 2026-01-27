@@ -744,7 +744,7 @@ class IndexTradingMode(trading_modes.AbstractTradingMode):
         self.indexed_coins = []
         self.indexed_coins_prices = {}
         self.is_processing_rebalance = False
-        self.rebalancer: rebalancer.AbstractRebalancer = self._create_rebalancer()
+        self.rebalancer: rebalancer.AbstractRebalancer = self._create_rebalancer(exchange_manager) if exchange_manager else None
     
     def init_user_inputs(self, inputs: dict) -> None:
         """

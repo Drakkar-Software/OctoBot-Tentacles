@@ -696,7 +696,8 @@ def get_config_activated_evaluators(tentacles_setup_config=None):
 
 def has_futures_exchange():
     for exchange_manager in get_live_trading_enabled_exchange_managers():
-        if trading_api.get_exchange_type(exchange_manager) is trading_enums.ExchangeTypes.FUTURE:
+        exchange_type = trading_api.get_exchange_type(exchange_manager)
+        if exchange_type is trading_enums.ExchangeTypes.FUTURE or exchange_type is trading_enums.ExchangeTypes.OPTION:
             return True
     return False
 
