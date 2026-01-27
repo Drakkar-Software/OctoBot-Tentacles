@@ -97,6 +97,39 @@ class Polymarket(exchanges.RestExchange):
     async def get_maintenance_margin_rate(self, symbol: str):
         return decimal.Decimal(0.0)
 
+    def get_contract_size(self, symbol: str):
+        """
+        Override contract size lookup for Polymarket.
+
+        Polymarket positions are 1:1 "shares" settled in the quote currency (USDC).
+        For expired or synthetic markets, the underlying CCXT client may not have
+        a market entry for the full unified symbol, which would normally cause a
+        KeyError when accessing client.markets[symbol].
+
+        To keep index/copy-trading logic working for historical/closed markets
+        (which only needs a consistent contract size, not the exact tick rules),
+        we treat all Polymarket contracts as having size 1.
+        """
+        return decimal.Decimal(1)
+
+    def is_linear_symbol(self, symbol) -> bool:
+        """
+        Override linear / inverse detection for Polymarket symbols.
+
+        Polymarket markets are USDC-settled binary options, including expired
+        markets that we may reconstruct synthetically. Their linearity does not
+        depend on the presence of an active CCXT market entry, so we treat all
+        Polymarket symbols as linear to avoid calling the underlying CCXT
+        client's market() method for closed markets.
+        """
+        return True
+
+    def is_inverse_symbol(self, symbol) -> bool:
+        """
+        Polymarket does not expose inverse-settled contracts.
+        """
+        return False
+
 def _parse_end_date(end_date: str) -> datetime.datetime:
     try:
         parsed_date = datetime.datetime.fromisoformat(end_date.replace('Z', '+00:00'))

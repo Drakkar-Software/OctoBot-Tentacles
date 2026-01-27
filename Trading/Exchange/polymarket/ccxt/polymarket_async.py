@@ -1420,7 +1420,7 @@ class polymarket(Exchange, ImplicitAPI):
             if market is not None and market['symbol'] is not None:
                 symbol = market['symbol']
             elif conditionId is not None:
-                resolved = self.safe_market(conditionId, None)
+                resolved = self.safe_market_with_fallback(conditionId, None, trade)
                 resolvedSymbol = self.safe_string(resolved, 'symbol')
                 if resolvedSymbol is not None:
                     symbol = resolvedSymbol
@@ -1481,14 +1481,14 @@ class polymarket(Exchange, ImplicitAPI):
             if market is not None and market['symbol'] is not None:
                 symbol = market['symbol']
             elif tradeMarket is not None:
-                resolved = self.safe_market(tradeMarket, None)
+                resolved = self.safe_market_with_fallback(tradeMarket, None, trade)
                 resolvedSymbol = self.safe_string(resolved, 'symbol')
                 if resolvedSymbol is not None:
                     symbol = resolvedSymbol
                 else:
                     symbol = tradeMarket
             elif assetId is not None:
-                resolved = self.safe_market(assetId, market)
+                resolved = self.safe_market_with_fallback(assetId, market, trade)
                 resolvedSymbol = self.safe_string(resolved, 'symbol')
                 if resolvedSymbol is not None:
                     symbol = resolvedSymbol
@@ -2473,7 +2473,7 @@ class polymarket(Exchange, ImplicitAPI):
         marketId = self.safe_string(order, 'market')
         assetId = self.safe_string(order, 'asset_id')
         if market is None and marketId is not None:
-            market = self.safe_market(marketId, None)
+            market = self.safe_market_with_fallback(marketId, None, order)
         symbol = None
         if market is not None and market['symbol'] is not None:
             symbol = market['symbol']
@@ -2702,6 +2702,100 @@ class polymarket(Exchange, ImplicitAPI):
         positions = response if isinstance(response, list) else []
         return self.parse_positions(positions, symbols)
 
+    def safe_market_with_fallback(self, market_id: str, market: Market = None, metadata: dict = None) -> Market:
+        """
+        Safely get a market by ID, with fallback to synthetic market for missing/closed markets.
+        
+        This method wraps safe_market and automatically handles missing markets by:
+        - Returning the market if found in markets_by_id
+        - Creating a synthetic market from metadata if available (position/order data)
+        - Returning the minimal market structure from safe_market as last resort
+        
+        :param str market_id: Market ID (asset ID, clobTokenId, or symbol) to look up
+        :param dict [market]: Optional pre-existing market structure
+        :param dict [metadata]: Optional metadata (position, order, etc.) containing market info
+                                (slug, conditionId, outcome, endDate, etc.) for synthetic market creation
+        :returns dict: Market structure (from markets_by_id, synthetic, or minimal)
+        """
+        try:
+            market = self.safe_market(market_id, market)
+            # Check if market was actually found in markets_by_id
+            if market_id in (self.markets_by_id or {}):
+                return market  # Market found, return it
+        except ArgumentsRequired:
+            # safe_market can raise ArgumentsRequired for ambiguous markets
+            # In this case, we'll try to create synthetic or return minimal structure
+            pass
+        
+        # Market not found in markets_by_id
+        # If we have metadata (position/order), try to create synthetic market
+        if metadata is not None:
+            condition_id = self.safe_string(metadata, 'conditionId')
+            slug = self.safe_string(metadata, 'slug')
+            if condition_id or slug:
+                return self._create_synthetic_closed_market(metadata, market_id)
+        
+        # No metadata or can't create synthetic - return minimal structure from safe_market
+        # This will create a basic market structure that won't break downstream code
+        return self.safe_market(market_id, market)
+
+    def _create_synthetic_closed_market(self, position: dict, asset: str) -> dict:
+        """
+        Create a synthetic market structure for a closed/expired market.
+        This allows position parsing to continue even when the market is no longer active.
+        """
+        conditionId = self.safe_string(position, 'conditionId')
+        slug = self.safe_string(position, 'slug')
+        title = self.safe_string(position, 'title')
+        outcome = self.safe_string(position, 'outcome')
+        endDate = self.safe_string(position, 'endDate')
+        
+        # Use slug or conditionId as base
+        baseId = slug or conditionId or asset
+        quoteId = self.safe_string(self.options, 'defaultCollateral', 'USDC')
+        
+        # Parse endDate for symbol construction
+        expiry = None
+        if endDate:
+            try:
+                if 'T' in endDate or 'Z' in endDate:
+                    expiry = self.parse8601(endDate)
+                else:
+                    expiry = self.parse8601(endDate + 'T00:00:00Z')
+            except Exception:
+                pass
+        
+        ymd = self.yymmdd(expiry) if expiry else '999999'  # Far future if no date
+        optionType = self.parse_option_type(outcome) if outcome else 'UNKNOWN'
+        symbol = baseId + '/' + quoteId + ':' + quoteId + '-' + ymd + '-0-' + optionType
+        
+        return self.safe_market_structure({
+            'id': asset,
+            'symbol': symbol,
+            'base': baseId,
+            'quote': quoteId,
+            'settle': quoteId,
+            'baseId': baseId,
+            'quoteId': quoteId,
+            'type': 'option',
+            'spot': False,
+            'margin': False,
+            'swap': False,
+            'future': False,
+            'option': True,
+            'active': False,  # Mark as inactive since it's closed
+            'contract': True,
+            'linear': True,
+            'info': {
+                'conditionId': conditionId,
+                'slug': slug,
+                'title': title,
+                'outcome': outcome,
+                'endDate': endDate,
+                'closed': True,
+            },
+        })
+
     def parse_position(self, position: dict, market: Market = None) -> Position:
         """
         parses a position from the exchange response format
@@ -2758,7 +2852,9 @@ class polymarket(Exchange, ImplicitAPI):
         endDate = self.safe_string(position, 'endDate')
         negativeRisk = self.safe_bool(position, 'negativeRisk')
         timestamp = self.safe_integer(position, 'timestamp')
-        market = self.safe_market(asset, market)
+        
+        # Get market with automatic fallback for closed markets
+        market = self.safe_market_with_fallback(asset, market, position)
         symbol = market['symbol']
         sizeString = self.safe_string(position, 'size', '0')
         contracts = self.parse_number(sizeString)
