@@ -3379,8 +3379,9 @@ async def test_get_currently_applied_historical_config_according_to_holdings(tra
             _is_index_config_applied_mock.reset_mock()
 
 
-async def test_is_index_config_applied(tools):
-    mode, producer, consumer, trader = await _init_mode(tools, _get_config(tools, {}))
+@pytest.mark.parametrize("trading_tools", ["spot", "futures"], indirect=True)
+async def test_is_index_config_applied(trading_tools):
+    mode, producer, consumer, trader = await _init_mode(trading_tools, _get_config(trading_tools, {}))
     trader.exchange_manager.exchange_config.traded_symbols = [
         commons_symbols.parse_symbol(symbol)
         for symbol in ["BTC/USDT", "ETH/USDT", "SOL/USDT", "ADA/USDT"]
@@ -3453,13 +3454,13 @@ async def test_is_index_config_applied(tools):
             # Match symbol by checking if it contains the coin name (handles both "BTC/USDT" and "BTC/USDT:USDT")
             symbol_str = str(symbol) if not isinstance(symbol, str) else symbol
             if "BTC" in symbol_str and "USDT" in symbol_str:
-                position_mock.get_value.return_value = btc_position_value
+                position_mock.margin = btc_position_value
                 position_mock.size = decimal.Decimal("0.6")  # Position size for BTC
             elif "ETH" in symbol_str and "USDT" in symbol_str:
-                position_mock.get_value.return_value = eth_position_value
+                position_mock.margin = eth_position_value
                 position_mock.size = decimal.Decimal("0.4")  # Position size for ETH
             else:
-                position_mock.get_value.return_value = decimal.Decimal("0")
+                position_mock.margin = decimal.Decimal("0")
                 position_mock.size = decimal.Decimal("0")
             position_mock.is_idle.return_value = False
             position_mock.is_open.return_value = True  # Position is open
@@ -3470,29 +3471,32 @@ async def test_is_index_config_applied(tools):
             position_mock.is_open.return_value = False
         return position_mock
     
-    with mock.patch.object(
-        portfolio_value_holder,
-        "get_holdings_ratio", mock.Mock(side_effect=lambda coin, **kwargs: {
-            "BTC": decimal.Decimal("0.6"),  # 60% target
-            "ETH": decimal.Decimal("0.4"),  # 40% target
-        }.get(coin, decimal.Decimal("0")))
-    ) as get_holdings_ratio_mock, mock.patch.object(
-                positions_manager, "get_symbol_position", mock.Mock(side_effect=_get_symbol_position)
-            ) as get_symbol_position_mock:
-        if is_futures:
-            with mock.patch.object(
-                portfolio_value_holder, "get_traded_assets_holdings_value", mock.Mock(return_value=total_portfolio_value)
-            ) as get_traded_assets_holdings_value_mock:
-                assert mode._is_index_config_applied(config_with_valid_distribution, traded_bases) is True
-                assert get_holdings_ratio_mock.call_count == 0
-                assert get_symbol_position_mock.call_count == 2
-                get_holdings_ratio_mock.reset_mock()
-        else:
+    if is_futures:
+        with mock.patch.object(
+            positions_manager, "get_symbol_position", mock.Mock(side_effect=_get_symbol_position)
+        ) as get_symbol_position_mock, \
+        mock.patch.object(
+            portfolio_value_holder, "get_traded_assets_holdings_value", mock.Mock(return_value=total_portfolio_value)
+        ) as get_traded_assets_holdings_value_mock:
+            assert mode._is_index_config_applied(config_with_valid_distribution, traded_bases) is True
+            assert get_symbol_position_mock.call_count == 2
+            assert "BTC" in str(get_symbol_position_mock.mock_calls[0].args[0])
+            assert "ETH" in str(get_symbol_position_mock.mock_calls[1].args[0])
+            get_symbol_position_mock.reset_mock()
+            assert get_traded_assets_holdings_value_mock.call_count == 2  # called for each coin
+            get_traded_assets_holdings_value_mock.reset_mock()
+    else:
+        with mock.patch.object(
+            portfolio_value_holder,
+            "get_holdings_ratio", mock.Mock(side_effect=lambda coin, **kwargs: {
+                "BTC": decimal.Decimal("0.6"),  # 60% target
+                "ETH": decimal.Decimal("0.4"),  # 40% target
+            }.get(coin, decimal.Decimal("0")))
+        ) as get_holdings_ratio_mock:
             assert mode._is_index_config_applied(config_with_valid_distribution, traded_bases) is True
             assert get_holdings_ratio_mock.call_count == 2
             assert get_holdings_ratio_mock.mock_calls[0].args[0] == "BTC"
             assert get_holdings_ratio_mock.mock_calls[1].args[0] == "ETH"
-            assert get_symbol_position_mock.call_count == 0
             get_holdings_ratio_mock.reset_mock()
     
     # Test 6: Valid distribution with holdings within tolerance range
