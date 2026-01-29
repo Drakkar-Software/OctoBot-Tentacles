@@ -88,6 +88,9 @@ def get_smoothed_distribution_from_profile_data(
         profile_data.positions, new_position_only, started_at,
         min_unrealized_pnl_percent, max_unrealized_pnl_percent, min_mark_price, max_mark_price
     )
+    if not profile_positions:
+        return []
+
     total_initial_margin = decimal.Decimal(sum(
         decimal.Decimal(str(position.get(
             trading_enums.ExchangeConstantsPositionColumns.INITIAL_MARGIN.value,
