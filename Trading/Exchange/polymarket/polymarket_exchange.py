@@ -130,7 +130,7 @@ class Polymarket(exchanges.RestExchange):
         """
         return False
 
-def _parse_end_date(end_date: str) -> datetime.datetime:
+def _parse_end_date(end_date: str) -> typing.Optional[datetime.datetime]:
     try:
         parsed_date = datetime.datetime.fromisoformat(end_date.replace('Z', '+00:00'))
         if parsed_date.tzinfo is not None:

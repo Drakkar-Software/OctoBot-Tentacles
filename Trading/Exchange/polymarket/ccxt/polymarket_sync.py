@@ -584,7 +584,7 @@ class polymarket(Exchange, ImplicitAPI):
         return self.parse_markets(filtered)
 
     def parse_clob_token_ids(self, clobTokenIds: Any) -> List[str]:
-        if clobTokenIds is None or clobTokenIds == None:
+        if clobTokenIds is None:
             return []
         if isinstance(clobTokenIds, list):
             return clobTokenIds
@@ -842,16 +842,14 @@ class polymarket(Exchange, ImplicitAPI):
         self.load_markets()
         market = self.market(symbol)
         request: dict = {}
-        # Get token ID from params or market info
+        # Get token ID from params or market
+        # Use market['id'] which is the specific token ID for self outcome(YES/NO)
+        # Do NOT use clobTokenIds[0] always picks the first outcome regardless of symbol
         tokenId = self.safe_string(params, 'token_id')
         if tokenId is None:
-            marketInfo = self.safe_dict(market, 'info', {})
-            clobTokenIds = self.safe_value(marketInfo, 'clobTokenIds', [])
-            if len(clobTokenIds) > 0:
-                # Use first token ID if multiple outcomes exist
-                tokenId = clobTokenIds[0]
-            else:
-                raise ArgumentsRequired(self.id + ' fetchOrderBook() requires a token_id parameter for market ' + symbol)
+            tokenId = self.safe_string(market, 'id')
+        if tokenId is None:
+            raise ArgumentsRequired(self.id + ' fetchOrderBook() requires a token_id parameter for market ' + symbol)
         request['token_id'] = tokenId
         response = self.clob_public_get_orderbook_token_id(self.extend(request, params))
         return self.parse_order_book(response, symbol)
@@ -876,11 +874,10 @@ class polymarket(Exchange, ImplicitAPI):
         for i in range(0, len(symbols)):
             symbol = symbols[i]
             market = self.market(symbol)
-            marketInfo = self.safe_dict(market, 'info', {})
-            clobTokenIds = self.safe_value(marketInfo, 'clobTokenIds', [])
-            if len(clobTokenIds) > 0:
-                # Use first token ID if multiple outcomes exist
-                tokenId = clobTokenIds[0]
+            # Use market['id'] which is the specific token ID for self outcome(YES/NO)
+            # Do NOT use clobTokenIds[0] always picks the first outcome regardless of symbol
+            tokenId = self.safe_string(market, 'id')
+            if tokenId is not None:
                 tokenIds.append(tokenId)
                 tokenIdToSymbol[tokenId] = symbol
         if len(tokenIds) == 0:
@@ -1048,15 +1045,14 @@ class polymarket(Exchange, ImplicitAPI):
         self.load_markets()
         market = self.market(symbol)
         marketInfo = self.safe_dict(market, 'info', {})
-        # Get token ID from params or market info
+        # Get token ID from params or market
+        # Use market['id'] which is the specific token ID for self outcome(YES/NO)
+        # Do NOT use clobTokenIds[0] always picks the first outcome regardless of symbol
         tokenId = self.safe_string(params, 'token_id')
         if tokenId is None:
-            clobTokenIds = self.safe_value(marketInfo, 'clobTokenIds', [])
-            if len(clobTokenIds) > 0:
-                # Use first token ID if multiple outcomes exist
-                tokenId = clobTokenIds[0]
-            else:
-                raise ArgumentsRequired(self.id + ' fetchTicker() requires a token_id parameter for market ' + symbol)
+            tokenId = self.safe_string(market, 'id')
+        if tokenId is None:
+            raise ArgumentsRequired(self.id + ' fetchTicker() requires a token_id parameter for market ' + symbol)
         # Fetch prices using POST /prices endpoint with both BUY and SELL sides
         # See https://docs.polymarket.com/api-reference/pricing/get-multiple-market-prices-by-request
         pricesResponse = self.clob_public_post_prices(self.extend({
@@ -1104,11 +1100,10 @@ class polymarket(Exchange, ImplicitAPI):
         for i in range(0, len(symbolsToFetch)):
             symbol = symbolsToFetch[i]
             market = self.market(symbol)
-            marketInfo = self.safe_dict(market, 'info', {})
-            clobTokenIds = self.safe_value(marketInfo, 'clobTokenIds', [])
-            if len(clobTokenIds) > 0:
-                # Use first token ID if multiple outcomes exist
-                tokenId = clobTokenIds[0]
+            # Use market['id'] which is the specific token ID for self outcome(YES/NO)
+            # Do NOT use clobTokenIds[0] always picks the first outcome regardless of symbol
+            tokenId = self.safe_string(market, 'id')
+            if tokenId is not None:
                 tokenIds.append(tokenId)
                 tokenIdToSymbol[tokenId] = symbol
         if len(tokenIds) == 0:
@@ -1573,16 +1568,14 @@ class polymarket(Exchange, ImplicitAPI):
         self.load_markets()
         market = self.market(symbol)
         request: dict = {}
-        # Get token ID from params or market info
+        # Get token ID from params or market
+        # Use market['id'] which is the specific token ID for self outcome(YES/NO)
+        # Do NOT use clobTokenIds[0] always picks the first outcome regardless of symbol
         tokenId = self.safe_string(params, 'token_id')
         if tokenId is None:
-            marketInfo = self.safe_dict(market, 'info', {})
-            clobTokenIds = self.safe_value(marketInfo, 'clobTokenIds', [])
-            if len(clobTokenIds) > 0:
-                # Use first token ID if multiple outcomes exist
-                tokenId = clobTokenIds[0]
-            else:
-                raise ArgumentsRequired(self.id + ' fetchOHLCV() requires a token_id parameter for market ' + symbol)
+            tokenId = self.safe_string(market, 'id')
+        if tokenId is None:
+            raise ArgumentsRequired(self.id + ' fetchOHLCV() requires a token_id parameter for market ' + symbol)
         request['market'] = tokenId  # API uses 'market' parameter for token_id
         # Note: REST API /prices-history endpoint requires either:
         # 1. startTs and endTs(mutually exclusive with interval)
@@ -1959,15 +1952,14 @@ class polymarket(Exchange, ImplicitAPI):
         """
         market = self.market(symbol)
         marketInfo = self.safe_dict(market, 'info', {})
-        # Get token ID from params or market info
+        # Get token ID from params or market
+        # Use market['id'] which is the specific token ID for self outcome(YES/NO)
+        # Do NOT use clobTokenIds[0] always picks the first outcome regardless of symbol
         tokenId = self.safe_string(params, 'token_id')
         if tokenId is None:
-            clobTokenIds = self.safe_value(marketInfo, 'clobTokenIds', [])
-            if len(clobTokenIds) > 0:
-                # Use first token ID if multiple outcomes exist
-                tokenId = clobTokenIds[0]
-            else:
-                raise ArgumentsRequired(self.id + ' buildOrder() requires a token_id parameter for market ' + symbol)
+            tokenId = self.safe_string(market, 'id')
+        if tokenId is None:
+            raise ArgumentsRequired(self.id + ' buildOrder() requires a token_id parameter for market ' + symbol)
         # Convert CCXT side to Polymarket side(BUY/SELL)
         polymarketSide = 'BUY' if (side == 'buy') else 'SELL'
         # Convert amount and price to strings
@@ -2311,13 +2303,15 @@ class polymarket(Exchange, ImplicitAPI):
             marketInfo = self.safe_dict(market, 'info', {})
             # Get condition_id(market ID)
             conditionId = self.safe_string(marketInfo, 'condition_id', market['id'])
-            # Get asset_id from clobTokenIds
-            clobTokenIds = self.safe_value(marketInfo, 'clobTokenIds', [])
+            # Get asset_id from market
+            # Use market['id'] which is the specific token ID for self outcome(YES/NO)
+            # Do NOT use clobTokenIds[0] always picks the first outcome regardless of symbol
             request: dict = {}
             if conditionId is not None:
                 request['market'] = conditionId
-            if len(clobTokenIds) > 0:
-                request['asset_id'] = clobTokenIds[0]
+            assetId = self.safe_string(market, 'id')
+            if assetId is not None:
+                request['asset_id'] = assetId
             # Response format: {canceled: string[], not_canceled: {order_id -> reason}}
             response = self.clob_private_delete_cancel_market_orders(self.extend(request, params))
         else:
@@ -2390,12 +2384,14 @@ class polymarket(Exchange, ImplicitAPI):
             if conditionId is not None:
                 request['market'] = conditionId
             # Also include asset_id for backward compatibility and more specific filtering
-            clobTokenIds = self.safe_value(marketInfo, 'clobTokenIds', [])
-            if len(clobTokenIds) > 0:
+            # Use market['id'] which is the specific token ID for self outcome(YES/NO)
+            # Do NOT use clobTokenIds[0] always picks the first outcome regardless of symbol
+            assetId = self.safe_string(market, 'id')
+            if assetId is not None:
                 # The Polymarket L2 getOpenOrders() endpoint filters by asset_id
-                request['asset_id'] = clobTokenIds[0]
+                request['asset_id'] = assetId
                 # Keep backward compatibility for legacy token_id usage
-                request['token_id'] = clobTokenIds[0]
+                request['token_id'] = assetId
         id = self.safe_string(params, 'id')
         if id is not None:
             request['id'] = id
@@ -2986,14 +2982,14 @@ class polymarket(Exchange, ImplicitAPI):
         self.load_markets()
         market = self.market(symbol)
         marketInfo = self.safe_dict(market, 'info', {})
-        # Get token ID from params or market info
+        # Get token ID from params or market
+        # Use market['id'] which is the specific token ID for self outcome(YES/NO)
+        # Do NOT use clobTokenIds[0] always picks the first outcome regardless of symbol
         tokenId = self.safe_string(params, 'token_id')
         if tokenId is None:
-            clobTokenIds = self.safe_value(marketInfo, 'clobTokenIds', [])
-            if len(clobTokenIds) > 0:
-                tokenId = clobTokenIds[0]
-            else:
-                raise ArgumentsRequired(self.id + ' fetchTradingFee() requires a token_id parameter for market ' + symbol)
+            tokenId = self.safe_string(market, 'id')
+        if tokenId is None:
+            raise ArgumentsRequired(self.id + ' fetchTradingFee() requires a token_id parameter for market ' + symbol)
         # Based on get_fee_rate() from py-clob-client
         # See https://github.com/Polymarket/py-clob-client/blob/main/py_clob_client/client.py
         response = self.clob_public_get_fee_rate(self.extend({'token_id': tokenId}, params))
