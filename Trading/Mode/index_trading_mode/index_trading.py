@@ -355,57 +355,45 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
         for coin in self.trading_mode.indexed_coins:
             await self.trading_mode.rebalancer.prepare_coin_rebalancing(coin)
 
+    def _get_full_traded_pairs(self):
+        return self.exchange_manager.exchange_config.traded_symbol_pairs + self.exchange_manager.exchange_config.additional_traded_pairs
+
+    async def _wait_for_topic_init(self, topic, topic_name, timeout) -> bool:
+        """
+        Wait for topic to be initialized. This ensures that existing topic data
+        are loaded from the exchange before calculating holdings ratios.
+        """
+        try:
+            full_symbols = self._get_full_traded_pairs()
+            if full_symbols:
+                await trading_util.wait_for_topic_init(
+                    self.exchange_manager, timeout,
+                    topic,
+                    symbols=full_symbols
+                )
+            return True
+        except (asyncio.TimeoutError,):
+            self.logger.warning(
+                f"{topic_name} initialization took more than {timeout} seconds. "
+                f"Existing {topic_name} might not be reflected in holdings calculations."
+            )
+            return False
+
     async def _wait_for_positions_init(self, timeout) -> bool:
-        """
-        Wait for positions to be initialized for futures/options trading.
-        This ensures that existing positions are loaded from the exchange before
-        calculating holdings ratios.
-        """
         if not (self.exchange_manager.is_future or self.exchange_manager.is_option):
             return True
-        try:
-            if self.trading_mode.indexed_coins:
-                self.logger.debug(
-                    f"Waiting for positions initialization for symbols: {self.trading_mode.indexed_coins}"
-                )
-                await trading_util.wait_for_topic_init(
-                    self.exchange_manager, timeout,
-                    commons_enums.InitializationEventExchangeTopics.POSITIONS.value,
-                    symbols=self.trading_mode.indexed_coins
-                )
-                self.logger.debug("Positions initialization completed")
-            return True
-        except (asyncio.TimeoutError,):
-            self.logger.warning(
-                f"Positions initialization took more than {timeout} seconds. "
-                f"Existing positions might not be reflected in holdings calculations."
-            )
-        return False
+        return await self._wait_for_topic_init(
+            commons_enums.InitializationEventExchangeTopics.POSITIONS.value,
+            "positions",
+            timeout
+        )
 
     async def _wait_for_orders_init(self, timeout) -> bool:
-        """
-        Wait for orders to be initialized.
-        This ensures that existing open orders are loaded from the exchange before
-        calculating holdings ratios.
-        """
-        try:
-            if self.trading_mode.indexed_coins:
-                self.logger.debug(
-                    f"Waiting for orders initialization for symbols: {self.trading_mode.indexed_coins}"
-                )
-                await trading_util.wait_for_topic_init(
-                    self.exchange_manager, timeout,
-                    commons_enums.InitializationEventExchangeTopics.ORDERS.value,
-                    symbols=self.trading_mode.indexed_coins
-                )
-                self.logger.debug("Orders initialization completed")
-            return True
-        except (asyncio.TimeoutError,):
-            self.logger.warning(
-                f"Orders initialization took more than {timeout} seconds. "
-                f"Existing open orders might not be reflected in holdings calculations."
-            )
-        return False
+        return await self._wait_for_topic_init(
+            commons_enums.InitializationEventExchangeTopics.ORDERS.value,
+            "orders",
+            timeout
+        )
 
     @trading_modes.enabled_trader_only()
     async def ensure_index(self):
@@ -490,7 +478,7 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
         for coin in set(self.trading_mode.indexed_coins):
             # Use adjusted target ratio to account for reference market percentage
             target_ratio = self.trading_mode.get_adjusted_target_ratio(coin)
-            coin_ratio = self.get_holdings_ratio(coin, traded_symbols_only=True)
+            coin_ratio = self.get_holdings_ratio(coin, traded_symbols_only=True, include_assets_in_open_orders=True)
             beyond_ratio = True
             if coin_ratio == trading_constants.ZERO and target_ratio > trading_constants.ZERO:
                 # missing coin in portfolio
@@ -518,7 +506,7 @@ class IndexTradingModeProducer(trading_modes.AbstractTradingModeProducer):
         should_rebalance = False
         for coin in self.trading_mode.get_removed_coins_from_config(available_traded_bases):
             if coin in available_traded_bases:
-                coin_ratio = self.get_holdings_ratio(coin, traded_symbols_only=True)
+                coin_ratio = self.get_holdings_ratio(coin, traded_symbols_only=True, include_assets_in_open_orders=True)
                 if coin_ratio >= self.MIN_RATIO_TO_SELL:
                     # coin to sell in portfolio
                     rebalance_details[RebalanceDetails.REMOVE.value][coin] = coin_ratio

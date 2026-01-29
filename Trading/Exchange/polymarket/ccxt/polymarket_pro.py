@@ -853,7 +853,7 @@ class polymarket(polymarket):
         params['keepalive'] = self.options['keepalive']
         return await super(polymarket, self).watch(url, messageHash, message, subscribeHash, subscription, params)
 
-    async def subscribe_to_asset_ids(self, asset_ids: List[str], params={}) -> void:
+    async def subscribe_to_asset_ids(self, asset_ids: List[str], params={}):
         """
         Dynamically subscribe to additional asset IDs on an existing market channel connection
         :param str[] asset_ids: list of asset IDs to subscribe to
@@ -869,7 +869,11 @@ class polymarket(polymarket):
         if not isinstance(channelSubscription, dict) or isinstance(channelSubscription, list):
             channelSubscription = {}
         # Filter out already subscribed asset_ids
-        newAssetIds = asset_ids.filter((aid) => not (aid in channelSubscription))
+        newAssetIds = []
+        for i in range(0, len(asset_ids)):
+            aid = asset_ids[i]
+            if not (aid in channelSubscription):
+                newAssetIds.append(aid)
         if len(newAssetIds) == 0:
             return  # All already subscribed
         request: dict = {
@@ -878,11 +882,12 @@ class polymarket(polymarket):
         }
         await client.send(request)
         # Track newly subscribed asset_ids
-        for(aid of newAssetIds) {
+        for i in range(0, len(newAssetIds)):
+            aid = newAssetIds[i]
             channelSubscription[aid] = True
         client.subscriptions[channelSubscriptionHash] = channelSubscription
 
-    async def unsubscribe_from_asset_ids(self, asset_ids: List[str], params={}) -> void:
+    async def unsubscribe_from_asset_ids(self, asset_ids: List[str], params={}):
         """
         Dynamically unsubscribe from asset IDs on an existing market channel connection
         :param str[] asset_ids: list of asset IDs to unsubscribe from
@@ -898,11 +903,22 @@ class polymarket(polymarket):
         if not isinstance(channelSubscription, dict) or isinstance(channelSubscription, list):
             channelSubscription = {}
         # Filter to only unsubscribe from actually subscribed asset_ids
-        subscribedAssetIds = asset_ids.filter((aid) => aid in channelSubscription)
+        subscribedAssetIds = []
+        for i in range(0, len(asset_ids)):
+            aid = asset_ids[i]
+            if aid in channelSubscription:
+                subscribedAssetIds.append(aid)
         if len(subscribedAssetIds) == 0:
             return  # None are subscribed
-        request: dict = {
-            'assets_ids' = channelSubscription
+        request = {}
+        request['assets_ids'] = subscribedAssetIds
+        request['operation'] = 'unsubscribe'
+        await client.send(request)
+        # Remove from tracking
+        for i in range(0, len(subscribedAssetIds)):
+            aid = subscribedAssetIds[i]
+            del channelSubscription[aid]
+        client.subscriptions[channelSubscriptionHash] = channelSubscription
 
     def on_connected(self, client: Client):
         # Called when websocket connection is established
