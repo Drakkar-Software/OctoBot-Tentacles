@@ -47,6 +47,7 @@ class ProfileCopyTradingMode(index_trading_mode.IndexTradingMode):
         super().__init__(config, exchange_manager)
         self.exchange_profile_ids: list[str] = []
         self.per_exchange_profile_portfolio_ratio: decimal.Decimal = trading_constants.ONE
+        self.allocation_padding_ratio: decimal.Decimal = trading_constants.ZERO
         self.new_position_only: bool = False
         self.min_unrealized_pnl_percent: typing.Optional[decimal.Decimal] = None
         self.max_unrealized_pnl_percent: typing.Optional[decimal.Decimal] = None
@@ -72,6 +73,14 @@ class ProfileCopyTradingMode(index_trading_mode.IndexTradingMode):
             float(self.per_exchange_profile_portfolio_ratio * trading_constants.ONE_HUNDRED), inputs,
             min_val=0, max_val=100,
             title="Percentage of the portfolio to allocate to each exchange profile.",
+        ))) / trading_constants.ONE_HUNDRED
+        self.allocation_padding_ratio = decimal.Decimal(str(self.UI.user_input(
+            ProfileCopyTradingModeProducer.ALLOCATION_PADDING_RATIO, commons_enums.UserInputTypes.FLOAT,
+            float(self.allocation_padding_ratio * trading_constants.ONE_HUNDRED), inputs,
+            min_val=0, max_val=100,
+            title="Allocation padding: Allow trading up to X% more than the configured portfolio ratio. "
+                  "Useful when the copied profile increases its position count. "
+                  "E.g., 20% padding on 50% allocation allows up to 60% usage.",
         ))) / trading_constants.ONE_HUNDRED
         self.new_position_only = self.UI.user_input(
             ProfileCopyTradingModeProducer.NEW_POSITION_ONLY, commons_enums.UserInputTypes.BOOLEAN,
@@ -130,7 +139,7 @@ class ProfileCopyTradingMode(index_trading_mode.IndexTradingMode):
             trading_enums.ExchangeTypes.OPTION,
         ]
 
-    def get_current_state(self) -> (str, float):
+    def get_current_state(self) -> typing.Tuple[str, float]:
         return super().get_current_state()[0] if self.producers[0].state is None else self.producers[0].state.name, self.producers[0].final_eval
 
     def get_mode_producer_classes(self) -> list:
@@ -200,7 +209,8 @@ class ProfileCopyTradingMode(index_trading_mode.IndexTradingMode):
         global_distribution = profile_distribution.update_global_distribution(
             self.distribution_per_exchange_profile,
             self.per_exchange_profile_portfolio_ratio,
-            self.exchange_profile_ids
+            self.exchange_profile_ids,
+            self.allocation_padding_ratio
         )
         self.ratio_per_asset = global_distribution[profile_distribution.RATIO_PER_ASSET]
         self.total_ratio_per_asset = global_distribution[profile_distribution.TOTAL_RATIO_PER_ASSET]
@@ -215,6 +225,7 @@ class ProfileCopyTradingModeConsumer(index_trading_mode.IndexTradingModeConsumer
 class ProfileCopyTradingModeProducer(index_trading_mode.IndexTradingModeProducer):
     EXCHANGE_PROFILE_IDS = "exchange_profile_ids"
     PER_PROFILE_PORTFOLIO_RATIO = "per_exchange_profile_portfolio_ratio"
+    ALLOCATION_PADDING_RATIO = "allocation_padding_ratio"
     NEW_POSITION_ONLY = "new_position_only"
     MIN_UNREALIZED_PNL_PERCENT = "min_unrealized_pnl_percent"
     MAX_UNREALIZED_PNL_PERCENT = "max_unrealized_pnl_percent"

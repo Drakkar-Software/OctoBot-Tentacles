@@ -39,11 +39,11 @@ The percentage of your total portfolio value to allocate to copying each exchang
 - 3 profiles × 30% each = 90% → **Valid**
 - 2 profiles × 50% each = 100% → **Valid**
 
-#### Allocation Padding Ratio
+#### Allocation Padding
 
 The percentage padding to allow on top of the configured portfolio allocation per profile. This allows the trading mode to use more of your portfolio than initially configured when the copied profile opens additional positions.
 
-**Example**: If you set *Per Exchange Profile Portfolio Ratio* to 50% and *Allocation Padding Ratio* to 20%, the effective maximum allocation for that profile can grow up to 60% (50% × 1.2). This is useful when the copied profile increases its number of traded positions over time.
+**Example**: If you set *Per Exchange Profile Portfolio Ratio* to 50% and *Allocation Padding* to 20%, the effective maximum allocation for that profile can grow up to 60% (50% × 1.2). This is useful when the copied profile increases its number of traded positions over time.
 
 **Use cases**:
 - Set to `0%` for strict allocation limits (recommended for conservative strategies)
