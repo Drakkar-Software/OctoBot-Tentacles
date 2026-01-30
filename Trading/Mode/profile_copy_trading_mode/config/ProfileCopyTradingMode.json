@@ -1,6 +1,6 @@
 {
     "required_strategies": [],
-    "refresh_interval": 1,
+    "refresh_interval": 0,
     "rebalance_trigger_min_percent": 5,
     "exchange_profile_ids": [],
     "per_exchange_profile_portfolio_ratio": 20,
