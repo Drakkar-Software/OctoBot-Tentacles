@@ -16,7 +16,7 @@ This trading mode is particularly useful for prediction markets like Polymarket,
 
 ### Configuration Parameters
 
-#### Exchange Profile IDs (`exchange_profile_ids`)
+#### Exchange Profile IDs
 
 A list of exchange profile identifiers to copy. Each profile ID should be a valid identifier on the target exchange.
 
@@ -24,11 +24,11 @@ A list of exchange profile identifiers to copy. Each profile ID should be a vali
 - `0x1234567890abcdef1234567890abcdef12345678`
 - `0xabcdefabcdefabcdefabcdefabcdefabcdefabcd`
 
-You can copy multiple profiles simultaneously. The portfolio allocation will be split among all profiles according to `per_exchange_profile_portfolio_ratio`. Profile IDs are exchange-specific (e.g., Polymarket uses Ethereum addresses).
+You can copy multiple profiles simultaneously. The portfolio allocation will be split among all profiles according to *Per Exchange Profile Portfolio Ratio*. Profile IDs are exchange-specific (e.g., Polymarket uses Ethereum addresses).
 
-#### Per Exchange Profile Portfolio Ratio (`per_exchange_profile_portfolio_ratio`)
+#### Per Exchange Profile Portfolio Ratio
 
-The percentage of your total portfolio value to allocate to copying each exchange profile. This value is applied to each profile in the `exchange_profile_ids` list.
+The percentage of your total portfolio value to allocate to copying each exchange profile. This value is applied to each profile in the *Exchange Profile IDs* list.
 
 **Example**: If you have 2 profiles and set this to 30%, each profile gets 30% of your portfolio (total: 60%). If you have 1 profile and set this to 50%, that profile gets 50% of your portfolio.
 
@@ -39,7 +39,20 @@ The percentage of your total portfolio value to allocate to copying each exchang
 - 3 profiles × 30% each = 90% → **Valid**
 - 2 profiles × 50% each = 100% → **Valid**
 
-#### New Position Only (`new_position_only`)
+#### Allocation Padding Ratio
+
+The percentage padding to allow on top of the configured portfolio allocation per profile. This allows the trading mode to use more of your portfolio than initially configured when the copied profile opens additional positions.
+
+**Example**: If you set *Per Exchange Profile Portfolio Ratio* to 50% and *Allocation Padding Ratio* to 20%, the effective maximum allocation for that profile can grow up to 60% (50% × 1.2). This is useful when the copied profile increases its number of traded positions over time.
+
+**Use cases**:
+- Set to `0%` for strict allocation limits (recommended for conservative strategies)
+- Set to `20-50%` to allow flexibility when the copied profile expands its portfolio
+- Higher values provide more flexibility but increase risk of over-allocation
+
+**Important**: The padding only allows expansion beyond the configured ratio.
+
+#### New Position Only
 
 *Not supported on Polymarket*
 
@@ -49,30 +62,30 @@ When enabled, only positions opened after OctoBot started will be considered for
 - Set to `true` to only copy new trades made by the profile after you start following them
 - Set to `false` to copy the entire current portfolio of the profile, including positions they opened before you started following
 
-#### Unrealized PnL Percent (`min_unrealized_pnl_percent` and `max_unrealized_pnl_percent`)
+#### Unrealized PnL Percent
 
 Filter positions based on their unrealized profit/loss ratio relative to their collateral. Values are expressed as decimal ratios (0.1 = 10%).
 
-**Minimum Unrealized PnL Percent** (`min_unrealized_pnl_percent`): Only copy positions that have at least this unrealized profit/loss ratio. For example, set to `0.05` to filter out losing positions and only copy positions with at least 5% unrealized profit, or set to `0.1` to copy only positions with at least 10% unrealized profit.
+**Minimum Unrealized PnL Percent**: Only copy positions that have at least this unrealized profit/loss ratio. For example, set to `0.05` to filter out losing positions and only copy positions with at least 5% unrealized profit, or set to `0.1` to copy only positions with at least 10% unrealized profit.
 
-**Maximum Unrealized PnL Percent** (`max_unrealized_pnl_percent`): Only copy positions that have at most this unrealized profit/loss ratio. For example, set to `0.5` to avoid copying positions with more than 50% unrealized profit (might be too risky), or set to `0.2` to cap at 20% unrealized profit and limit exposure to highly profitable positions.
+**Maximum Unrealized PnL Percent**: Only copy positions that have at most this unrealized profit/loss ratio. For example, set to `0.5` to avoid copying positions with more than 50% unrealized profit (might be too risky), or set to `0.2` to cap at 20% unrealized profit and limit exposure to highly profitable positions.
 
 Set either parameter to `None` to disable that filter.
 
-#### Mark Price (`min_mark_price` and `max_mark_price`)
+#### Mark Price
 
 Filter positions based on their mark price (current market price). Useful for filtering positions by price range.
 
-**Minimum Mark Price** (`min_mark_price`): Only copy positions with a mark price greater than or equal to this value. For example, set to `0.5` to focus on higher-value markets and only copy positions in markets priced at $0.50 or higher, or set to `0.1` to filter out very cheap positions.
+**Minimum Mark Price**: Only copy positions with a mark price greater than or equal to this value. For example, set to `0.5` to focus on higher-value markets and only copy positions in markets priced at $0.50 or higher, or set to `0.1` to filter out very cheap positions.
 
-**Maximum Mark Price** (`max_mark_price`): Only copy positions with a mark price less than or equal to this value. For example, set to `0.8` to focus on lower-value markets and only copy positions in markets priced at $0.80 or lower, or set to `0.9` to filter out positions near certainty.
+**Maximum Mark Price**: Only copy positions with a mark price less than or equal to this value. For example, set to `0.8` to focus on lower-value markets and only copy positions in markets priced at $0.80 or lower, or set to `0.9` to filter out positions near certainty.
 
 Set either parameter to `None` to disable that filter.
 
 ### Portfolio Allocation Validation
 
 OctoBot automatically validates that your portfolio allocation is feasible:
-- Total allocation = `per_exchange_profile_portfolio_ratio` × number of profiles
+- Total allocation = *Per Exchange Profile Portfolio Ratio* × number of profiles
 - This total must be ≤ 100%
 - If validation fails, OctoBot will raise an error and prevent starting the trading mode
 
@@ -87,11 +100,11 @@ OctoBot automatically validates that your portfolio allocation is feasible:
 - **Solution**: Wait for the Exchange Service Feed to provide data from all configured profiles. This is normal on startup.
 
 **Issue**: "Total portfolio allocation exceeds 100%"
-- **Solution**: Reduce `per_exchange_profile_portfolio_ratio` or reduce the number of profiles in `exchange_profile_ids`.
+- **Solution**: Reduce *Per Exchange Profile Portfolio Ratio* or reduce the number of profiles in *Exchange Profile IDs*.
 
 **Issue**: "Impossible to find the Exchange service feed"
 - **Solution**: Ensure the Exchange Service Feed tentacle is installed and enabled in your OctoBot configuration.
 
-**Note**: Since Profile Copy Trading mode extends the Index Trading Mode, it also supports Index Trading Mode parameters such as `refresh_interval` and `rebalance_trigger_min_percent` for controlling portfolio rebalancing behavior.
+**Note**: Since Profile Copy Trading mode extends the Index Trading Mode, it also supports Index Trading Mode parameters such as *Refresh interval* and  *Rebalance cap* for controlling portfolio rebalancing behavior.
 
 _This trading mode supports backtesting and is compatible with PNL history._

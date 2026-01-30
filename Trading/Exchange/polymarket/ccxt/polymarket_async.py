@@ -423,6 +423,20 @@ class polymarket(Exchange, ImplicitAPI):
                     },
                 },
             },
+            'limits': {
+                'amount': {
+                    'min': 5,  # Minimum order size
+                    'max': None,
+                },
+                'price': {
+                    'min': 1e-6,  # Prediction markets are >0 and <1
+                    'max': 1,  # Prediction markets are 0-1
+                },
+                'cost': {
+                    'min': None,
+                    'max': None,
+                },
+            },
             'exceptions': {
                 'exact': {
                     # HTTP status codes
@@ -789,11 +803,11 @@ class polymarket(Exchange, ImplicitAPI):
                     'max': None,
                 },
                 'amount': {
-                    'min': None,
+                    'min': 5,  # Minimum order size
                     'max': None,
                 },
                 'price': {
-                    'min': 0,  # Prediction markets are 0-1
+                    'min': 1e-6,  # Prediction markets are >0 and <1
                     'max': 1,  # Prediction markets are 0-1
                 },
                 'cost': {
@@ -979,10 +993,20 @@ class polymarket(Exchange, ImplicitAPI):
             metadata: dict = {}
             if tickSize is not None:
                 metadata['tick_size'] = tickSize
+                # Update market precision with tick_size if available
+                if self.markets is not None and symbol in self.markets:
+                    market = self.markets[symbol]
+                    if market['precision']['price'] is None or market['precision']['price'] == 6:
+                        market['precision']['price'] = self.parse_number(tickSize)
             if negRisk is not None:
                 metadata['neg_risk'] = negRisk
             if minOrderSize is not None:
                 metadata['min_order_size'] = minOrderSize
+                # Update market limits with min_order_size if available
+                if self.markets is not None and symbol in self.markets:
+                    market = self.markets[symbol]
+                    if market['limits']['amount']['min'] is None:
+                        market['limits']['amount']['min'] = self.parse_number(minOrderSize)
             result['info'] = self.extend(orderbook, metadata)
         return result
 
