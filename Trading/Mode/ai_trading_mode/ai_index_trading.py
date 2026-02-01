@@ -38,6 +38,7 @@ import tentacles.Services.Services_bases
 from tentacles.Trading.Mode.ai_trading_mode import ai_index_distribution
 from tentacles.Trading.Mode.index_trading_mode import index_trading
 from tentacles.Trading.Mode.ai_trading_mode.team import TradingAgentTeam
+from tentacles.Trading.Mode.ai_trading_mode.deep_agent_team import DeepAgentTradingTeam
 
 # Data keys
 STRATEGY_DATA_KEY = "strategy_data"
@@ -295,8 +296,10 @@ class AIIndexTradingModeProducer(index_trading.IndexTradingModeProducer):
         
         self.logger.debug("Running TradingAgentTeam for portfolio distribution analysis...")
         
-        # Create and run the team
-        team = TradingAgentTeam(ai_service=ai_service)
+        # Create and run the team based on use_deep_agent config
+        use_deep_agent = self.trading_mode.config.get(AIIndexTradingMode.USE_DEEP_AGENT_KEY, False)
+        team_class = DeepAgentTradingTeam if use_deep_agent else TradingAgentTeam
+        team = team_class(ai_service=ai_service)
         
         try:
             distribution_output = await team.run_with_state(state)
@@ -497,6 +500,7 @@ class AIIndexTradingMode(index_trading.IndexTradingMode):
     TEMPERATURE_KEY = "temperature"
     MAX_TOKENS_KEY = "max_tokens"
     LOG_AI_DECISIONS_KEY = "log_ai_decisions"
+    USE_DEEP_AGENT_KEY = "use_deep_agent"
 
     async def single_exchange_process_health_check(self, chained_orders, tickers):
         return []
@@ -545,4 +549,12 @@ class AIIndexTradingMode(index_trading.IndexTradingMode):
             inputs.get(self.LOG_AI_DECISIONS_KEY),
             inputs,
             title="Log debate/judge decisions at INFO (verbose).",
+        )
+
+        self.UI.user_input(
+            self.USE_DEEP_AGENT_KEY,
+            commons_enums.UserInputTypes.BOOLEAN,
+            inputs.get(self.USE_DEEP_AGENT_KEY, False),
+            inputs,
+            title="Use Deep Agent implementation (requires deepagents package). Default: use traditional AI agent.",
         )

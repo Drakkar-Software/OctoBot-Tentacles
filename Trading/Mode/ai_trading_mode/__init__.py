@@ -16,3 +16,16 @@
 
 from .ai_index_trading import AIIndexTradingMode
 from .ai_index_distribution import apply_ai_instructions
+
+from .team import (
+    TradingAgentTeamChannel,
+    TradingAgentTeamConsumer,
+    TradingAgentTeam,
+)
+
+from .deep_agent_team import (
+    DeepAgentTradingTeamChannel,
+    DeepAgentTradingTeamConsumer,
+    DeepAgentTradingTeam,
+    create_trading_team,
+)

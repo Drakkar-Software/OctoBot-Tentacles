@@ -24,7 +24,7 @@ import octobot_evaluators.evaluators as evaluators
 import octobot_services.api.services as services_api
 import tentacles.Services.Services_bases
 
-from tentacles.Agent.Teams.simple_ai_evaluator_agents_team import SimpleAIEvaluatorAgentsTeam
+from tentacles.Agent.Teams.simple_ai_evaluator_agents_team import SimpleAIEvaluatorAgentsTeam, DeepAgentEvaluatorTeam
 
 
 class BaseLLMAIStrategyEvaluator(evaluators.StrategyEvaluator):
@@ -39,6 +39,7 @@ class BaseLLMAIStrategyEvaluator(evaluators.StrategyEvaluator):
     TEMPERATURE_KEY = "temperature"
     OUTPUT_FORMAT_KEY = "output_format"
     EVALUATOR_TYPES_KEY = "evaluator_types"
+    USE_DEEP_AGENT_KEY = "use_deep_agent"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -87,6 +88,13 @@ class BaseLLMAIStrategyEvaluator(evaluators.StrategyEvaluator):
             min_val=0.0,
             max_val=1.0,
             title="Temperature for LLM randomness (0.0 = deterministic, 1.0 = very random).",
+        )
+        self.use_deep_agent = self.UI.user_input(
+            self.USE_DEEP_AGENT_KEY,
+            commons_enums.UserInputTypes.BOOLEAN,
+            default_config.get(self.USE_DEEP_AGENT_KEY, False),
+            inputs,
+            title="Use Deep Agent implementation (requires deepagents package). Default: use traditional AI agent.",
         )
         self.evaluator_types = self.UI.user_input(
             self.EVALUATOR_TYPES_KEY,
@@ -158,8 +166,9 @@ class BaseLLMAIStrategyEvaluator(evaluators.StrategyEvaluator):
             self.logger.error("No valid data available for any agent")
             return common_constants.START_PENDING_EVAL_NOTE, "Error: No valid data available"
         
-        # Create and run the team
-        team = SimpleAIEvaluatorAgentsTeam(
+        # Create and run the team based on use_deep_agent config
+        team_class = DeepAgentEvaluatorTeam if self.use_deep_agent else SimpleAIEvaluatorAgentsTeam
+        team = team_class(
             ai_service=ai_service,
             model=self.model,
             max_tokens=self.max_tokens,

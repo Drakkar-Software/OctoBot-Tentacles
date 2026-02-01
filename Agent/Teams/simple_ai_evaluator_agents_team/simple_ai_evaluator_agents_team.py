@@ -172,6 +172,9 @@ class SimpleAIEvaluatorAgentsTeam(agent.AbstractSyncAgentsTeamChannelProducer):
         """
         Convenience method to run the team with aggregated evaluator data.
         
+        Uses Deep Agent file system for context management between agents.
+        Analysis results are saved to /analysis/* for cross-agent access.
+        
         Args:
             aggregated_data: Dict mapping evaluator type to list of evaluations.
             missing_data_types: Optional list of missing evaluator types.
@@ -179,6 +182,9 @@ class SimpleAIEvaluatorAgentsTeam(agent.AbstractSyncAgentsTeamChannelProducer):
         Returns:
             Tuple of (eval_note, eval_note_description).
         """
+        # Clear transient files from previous runs
+        self.clear_transient_files()
+        
         # Build input data for entry agents based on their type
         initial_data = {
             "aggregated_data": aggregated_data,
@@ -187,6 +193,10 @@ class SimpleAIEvaluatorAgentsTeam(agent.AbstractSyncAgentsTeamChannelProducer):
         
         # Run the team
         results = await self.run(initial_data)
+        
+        # Save analysis results to file system for debugging/audit
+        for agent_name, result in results.items():
+            self.save_analysis(agent_name.lower(), result)
         
         # Extract summarization result using the actual agent name
         summarization_result = results.get(self.summarization_producer.name)

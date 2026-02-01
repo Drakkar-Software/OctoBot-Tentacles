@@ -9,6 +9,7 @@
     "MarketCapEvaluator",
     "CryptoNewsEvaluator"
   ],
-  "required_time_frames": ["1d"]
+  "required_time_frames": ["1d"],
+  "use_deep_agent": false
 }
 

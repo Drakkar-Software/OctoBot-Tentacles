@@ -14,5 +14,6 @@
     "4h",
     "1d"
   ],
-  "required_candles_count": 1000
+  "required_candles_count": 1000,
+  "use_deep_agent": false
 }
