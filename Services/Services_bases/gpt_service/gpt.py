@@ -35,6 +35,7 @@ except ImportError:
 import octobot_services.constants as services_constants
 import octobot_services.services as services
 import octobot_services.errors as errors
+import octobot_services.enums as enums
 import octobot_services.interfaces.util as interfaces_util
 from octobot_services.services.abstract_ai_service import AbstractAIService
 
@@ -119,6 +120,8 @@ class LLMService(services.AbstractAIService):
                     "When enabled, tools from configured MCP servers are automatically available. "
                     "Default: True."
                 ),
+                services_constants.CONFIG_LLM_AI_PROVIDER: "AI provider to use (openai, anthropic, local, other)",
+                services_constants.CONFIG_LLM_AUTH_TOKEN: "Authentication token for the AI service"
             }
             return fields
         return {}
@@ -134,6 +137,8 @@ class LLMService(services.AbstractAIService):
                 services_constants.CONFIG_LLM_REASONING_EFFORT: "",
                 services_constants.CONFIG_LLM_MCP_SERVERS: [],
                 services_constants.CONFIG_LLM_AUTO_INJECT_MCP_TOOLS: True,
+                services_constants.CONFIG_LLM_AI_PROVIDER: "",
+                services_constants.CONFIG_LLM_AUTH_TOKEN: "",
             }
         return {}
 
@@ -168,6 +173,8 @@ class LLMService(services.AbstractAIService):
         self._mcp_tools: list[dict] = []
         self._mcp_clients: list[typing.Any] = []
         self._octobot_mcp_tools: typing.Optional[list] = None
+
+        self.ai_provider = enums.AIProvider.OPENAI
 
     def _load_model_from_config(self):
         """Load model from config if not overridden by environment variable."""
@@ -290,6 +297,27 @@ class LLMService(services.AbstractAIService):
         except (KeyError, TypeError):
             pass
         return []
+
+    def _load_ai_config_from_config(self):
+        try:
+            svc_config = self.config[services_constants.CONFIG_CATEGORY_SERVICES][
+                self.get_type()
+            ]
+            self.api_key = self._get_api_key()
+
+            ai_provider_str = svc_config.get(services_constants.CONFIG_LLM_AI_PROVIDER)
+            if ai_provider_str and not fields_utils.has_invalid_default_config_value(ai_provider_str):
+                try:
+                    self.ai_provider = enums.AIProvider(ai_provider_str.lower())
+                except ValueError:
+                    self.logger.warning(f"Invalid AI provider: {ai_provider_str}")
+            
+            auth_token = svc_config.get(services_constants.CONFIG_LLM_AUTH_TOKEN)
+            if auth_token and not fields_utils.has_invalid_default_config_value(auth_token):
+                self.auth_token = auth_token
+                
+        except (KeyError, TypeError):
+            pass
 
     def _extract_tool_attr(self, tool, attr_name: str, default=''):
         """Extract attribute from tool (object or dict) using duck typing.
@@ -1555,6 +1583,7 @@ class LLMService(services.AbstractAIService):
             self._load_model_from_config()
             self._load_models_config()
             self._load_token_limit_from_config()
+            self._load_ai_config_from_config()
 
             if self._get_base_url():
                 self.logger.debug(f"Using custom LLM url: {self._get_base_url()}")
